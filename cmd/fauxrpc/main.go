@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/alecthomas/kong"
 )
 
 type Globals struct {
-	LogLevel string      `short:"l" help:"Set the logging level (debug|info|warn|error|fatal)" default:"info"`
+	LogLevel string      `short:"l" help:"Set the logging level (debug|info|warn|error)" default:"info"`
 	Version  VersionFlag `name:"version" help:"Print version information and quit"`
 }
 
@@ -44,6 +45,18 @@ func main() {
 		kong.Vars{
 			"version": "0.0.1",
 		})
+	switch cli.Globals.LogLevel {
+	case "debug":
+		slog.SetLogLoggerLevel(slog.LevelDebug)
+	case "info":
+		slog.SetLogLoggerLevel(slog.LevelInfo)
+	case "warn":
+		slog.SetLogLoggerLevel(slog.LevelWarn)
+	case "error":
+		slog.SetLogLoggerLevel(slog.LevelError)
+	default:
+		ctx.Fatalf("unknown log level: %s", cli.Globals.LogLevel)
+	}
 	ctx.FatalIfErrorf(ctx.Run(&cli.Globals))
 }
 

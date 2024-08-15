@@ -63,7 +63,7 @@ func (r *ServiceRegistry) Get(name string) protoreflect.ServiceDescriptor {
 }
 
 func (r *ServiceRegistry) AddFile(fd protoreflect.FileDescriptor) error {
-	slog.Info("add file", "name", fd.FullName(), "path", fd.Path())
+	slog.Debug("add file", "name", fd.FullName(), "path", fd.Path())
 	if _, err := r.files.FindFileByPath(fd.Path()); err == nil {
 		return nil
 	} else if !errors.Is(err, protoregistry.NotFound) {
@@ -133,7 +133,6 @@ func AddServicesFromPath(registry *ServiceRegistry, path string) error {
 }
 
 func AddServicesFromSingleFile(registry *ServiceRegistry, filepath string) error {
-	slog.Info("AddServicesFromSingleFile", "filepath", filepath)
 	ext := path.Ext(filepath)
 	switch ext {
 	case ".proto":
@@ -293,7 +292,6 @@ func AddServicesFromReflection(registry *ServiceRegistry, addr string) error {
 }
 
 func addServicesFromDescriptorsBytes(registry *ServiceRegistry, fdp *descriptorpb.FileDescriptorProto) error {
-	slog.Debug("addServicesFromDescriptorsBytes", slog.String("fdp", fdp.GetName()))
 	fd, err := protodesc.NewFile(fdp, registry.Files())
 	if err != nil {
 		return fmt.Errorf("protodesc.NewFile: %w", err)
