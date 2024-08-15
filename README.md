@@ -1,6 +1,6 @@
 # FauxRPC
 
-Quickly and easily set up a mock gRPC/gRPC-Web/Connect/Protobuf-powered REST API that returns random test data. No complicated code generation step, just pass the protobuf descriptors and go.
+Quickly and easily set up a mock gRPC/gRPC-Web/Connect/Protobuf-powered REST API that returns random test data. No complicated code generation step, just pass the protobuf descriptors and go!
 
 ### Mock out services from descriptors
 ```shell
@@ -9,7 +9,7 @@ $ go run ./cmd/fauxrpc/ run --schema=descriptors.binpb
 ```
 
 ### Mock out services using reflection
-Mock out
+Use the reflection API to fake another gRPC server(s).
 ```shell
 $ go run ./cmd/fauxrpc/ run --schema=https://demo.connectrpc.com
 2024/08/15 19:10:01 INFO add file name=connectrpc.eliza.v1 path=connectrpc/eliza/v1/eliza.proto
@@ -26,7 +26,6 @@ connectrpc.eliza.v1.ElizaService/Say
 ## Status: SUPER Alpha
 This project is just starting out. I plan to add a lot of things that make this tool actually usable in more situations.
 
-- Sane default behavior for well-known types - timestamps and embedded protobuf messages are essentially unusable at the moment.
 - Use known `protovalidate` rules to determine how to generate output.
 - Service for adding/updating/removing stub responses.
 - Configuration file

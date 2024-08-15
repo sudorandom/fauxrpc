@@ -2,10 +2,13 @@ package fauxrpc
 
 import (
 	"log"
+	"time"
 
 	"github.com/brianvoe/gofakeit/v7"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/dynamicpb"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const MaxNestedDepth = 20
@@ -71,22 +74,38 @@ func (g *dataGenerator) setDataOnMessage(msg *dynamicpb.Message, depth int) {
 	}
 }
 
+func (g *dataGenerator) genGoogleDuration() *protoreflect.Value {
+	duration := time.Duration(g.faker.IntRange(0, int(30*time.Hour*24)))
+	v := protoreflect.ValueOf(durationpb.New(duration).ProtoReflect())
+	return &v
+}
+
+func (g *dataGenerator) genGoogleTimestamp() *protoreflect.Value {
+	v := protoreflect.ValueOf(timestamppb.New(g.faker.Date()).ProtoReflect())
+	return &v
+}
+
 func (g *dataGenerator) getFieldValue(field protoreflect.FieldDescriptor, depth int) *protoreflect.Value {
 	switch field.Kind() {
 	case protoreflect.MessageKind:
-		nested := dynamicpb.NewMessage(field.Message())
-		g.setDataOnMessage(nested, depth+1)
-		v := protoreflect.ValueOf(nested)
-		return &v
+		switch string(field.Message().FullName()) {
+		case "google.protobuf.Duration":
+			return g.genGoogleDuration()
+		case "google.protobuf.Timestamp":
+			return g.genGoogleTimestamp()
+		case "google.protobuf.Any":
+			return nil
+		default:
+			nested := dynamicpb.NewMessage(field.Message())
+			g.setDataOnMessage(nested, depth+1)
+			v := protoreflect.ValueOf(nested)
+			return &v
+		}
 	case protoreflect.GroupKind:
 		nested := dynamicpb.NewMessage(field.Message())
 		g.setDataOnMessage(nested, depth+1)
 		v := protoreflect.ValueOf(nested)
 		return &v
-	default:
-
-	}
-	switch field.Kind() {
 	case protoreflect.BoolKind:
 		v := protoreflect.ValueOfBool(true)
 		return &v
