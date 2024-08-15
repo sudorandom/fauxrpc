@@ -1,7 +1,8 @@
-package fauxrpc
+package protobuf
 
 import (
 	"log"
+	"strings"
 	"time"
 
 	"github.com/brianvoe/gofakeit/v7"
@@ -110,11 +111,27 @@ func (g *dataGenerator) getFieldValue(field protoreflect.FieldDescriptor, depth 
 		v := protoreflect.ValueOfBool(true)
 		return &v
 	case protoreflect.EnumKind:
-		// TODO: select random enum from options
-		v := protoreflect.ValueOfEnum(0)
+		values := field.Enum().Values()
+		idx := g.faker.IntRange(0, values.Len()-1)
+		v := protoreflect.ValueOfEnum(protoreflect.EnumNumber(idx))
 		return &v
 	case protoreflect.StringKind:
-		v := protoreflect.ValueOfString(g.faker.LoremIpsumSentence(10))
+		var v protoreflect.Value
+		lowerName := strings.ToLower(string(field.Name()))
+		switch {
+		case strings.Contains(lowerName, "firstname"):
+			v = protoreflect.ValueOfString(g.faker.FirstName())
+		case strings.Contains(lowerName, "lastname"):
+			v = protoreflect.ValueOfString(g.faker.LastName())
+		case strings.Contains(lowerName, "name"):
+			v = protoreflect.ValueOfString(g.faker.Name())
+		case strings.Contains(lowerName, "id"):
+			v = protoreflect.ValueOfString(g.faker.UUID())
+		case strings.Contains(lowerName, "url"):
+			v = protoreflect.ValueOfString(g.faker.URL())
+		default:
+			v = protoreflect.ValueOfString(g.faker.LoremIpsumSentence(10))
+		}
 		return &v
 	case protoreflect.Int32Kind:
 		v := protoreflect.ValueOfInt32(g.faker.Int32())

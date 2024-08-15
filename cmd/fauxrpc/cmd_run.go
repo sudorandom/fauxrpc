@@ -9,7 +9,6 @@ import (
 
 	"connectrpc.com/grpcreflect"
 	"connectrpc.com/vanguard"
-	"github.com/sudorandom/fauxrpc"
 	"github.com/sudorandom/fauxrpc/private/protobuf"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -43,7 +42,7 @@ func (c *RunCmd) Run(globals *Globals) error {
 	// TODO: Load descriptors from BSR (this would be SUPER cool to do)
 
 	// TODO: way more options for data generator, including a stub service for registering stubs
-	generator := fauxrpc.NewDataGenerator()
+	generator := protobuf.NewDataGenerator()
 
 	serviceNames := []string{}
 	vgservices := []*vanguard.Service{}

@@ -15,6 +15,8 @@ import (
 	"buf.build/gen/go/grpc/grpc/connectrpc/go/grpc/reflection/v1/reflectionv1connect"
 	reflectionv1 "buf.build/gen/go/grpc/grpc/protocolbuffers/go/grpc/reflection/v1"
 	"connectrpc.com/connect"
+	"github.com/bufbuild/protocompile/parser"
+	"github.com/bufbuild/protocompile/reporter"
 	"github.com/bufbuild/protoyaml-go"
 	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -134,6 +136,8 @@ func AddServicesFromSingleFile(registry *ServiceRegistry, filepath string) error
 	slog.Info("AddServicesFromSingleFile", "filepath", filepath)
 	ext := path.Ext(filepath)
 	switch ext {
+	case ".proto":
+		return AddServicesFromProtoFile(registry, filepath)
 	case ".txtpb":
 		return AddServicesFromDescriptorsFileTXTPB(registry, filepath)
 	case ".json":
@@ -146,6 +150,30 @@ func AddServicesFromSingleFile(registry *ServiceRegistry, filepath string) error
 		slog.Info("not sure how to handle file", "filepath", filepath)
 	}
 	return nil
+}
+
+func AddServicesFromProtoFile(registry *ServiceRegistry, filepath string) error {
+	f, err := os.Open(filepath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	handler := reporter.NewHandler(nil)
+	ast, err := parser.Parse(filepath, f, handler)
+	if err != nil {
+		return err
+	}
+
+	res, err := parser.ResultFromAST(ast, true, handler)
+	if err != nil {
+		return fmt.Errorf("convert from AST: %w", err)
+	}
+	fd, err := protodesc.NewFile(res.FileDescriptorProto(), registry.Files())
+	if err != nil {
+		return fmt.Errorf("protodesc.NewFile: %w", err)
+	}
+
+	return registry.AddFile(fd)
 }
 
 func AddServicesFromDescriptorsFilePB(registry *ServiceRegistry, filepath string) error {
@@ -276,38 +304,6 @@ func addServicesFromDescriptorsBytes(registry *ServiceRegistry, fdp *descriptorp
 
 func AddServicesFromBSR(registry *ServiceRegistry, module string) error {
 	// TODO: Add support for downloading from the buf registry.
-	// It might just be easier to use a library for this.
-	// https://buf.build/bufbuild/registry/docs/main:buf.registry.module.v1#buf.registry.module.v1.File
-	// call buf.registry.module.v1.ModuleService/GetModules
-	// parts := strings.Split(module, "/")
-	// client := modulev1connect.NewModuleServiceClient(http.DefaultClient, "https://buf.build/")
-	// modules, err := client.GetModules(context.Background(), connect.NewRequest(&modulev1.GetModulesRequest{
-	// 	ModuleRefs: []*modulev1.ModuleRef{
-	// 		{
-	// 			Value: &modulev1.ModuleRef_Name_{
-	// 				Name: &modulev1.ModuleRef_Name{
-	// 					Owner:  parts[1],
-	// 					Module: parts[2],
-	// 				},
-	// 			},
-	// 		},
-	// 	},
-	// }))
-	// if err != nil {
-	// 	return err
-	// }
-	// log.Println(modules.Msg)
-	// dlclient := modulev1connect.NewDownloadServiceClient(http.DefaultClient, "https://buf.build/")
-	// dlclient.Download(context.Background(), connect.NewRequest(&modulev1.DownloadRequest{
-	// 	Values: []*modulev1.DownloadRequest_Value{
-	// 		{
-	// 			ResourceRef:        &modulev1.ResourceRef{},
-	// 			FileTypes:          []modulev1.FileType{},
-	// 			Paths:              []string{},
-	// 			PathsAllowNotExist: false,
-	// 		},
-	// 	},
-	// }))
 	// buf.registry.module.v1.CommitService/GetCommits
 	// buf.registry.module.v1.GraphService/GetGraph
 	// buf.registry.module.v1.ModuleService/GetModules

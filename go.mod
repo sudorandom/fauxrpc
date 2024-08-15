@@ -10,6 +10,7 @@ require (
 	connectrpc.com/vanguard v0.2.0
 	github.com/alecthomas/kong v0.9.0
 	github.com/brianvoe/gofakeit/v7 v7.0.4
+	github.com/bufbuild/protocompile v0.14.0
 	github.com/bufbuild/protoyaml-go v0.1.11
 	github.com/golang/protobuf v1.5.4
 	golang.org/x/net v0.26.0

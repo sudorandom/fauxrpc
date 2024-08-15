@@ -8,13 +8,12 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
-	"github.com/sudorandom/fauxrpc"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/dynamicpb"
 )
 
-func NewHandler(service protoreflect.ServiceDescriptor, generator fauxrpc.DataGenerator) http.Handler {
+func NewHandler(service protoreflect.ServiceDescriptor, generator DataGenerator) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Trailer", "Grpc-Status,Grpc-Message")
 		w.Header().Add("Content-Type", "application/grpc")
