@@ -2,7 +2,18 @@
 
 Quickly and easily set up a mock gRPC/gRPC-Web/Connect/Protobuf-powered REST API that returns random test data. No complicated code generation step, just pass the protobuf descriptors and go!
 
+```mermaid
+flowchart LR
+
+protobuf(Protobuf) --> fauxrpc(FauxRPC)
+fauxrpc -->|gRPC| microservices(Microservices)
+fauxrpc -->|gRPC-Web| frontend(Web Frontend)
+fauxrpc -->|Connect| other-frontend(Other Frontend)
+fauxrpc -->|REST| api(Third-party API Client)
+```
+
 ### Mock out services from descriptors
+Now you can use protobuf descriptors to automatically make a fake API:
 ```shell
 $ buf build buf.build/bufbuild/registry -o descriptors.binpb
 $ go run ./cmd/fauxrpc/ run --schema=descriptors.binpb
@@ -21,6 +32,31 @@ $ buf curl --http2-prior-knowledge http://127.0.0.1:6660 --list-methods
 connectrpc.eliza.v1.ElizaService/Converse
 connectrpc.eliza.v1.ElizaService/Introduce
 connectrpc.eliza.v1.ElizaService/Say
+
+# Make a request! (connect)
+$ buf curl --http2-prior-knowledge http://127.0.0.1:6660/connectrpc.eliza.v1.ElizaService/Say
+{
+  "sentence": "Mollitia ratione ea modi libero corrupti minus qui autem et."
+}
+
+# Make a request with gRPC-Web
+$ buf curl --http2-prior-knowledge --protocol=grpcweb http://127.0.0.1:6660/connectrpc.eliza.v1.ElizaService/Say
+{
+  "sentence": "Eos illum consequatur adipisci eum et voluptatum quas id consequatur."
+}
+
+# Make a request with gRPC-Web
+$ buf curl --http2-prior-knowledge --protocol=grpc http://127.0.0.1:6660/connectrpc.eliza.v1.ElizaService/Say
+{
+  "sentence": "Autem voluptatem quam aut ipsam voluptatem velit architecto ducimus quibusdam."
+}
+```
+
+### Support for many different descriptors from different sources
+
+This shows using descriptors from a file and from server reflection:
+```shell
+$ go run ./cmd/fauxrpc/ run --schema=descriptors.binpb --schema=https://demo.connectrpc.com
 ```
 
 ## Status: SUPER Alpha
