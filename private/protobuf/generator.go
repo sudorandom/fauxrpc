@@ -178,7 +178,7 @@ func (g *dataGenerator) getFieldValue(field protoreflect.FieldDescriptor, depth 
 		v := protoreflect.ValueOfInt32(g.faker.Int32())
 		return &v
 	case protoreflect.Fixed32Kind:
-		v := protoreflect.ValueOfInt32(g.faker.Int32())
+		v := protoreflect.ValueOfUint32(g.faker.Uint32())
 		return &v
 	case protoreflect.FloatKind:
 		v := protoreflect.ValueOfFloat32(g.faker.Float32())
@@ -187,7 +187,7 @@ func (g *dataGenerator) getFieldValue(field protoreflect.FieldDescriptor, depth 
 		v := protoreflect.ValueOfInt64(g.faker.Int64())
 		return &v
 	case protoreflect.Fixed64Kind:
-		v := protoreflect.ValueOfInt64(g.faker.Int64())
+		v := protoreflect.ValueOfUint64(g.faker.Uint64())
 		return &v
 	case protoreflect.DoubleKind:
 		v := protoreflect.ValueOfFloat64(g.faker.Float64())
