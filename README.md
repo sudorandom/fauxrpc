@@ -5,11 +5,15 @@ Quickly and easily set up a mock gRPC/gRPC-Web/Connect/Protobuf-powered REST API
 ```mermaid
 flowchart LR
 
-protobuf(Protobuf) --> fauxrpc(FauxRPC)
+fauxrpc(FauxRPC)
+
+bsr("BSR\n(Buf Schema Registry)") -->|buf build| descriptors
+descriptors("Descriptors\nbinpb,json,txtpb,yaml") --> fauxrpc
+protobuf(Protobuf Files) --> fauxrpc
 fauxrpc -->|gRPC| microservices(Microservices)
 fauxrpc -->|gRPC-Web| frontend(Web Frontend)
 fauxrpc -->|Connect| other-frontend(Other Frontend)
-fauxrpc -->|REST| api(Third-party API Client)
+fauxrpc -->|REST| api(REST API Client)
 ```
 
 ### Mock out services from descriptors
@@ -62,7 +66,6 @@ $ go run github.com/sudorandom/fauxrpc/cmd/fauxrpc@latest run --schema=descripto
 ## Status: Alpha
 This project is just starting out. I plan to add a lot of things that make this tool actually usable in more situations.
 
-- Allow proto files as input
 - Use known `protovalidate` rules to determine how to generate output.
 - Service for adding/updating/removing stub responses.
 - Configuration file
