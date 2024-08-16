@@ -2,6 +2,7 @@ package protobuf
 
 import (
 	"log"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -9,6 +10,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/dynamicpb"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -30,6 +32,8 @@ func (g *dataGenerator) SetData(msg *dynamicpb.Message) {
 	// TODO: Lookup/resolve custom rules per field
 	// TODO: Lookup/resolve custom rules per type, starting with well-known
 	// TODO: Use known protovalidate rules as constraints
+	slog.Debug("setDataOnMessage", slog.String("msg", string(msg.Descriptor().FullName())))
+	defer slog.Debug("finished setDataOnMessage", slog.String("msg", string(msg.Descriptor().FullName())))
 	g.setDataOnMessage(msg, 0)
 }
 
@@ -45,7 +49,7 @@ func (g *dataGenerator) setDataOnMessage(msg *dynamicpb.Message, depth int) {
 		if field.IsList() {
 			listVal := msg.NewField(field)
 			for i := 0; i < 5; i++ {
-				if v := g.getFieldValue(field, depth); v != nil {
+				if v := g.getFieldValue(field, depth+1); v != nil {
 					listVal.List().Append(*v)
 				} else {
 					log.Printf("Unknown value %T %v", field, field.Kind())
@@ -58,8 +62,8 @@ func (g *dataGenerator) setDataOnMessage(msg *dynamicpb.Message, depth int) {
 		if field.IsMap() {
 			mapVal := msg.NewField(field)
 			for i := 0; i < 5; i++ {
-				v := g.getFieldValue(field.MapKey(), depth)
-				w := g.getFieldValue(field.MapValue(), depth)
+				v := g.getFieldValue(field.MapKey(), depth+1)
+				w := g.getFieldValue(field.MapValue(), depth+1)
 				if v != nil && w != nil {
 					mapVal.Map().Set((*v).MapKey(), *w)
 				} else {
@@ -69,7 +73,7 @@ func (g *dataGenerator) setDataOnMessage(msg *dynamicpb.Message, depth int) {
 			msg.Set(field, mapVal)
 			return
 		}
-		if v := g.getFieldValue(field, depth); v != nil {
+		if v := g.getFieldValue(field, depth+1); v != nil {
 			msg.Set(field, *v)
 		}
 	}
@@ -86,6 +90,21 @@ func (g *dataGenerator) genGoogleTimestamp() *protoreflect.Value {
 	return &v
 }
 
+func (g *dataGenerator) genGoogleValue() *protoreflect.Value {
+	// v := protoreflect.ValueOf(timestamppb.New(g.faker.Date()).ProtoReflect())
+	options := []func() *structpb.Value{
+		func() *structpb.Value { return structpb.NewNullValue() },
+		func() *structpb.Value { return structpb.NewBoolValue(g.faker.Bool()) },
+		func() *structpb.Value { return structpb.NewNumberValue(g.faker.Float64()) },
+		func() *structpb.Value { return structpb.NewStringValue(g.faker.SentenceSimple()) },
+		// TODO: structpb.NewList()
+		// TODO: structpb.NewStruct()
+	}
+	fn := options[g.faker.IntRange(0, len(options)-1)]
+	v := protoreflect.ValueOf(fn().ProtoReflect())
+	return &v
+}
+
 func (g *dataGenerator) getFieldValue(field protoreflect.FieldDescriptor, depth int) *protoreflect.Value {
 	switch field.Kind() {
 	case protoreflect.MessageKind:
@@ -96,6 +115,8 @@ func (g *dataGenerator) getFieldValue(field protoreflect.FieldDescriptor, depth 
 			return g.genGoogleTimestamp()
 		case "google.protobuf.Any":
 			return nil
+		case "google.protobuf.Value":
+			return g.genGoogleValue()
 		default:
 			nested := dynamicpb.NewMessage(field.Message())
 			g.setDataOnMessage(nested, depth+1)
