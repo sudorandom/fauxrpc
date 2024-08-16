@@ -16,13 +16,13 @@ fauxrpc -->|REST| api(Third-party API Client)
 Now you can use protobuf descriptors to automatically make a fake API:
 ```shell
 $ buf build buf.build/bufbuild/registry -o descriptors.binpb
-$ go run ./cmd/fauxrpc/ run --schema=descriptors.binpb
+$ go run github.com/sudorandom/fauxrpc/cmd/fauxrpc@latest run --schema=descriptors.binpb
 ```
 
 ### Mock out services using reflection
 Use the reflection API to fake another gRPC server(s).
 ```shell
-$ go run ./cmd/fauxrpc/ run --schema=https://demo.connectrpc.com
+$ go run github.com/sudorandom/fauxrpc/cmd/fauxrpc@latest run --schema=https://demo.connectrpc.com
 2024/08/15 19:10:01 INFO add file name=connectrpc.eliza.v1 path=connectrpc/eliza/v1/eliza.proto
 2024/08/15 19:10:01 INFO Listening on http://127.0.0.1:6660
 2024/08/15 19:10:01 INFO See available methods: buf curl --http2-prior-knowledge http://127.0.0.1:6660 --list-methods
@@ -56,12 +56,13 @@ $ buf curl --http2-prior-knowledge --protocol=grpc http://127.0.0.1:6660/connect
 
 This shows using descriptors from a file and from server reflection:
 ```shell
-$ go run ./cmd/fauxrpc/ run --schema=descriptors.binpb --schema=https://demo.connectrpc.com
+$ go run github.com/sudorandom/fauxrpc/cmd/fauxrpc@latest run --schema=descriptors.binpb --schema=https://demo.connectrpc.com
 ```
 
-## Status: SUPER Alpha
+## Status: Alpha
 This project is just starting out. I plan to add a lot of things that make this tool actually usable in more situations.
 
+- Allow proto files as input
 - Use known `protovalidate` rules to determine how to generate output.
 - Service for adding/updating/removing stub responses.
 - Configuration file
@@ -70,4 +71,3 @@ This project is just starting out. I plan to add a lot of things that make this 
 - Heuristics "firstName" should probably generate first names, etc.
 - Testing for REST translations. I have no idea if this actually works
 - Streaming support
-- Allow proto files as input?
