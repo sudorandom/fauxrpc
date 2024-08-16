@@ -15,6 +15,7 @@ type StringHints struct {
 	Name      bool
 	UUID      bool
 	URL       bool
+	Version   bool
 }
 
 func GenerateString(faker *gofakeit.Faker, hints StringHints) string {
@@ -30,6 +31,8 @@ func GenerateString(faker *gofakeit.Faker, hints StringHints) string {
 			return faker.UUID()
 		case hints.URL:
 			return faker.URL()
+		case hints.Version:
+			return faker.AppVersion()
 		}
 		return faker.Word()
 	}

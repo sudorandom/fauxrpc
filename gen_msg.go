@@ -1,7 +1,8 @@
 package fauxrpc
 
 import (
-	"log"
+	"fmt"
+	"log/slog"
 
 	"google.golang.org/protobuf/types/dynamicpb"
 )
@@ -22,7 +23,7 @@ func (g *dataGenerator) setDataOnMessage(msg *dynamicpb.Message, st state) {
 				if v := g.getFieldValue(field, st.Inc()); v != nil {
 					listVal.List().Append(*v)
 				} else {
-					log.Printf("Unknown value %T %v", field, field.Kind())
+					slog.Warn(fmt.Sprintf("Unknown list value %s %v", field.FullName(), field.Kind()))
 				}
 			}
 
@@ -38,7 +39,7 @@ func (g *dataGenerator) setDataOnMessage(msg *dynamicpb.Message, st state) {
 				if v != nil && w != nil {
 					mapVal.Map().Set((*v).MapKey(), *w)
 				} else {
-					log.Printf("Unknown value %T %v", field, field.Kind())
+					slog.Warn(fmt.Sprintf("Unknown map k/v %s %v", field.FullName(), field.Kind()))
 				}
 			}
 			msg.Set(field, mapVal)

@@ -58,6 +58,8 @@ func (g *dataGenerator) getFieldValue(field protoreflect.FieldDescriptor, st sta
 			hints.UUID = true
 		case strings.Contains(lowerName, "url"):
 			hints.URL = true
+		case strings.Contains(lowerName, "version"):
+			hints.Version = true
 		}
 		v := protoreflect.ValueOfString(GenerateString(g.faker, hints))
 		return &v
