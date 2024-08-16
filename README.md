@@ -1,4 +1,5 @@
 # FauxRPC
+![](<assets/logo.jpg>)
 
 Quickly and easily set up a mock gRPC/gRPC-Web/Connect/Protobuf-powered REST API that returns random test data. No complicated code generation step, just pass the protobuf descriptors and go!
 
