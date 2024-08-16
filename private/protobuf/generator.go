@@ -48,7 +48,8 @@ func (g *dataGenerator) setDataOnMessage(msg *dynamicpb.Message, depth int) {
 		field := fields.Get(i)
 		if field.IsList() {
 			listVal := msg.NewField(field)
-			for i := 0; i < 5; i++ {
+			itemCount := g.faker.IntRange(0, 4)
+			for i := 0; i < itemCount; i++ {
 				if v := g.getFieldValue(field, depth+1); v != nil {
 					listVal.List().Append(*v)
 				} else {
@@ -61,7 +62,8 @@ func (g *dataGenerator) setDataOnMessage(msg *dynamicpb.Message, depth int) {
 		}
 		if field.IsMap() {
 			mapVal := msg.NewField(field)
-			for i := 0; i < 5; i++ {
+			itemCount := g.faker.IntRange(0, 4)
+			for i := 0; i < itemCount; i++ {
 				v := g.getFieldValue(field.MapKey(), depth+1)
 				w := g.getFieldValue(field.MapValue(), depth+1)
 				if v != nil && w != nil {
@@ -151,7 +153,7 @@ func (g *dataGenerator) getFieldValue(field protoreflect.FieldDescriptor, depth 
 		case strings.Contains(lowerName, "url"):
 			v = protoreflect.ValueOfString(g.faker.URL())
 		default:
-			v = protoreflect.ValueOfString(g.faker.LoremIpsumSentence(10))
+			v = protoreflect.ValueOfString(g.faker.SentenceSimple())
 		}
 		return &v
 	case protoreflect.Int32Kind:
