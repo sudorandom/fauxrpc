@@ -82,7 +82,7 @@ func (g *dataGenerator) setDataOnMessage(msg *dynamicpb.Message, depth int) {
 }
 
 func (g *dataGenerator) genGoogleDuration() *protoreflect.Value {
-	duration := time.Duration(g.faker.IntRange(0, int(30*time.Hour*24)))
+	duration := time.Duration(g.faker.Rand.Uint64() % uint64(30*time.Hour*24))
 	v := protoreflect.ValueOf(durationpb.New(duration).ProtoReflect())
 	return &v
 }
