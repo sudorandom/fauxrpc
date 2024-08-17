@@ -86,6 +86,42 @@ You can define this `--schema` option as many times as you want. That means you 
 $ fauxrpc run --schema=https://demo.connectrpc.com --schema=./example.binpb
 ```
 
+## Multi-protocol Support
+The multi-protocol support [is based on ConnectRPC](https://connectrpc.com/docs/multi-protocol/). So with FauxRPC, you get **gRPC, gRPC-Web and Connect** out of the box. However, FauxRPC does one thing more. It allows you to use [`google.api.http` annotations](https://grpc-ecosystem.github.io/grpc-gateway/docs/tutorials/adding_annotations/) to present a JSON/HTTP API, so you can gRPC and REST together! This is normally done with [an additional service](https://github.com/grpc-ecosystem/grpc-gateway) that runs in-between the outside world and your actual gRPC service but with FauxRPC you get the so-called transcoding from HTTP/JSON to gRPC all in the same package. Here's a concrete example:
+
+```protobuf
+syntax = "proto3";
+
+package http.service;
+
+import "google/api/annotations.proto";
+
+service HTTPService {
+  rpc GetMessage(GetMessageRequest) returns (Message) {
+    option (google.api.http) = {get: "/v1/{name=messages/*}"};
+  }
+}
+message GetMessageRequest {
+  string name = 1; // Mapped to URL path.
+}
+message Message {
+  string text = 1; // The resource content.
+}
+```
+
+Again, we start the service by building the descriptors and using
+```
+$ buf build ./httpservice.proto -o ./httpservice.binpb
+$ fauxrpc run --schema=httpservice.binpb
+```
+
+Now that we have the server running we can test this with the "normal" curl:
+```shell
+$ curl http://127.0.0.1:6660/v1/messages/123456
+{"text":"Retro."}⏎
+```
+Sweet. You can now easily support REST alongside gRPC. If you are wondering how to do this with "real" services, look into [vangaurd-go](https://github.com/connectrpc/vanguard-go). This library is doing the real heavy lifting.
+
 ## What does the fake data look like?
 You might be wondering what actual responses look like. FauxRPC's fake data generation is continually improving so these details might change as time goes on. It uses a library called [fakeit](https://github.com/brianvoe/gofakeit) to generate fake data. Because protobufs have pretty well-defined types, we can easily generate data that technically matches the types. This works well for most use cases, but FauxRPC tries to be a little bit better. If you annotate your protobuf files with [protovalidate](https://github.com/bufbuild/protovalidate) constraints, FauxRPC will try its best to generate data that matches these constraints. Let's look at some examples!
 
@@ -152,5 +188,4 @@ This project is just starting out. I plan to add a lot of things that make this 
 - Service for adding/updating/removing stub responses with a CLI to add/remove/replace these stubs
 - Configuration file
 - BSR Support (this is a 'maybe' because using `buf build` to emit descriptors works well enough IMO)
-- Testing for REST translations. I have no idea if this actually works yet
 - Better streaming support. FauxRPC does work with streaming calls but it only returns a single response
