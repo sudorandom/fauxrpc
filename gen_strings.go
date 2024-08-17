@@ -1,6 +1,7 @@
 package fauxrpc
 
 import (
+	"math"
 	"strconv"
 	"strings"
 
@@ -16,6 +17,10 @@ type StringHints struct {
 	UUID      bool
 	URL       bool
 	Version   bool
+}
+
+func randInt64GeometricDist(faker *gofakeit.Faker, p float64) int64 {
+	return int64(math.Floor(math.Log(faker.Float64()) / math.Log(1.0-p)))
 }
 
 func GenerateString(faker *gofakeit.Faker, hints StringHints) string {
@@ -34,7 +39,7 @@ func GenerateString(faker *gofakeit.Faker, hints StringHints) string {
 		case hints.Version:
 			return faker.AppVersion()
 		}
-		return faker.Word()
+		return faker.HipsterSentence(int(randInt64GeometricDist(faker, 0.5) + 1))
 	}
 
 	if hints.Rules.Const != nil {
@@ -97,5 +102,20 @@ func GenerateString(faker *gofakeit.Faker, hints StringHints) string {
 		}
 	}
 
-	return faker.Sentence(int(maxLen / uint64(4)))[minLen:maxLen]
+	return generateHipsterText(faker, minLen, maxLen)
+}
+
+func generateHipsterText(faker *gofakeit.Faker, minLen, maxLen uint64) string {
+	b := &strings.Builder{}
+	addMoreText := func() {
+		b.WriteString(faker.HipsterSentence(int(randInt64GeometricDist(faker, 0.5) + 1)))
+	}
+	addMoreText()
+	for uint64(b.Len()) < minLen {
+		addMoreText()
+	}
+	if uint64(b.Len()) > maxLen {
+		return b.String()[:maxLen-1]
+	}
+	return b.String()
 }
