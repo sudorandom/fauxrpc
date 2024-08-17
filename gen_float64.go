@@ -8,6 +8,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
+// GenerateFloat64 returns a fake float64 value given a field descriptor.
 func GenerateFloat64(fd protoreflect.FieldDescriptor) float64 {
 	constraints := getResolver().ResolveFieldConstraints(fd)
 	if constraints == nil {

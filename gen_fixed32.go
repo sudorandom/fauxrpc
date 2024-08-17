@@ -8,6 +8,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
+// GenerateFixed32 returns a fake fixed32 value given a field descriptor.
 func GenerateFixed32(fd protoreflect.FieldDescriptor) uint32 {
 	constraints := getResolver().ResolveFieldConstraints(fd)
 	if constraints == nil {

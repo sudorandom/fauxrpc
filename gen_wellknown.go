@@ -11,17 +11,20 @@ import (
 )
 
 func genGoogleDuration() *protoreflect.Value {
+	// TODO: use protovalidate
 	duration := time.Duration(gofakeit.Uint64() % uint64(30*time.Hour*24))
 	v := protoreflect.ValueOf(durationpb.New(duration).ProtoReflect())
 	return &v
 }
 
 func genGoogleTimestamp() *protoreflect.Value {
+	// TODO: use protovalidate
 	v := protoreflect.ValueOf(timestamppb.New(gofakeit.Date()).ProtoReflect())
 	return &v
 }
 
 func genGoogleValue() *protoreflect.Value {
+	// TODO: use protovalidate
 	scalarOptions := []func() *structpb.Value{
 		func() *structpb.Value { return structpb.NewNullValue() },
 		func() *structpb.Value { return structpb.NewBoolValue(gofakeit.Bool()) },

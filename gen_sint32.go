@@ -8,6 +8,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
+// GenerateSInt32 returns a fake sint32 value given a field descriptor.
 func GenerateSInt32(fd protoreflect.FieldDescriptor) int32 {
 	constraints := getResolver().ResolveFieldConstraints(fd)
 	if constraints == nil {

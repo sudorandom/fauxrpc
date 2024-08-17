@@ -8,6 +8,7 @@ import (
 	"google.golang.org/protobuf/types/dynamicpb"
 )
 
+// SetDataOnMessage generates fake data given a *dynamicpb.Message and sets the field values.
 func SetDataOnMessage(msg *dynamicpb.Message) {
 	setDataOnMessage(msg, state{})
 }

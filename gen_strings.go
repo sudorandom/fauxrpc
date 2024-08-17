@@ -36,6 +36,7 @@ func generateStringSimple(fd protoreflect.FieldDescriptor) string {
 	return gofakeit.HipsterSentence(int(randInt64GeometricDist(0.5) + 1))
 }
 
+// GenerateString returns a fake string value given a field descriptor.
 func GenerateString(fd protoreflect.FieldDescriptor) string {
 	constraints := getResolver().ResolveFieldConstraints(fd)
 	if constraints == nil {

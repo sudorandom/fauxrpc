@@ -8,6 +8,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
+// GenerateFloat32 returns a fake float32 value given a field descriptor.
 func GenerateFloat32(fd protoreflect.FieldDescriptor) float32 {
 	constraints := getResolver().ResolveFieldConstraints(fd)
 	if constraints == nil {

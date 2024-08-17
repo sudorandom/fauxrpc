@@ -8,7 +8,8 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-func GenerateSFixedInt32(fd protoreflect.FieldDescriptor) int32 {
+// GenerateSFixed32 returns a fake sfixedint32 value given a field descriptor.
+func GenerateSFixed32(fd protoreflect.FieldDescriptor) int32 {
 	constraints := getResolver().ResolveFieldConstraints(fd)
 	if constraints == nil {
 		return gofakeit.Int32()

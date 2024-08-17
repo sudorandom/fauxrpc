@@ -8,6 +8,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
+// GenerateUInt32 returns a fake uint32 value given a field descriptor.
 func GenerateUInt32(fd protoreflect.FieldDescriptor) uint32 {
 	constraints := getResolver().ResolveFieldConstraints(fd)
 	if constraints == nil {

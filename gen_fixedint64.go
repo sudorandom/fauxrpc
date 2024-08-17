@@ -8,6 +8,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
+// GenerateFixed64 returns a fake fixed64 value given a field descriptor.
 func GenerateFixed64(fd protoreflect.FieldDescriptor) uint64 {
 	constraints := getResolver().ResolveFieldConstraints(fd)
 	if constraints == nil {
