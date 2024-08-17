@@ -77,17 +77,19 @@ func getFieldValue(fd protoreflect.FieldDescriptor, st state) *protoreflect.Valu
 	case protoreflect.MessageKind:
 		switch string(fd.Message().FullName()) {
 		case "google.protobuf.Duration":
-			// TODO: hints
-			return genGoogleDuration()
+			if val := GenerateGoogleDuration(fd); val != nil {
+				v := protoreflect.ValueOf(val.ProtoReflect())
+				return &v
+			}
 		case "google.protobuf.Timestamp":
-			// TODO: hints
-			return genGoogleTimestamp()
+			if val := GenerateGoogleTimestamp(fd); val != nil {
+				v := protoreflect.ValueOf(val.ProtoReflect())
+				return &v
+			}
 		case "google.protobuf.Any":
-			// TODO: hints
 			return nil
 		case "google.protobuf.Value":
-			// TODO: hints
-			return genGoogleValue()
+			return generateGoogleValue()
 		}
 
 		nested := dynamicpb.NewMessage(fd.Message())

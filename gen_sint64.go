@@ -34,7 +34,7 @@ func GenerateSInt64(fd protoreflect.FieldDescriptor) int64 {
 	if rules.LessThan != nil {
 		switch v := rules.LessThan.(type) {
 		case *validate.SInt64Rules_Lt:
-			maxVal = v.Lt + 1
+			maxVal = v.Lt - 1
 		case *validate.SInt64Rules_Lte:
 			maxVal = v.Lte
 		}

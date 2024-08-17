@@ -34,7 +34,7 @@ func GenerateFixed32(fd protoreflect.FieldDescriptor) uint32 {
 	if rules.LessThan != nil {
 		switch v := rules.LessThan.(type) {
 		case *validate.Fixed32Rules_Lt:
-			maxVal = v.Lt + 1
+			maxVal = v.Lt - 1
 		case *validate.Fixed32Rules_Lte:
 			maxVal = v.Lte
 		}

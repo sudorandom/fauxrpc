@@ -34,7 +34,7 @@ func GenerateFloat64(fd protoreflect.FieldDescriptor) float64 {
 	if rules.LessThan != nil {
 		switch v := rules.LessThan.(type) {
 		case *validate.DoubleRules_Lt:
-			maxVal = v.Lt + 1
+			maxVal = v.Lt - 1
 		case *validate.DoubleRules_Lte:
 			maxVal = v.Lte
 		}
