@@ -1,77 +1,144 @@
 # FauxRPC
-![](<assets/logo.jpg>)
+![](<assets/logo-wide.jpg>)
 
 Quickly and easily set up a mock gRPC/gRPC-Web/Connect/Protobuf-powered REST API that returns random test data. No complicated code generation step, just pass the protobuf descriptors and go!
 
-```mermaid
-flowchart LR
+![](<assets/diagram.svg>)
 
-fauxrpc(FauxRPC)
+## Get Started
+FauxRPC is available as an open-source project.
 
-bsr("BSR\n(Buf Schema Registry)") -->|buf build| descriptors
-descriptors("Descriptors\nbinpb,json,txtpb,yaml") --> fauxrpc
-protobuf(Protobuf Files) --> fauxrpc
-fauxrpc -->|gRPC| microservices(Microservices)
-fauxrpc -->|gRPC-Web| frontend(Web Frontend)
-fauxrpc -->|Connect| other-frontend(Other Frontend)
-fauxrpc -->|REST| api(REST API Client)
+### Install via source
+```
+go install github.com/sudorandom/fauxrpc/cmd/fauxrpc@latest
 ```
 
-### Mock out services from descriptors
-Now you can use protobuf descriptors to automatically make a fake API:
-```shell
-$ buf build buf.build/bufbuild/registry -o descriptors.binpb
-$ go run github.com/sudorandom/fauxrpc/cmd/fauxrpc@latest run --schema=descriptors.binpb
-```
+### Pre-built binaries
+Binaries are built for several platforms for each release. See the latest ones on [the releases page](https://github.com/sudorandom/fauxrpc/releases/latest).
 
-### Mock out services using reflection
-Use the reflection API to fake another gRPC server(s).
-```shell
-$ go run github.com/sudorandom/fauxrpc/cmd/fauxrpc@latest run --schema=https://demo.connectrpc.com
-2024/08/15 19:10:01 INFO add file name=connectrpc.eliza.v1 path=connectrpc/eliza/v1/eliza.proto
-2024/08/15 19:10:01 INFO Listening on http://127.0.0.1:6660
-2024/08/15 19:10:01 INFO See available methods: buf curl --http2-prior-knowledge http://127.0.0.1:6660 --list-methods
+### Use Descriptors
+Make an `example.proto` file (or use a file that already exists):
+```protobuf
+syntax = "proto3";
 
-# (in another shell) List out methods
-$ buf curl --http2-prior-knowledge http://127.0.0.1:6660 --list-methods
-connectrpc.eliza.v1.ElizaService/Converse
-connectrpc.eliza.v1.ElizaService/Introduce
-connectrpc.eliza.v1.ElizaService/Say
+package greet.v1;
 
-# Make a request! (connect)
-$ buf curl --http2-prior-knowledge http://127.0.0.1:6660/connectrpc.eliza.v1.ElizaService/Say
-{
-  "sentence": "Mollitia ratione ea modi libero corrupti minus qui autem et."
+message GreetRequest {
+  string name = 1;
 }
 
-# Make a request with gRPC-Web
-$ buf curl --http2-prior-knowledge --protocol=grpcweb http://127.0.0.1:6660/connectrpc.eliza.v1.ElizaService/Say
-{
-  "sentence": "Eos illum consequatur adipisci eum et voluptatum quas id consequatur."
+message GreetResponse {
+  string greeting = 1;
 }
 
-# Make a request with gRPC-Web
-$ buf curl --http2-prior-knowledge --protocol=grpc http://127.0.0.1:6660/connectrpc.eliza.v1.ElizaService/Say
-{
-  "sentence": "Autem voluptatem quam aut ipsam voluptatem velit architecto ducimus quibusdam."
+service GreetService {
+  rpc Greet(GreetRequest) returns (GreetResponse) {}
 }
 ```
 
-### Support for many different descriptors from different sources
-
-This shows using descriptors from a file and from server reflection:
+Create a descriptors file and use it to start the FauxRPC server:
 ```shell
-$ go run github.com/sudorandom/fauxrpc/cmd/fauxrpc@latest run --schema=descriptors.binpb --schema=https://demo.connectrpc.com
+$ buf build ./example.proto -o ./example.binpb
+$ fauxrpc run --schema=./example.binpb
+2024/08/17 08:01:19 INFO Listening on http://127.0.0.1:6660
+2024/08/17 08:01:19 INFO See available methods: buf curl --http2-prior-knowledge http://127.0.0.1:6660 --list-methods
 ```
+Done! It's that easy. Now you can call the service with any tooling that supports gRPC, gRPC-Web, or connect. So [buf curl](https://buf.build/docs/reference/cli/buf/curl), [grpcurl](https://github.com/fullstorydev/grpcurl), [Postman](https://www.postman.com/), [Insomnia](https://insomnia.rest/) all work fine!
+
+```shell
+$ buf curl --http2-prior-knowledge http://127.0.0.1:6660/greet.v1.GreetService/Greet
+{
+  "greeting":  "3 wolf moon fashion axe."
+}
+```
+
+### Server Reflection
+If there's an existing gRPC service running that you want to emulate, you can use server reflection to start the FauxRPC service:
+```shell
+$ fauxrpc run --schema=https://demo.connectrpc.com
+```
+
+### From BSR (Buf Schema Registry)
+Buf has a [schema registry](https://buf.build/product/bsr) where many schemas are hosted. Here's how to use FauxRPC using images from the registry.
+
+```shell
+$ buf build buf.build/bufbuild/registry -o bufbuild.registry.json
+$ fauxrpc run --schema=./bufbuild.registry.json
+```
+
+This will start a fake version of the BSR API by downloading descriptors for [bufbuild/registry](https://buf.build/bufbuild/registry) from the BSR and using them with FauxRPC. Very meta.
+
+### Multiple Sources
+You can define this `--schema` option as many times as you want. That means you can add services from multiple descriptors and even mix and match from descriptors and from server reflection:
+```shell
+$ fauxrpc run --schema=https://demo.connectrpc.com --schema=./example.binpb
+```
+
+## What does the fake data look like?
+You might be wondering what actual responses look like. FauxRPC's fake data generation is continually improving so these details might change as time goes on. It uses a library called [fakeit](https://github.com/brianvoe/gofakeit) to generate fake data. Because protobufs have pretty well-defined types, we can easily generate data that technically matches the types. This works well for most use cases, but FauxRPC tries to be a little bit better. If you annotate your protobuf files with [protovalidate](https://github.com/bufbuild/protovalidate) constraints, FauxRPC will try its best to generate data that matches these constraints. Let's look at some examples!
+
+```protobuf
+syntax = "proto3";
+
+package greet.v1;
+
+message GreetRequest {
+  string name = 1;
+}
+
+message GreetResponse {
+  string greeting = 1;
+}
+
+service GreetService {
+  rpc Greet(GreetRequest) returns (GreetResponse) {}
+}
+```
+
+With FauxRPC, you will get any kind of word, so it might look like this:
+```json
+{
+  "greeting": "Poutine."
+}
+```
+This is fine, but for the RPC, we know a bit more about the type being returned. We know that it sends a greeting back that looks like "Hello, [name]". So here's what the same protobuf file might look like with protovalidate constraints:
+
+
+Now let's see what this looks like with protovalidate constraints:
+```protobuf
+syntax = "proto3";
+
+import "buf/validate/validate.proto";
+
+package greet.v1;
+
+message GreetRequest {
+  string name = 1 [(buf.validate.field).string = {min_len: 3, max_len: 100}];
+}
+
+message GreetResponse {
+  string greeting = 1 [(buf.validate.field).string.pattern = "^Hello, [a-zA-Z]+$"];
+}
+
+service GreetService {
+  rpc Greet(GreetRequest) returns (GreetResponse) {}
+}
+```
+
+With this new protobuf file, this is what FauxRPC might output now:
+
+```json
+{
+  "greeting": "Hello, TWXxF"
+}
+```
+In essence, protovalidate constraints enable FauxRPC to generate more realistic and contextually relevant fake data, aligning it closer to the expected behavior of your actual services.
 
 ## Status: Alpha
 This project is just starting out. I plan to add a lot of things that make this tool actually usable in more situations.
 
-- Use known `protovalidate` rules to determine how to generate output.
-- Service for adding/updating/removing stub responses.
+- Service for adding/updating/removing stub responses with a CLI to add/remove/replace these stubs
 - Configuration file
-- BSR Support (maybe, using `buf build` to emit descriptors works well enough IMO)
-- Templating for stub responses, maybe give the option to use values from the input in the output
-- Heuristics "firstName" should probably generate first names, etc.
-- Testing for REST translations. I have no idea if this actually works
-- Streaming support
+- BSR Support (this is a 'maybe' because using `buf build` to emit descriptors works well enough IMO)
+- Testing for REST translations. I have no idea if this actually works yet
+- Better streaming support. FauxRPC does work with streaming calls but it only returns a single response

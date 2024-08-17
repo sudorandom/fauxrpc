@@ -1,0 +1,37 @@
+# d2 content/posts/2024/fauxrpc/diagram.d2 --sketch --theme 201 content/posts/2024/fauxrpc/diagram.svg
+
+style: {
+  fill: transparent
+}
+
+Buf Schema Registry.shape: cloud
+Buf Schema Registry -> Descriptors: buf build
+
+Descriptors.label: Descriptors\nbinpb, json, txtpb, yaml
+Descriptors.shape: document
+Descriptors -> FauxRPC
+Protobuf.shape: document
+Protobuf -> FauxRPC
+Protobuf -> Descriptors: buf build
+
+FauxRPC.shape: oval
+FauxRPC -> Microservices: gRPC {
+  style: {
+    bold: true
+  }
+}
+FauxRPC -> Web Frontend: gRPC-Web {
+  style: {
+    bold: true
+  }
+}
+FauxRPC -> Other Frontend: Connect {
+  style: {
+    bold: true
+  }
+}
+FauxRPC -> REST API Client: REST {
+  style: {
+    bold: true
+  }
+}
