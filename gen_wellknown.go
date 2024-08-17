@@ -1,6 +1,7 @@
 package fauxrpc
 
 import (
+	"strings"
 	"time"
 
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
@@ -105,20 +106,29 @@ func GenerateGoogleTimestamp(fd protoreflect.FieldDescriptor) *timestamppb.Times
 	return timestamppb.New(time.Unix(0, (gofakeit.GlobalFaker.Int64()%delta)+min))
 }
 
-func generateGoogleValue() *protoreflect.Value {
-	// TODO: use protovalidate
-	scalarOptions := []func() *structpb.Value{
+func GenerateGoogleValue(fd protoreflect.FieldDescriptor, st state) *structpb.Value {
+	options := []func() *structpb.Value{
 		func() *structpb.Value { return structpb.NewNullValue() },
-		func() *structpb.Value { return structpb.NewBoolValue(gofakeit.Bool()) },
-		func() *structpb.Value { return structpb.NewNumberValue(gofakeit.Float64()) },
-		func() *structpb.Value { return structpb.NewStringValue(gofakeit.SentenceSimple()) },
+		func() *structpb.Value { return structpb.NewBoolValue(GenerateBool(fd)) },
+		func() *structpb.Value { return structpb.NewNumberValue(GenerateFloat64(fd)) },
+		func() *structpb.Value { return structpb.NewStringValue(GenerateString(fd)) },
+		func() *structpb.Value {
+			list := &structpb.ListValue{}
+			itemCount := gofakeit.GlobalFaker.IntRange(0, 4)
+			for i := 0; i < itemCount; i++ {
+				list.Values = append(list.Values, GenerateGoogleValue(fd, st.Inc()))
+			}
+			return structpb.NewListValue(list)
+		},
+		func() *structpb.Value {
+			obj := &structpb.Struct{}
+			itemCount := gofakeit.GlobalFaker.IntRange(0, 4)
+			for i := 0; i < itemCount; i++ {
+				obj.Fields[strings.ToLower(gofakeit.Word())] = GenerateGoogleValue(fd, st.Inc())
+			}
+			return structpb.NewStructValue(obj)
+		},
 	}
-	msgOptions := []func() *structpb.Value{
-		// TODO: structpb.NewList()
-		// TODO: structpb.NewStruct()
-	}
-	options := append(scalarOptions, msgOptions...)
 	fn := options[gofakeit.IntRange(0, len(options)-1)]
-	v := protoreflect.ValueOf(fn().ProtoReflect())
-	return &v
+	return fn()
 }

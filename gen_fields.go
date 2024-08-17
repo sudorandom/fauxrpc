@@ -89,7 +89,10 @@ func getFieldValue(fd protoreflect.FieldDescriptor, st state) *protoreflect.Valu
 		case "google.protobuf.Any":
 			return nil
 		case "google.protobuf.Value":
-			return generateGoogleValue()
+			if val := GenerateGoogleValue(fd, st); val != nil {
+				v := protoreflect.ValueOf(val.ProtoReflect())
+				return &v
+			}
 		}
 
 		nested := dynamicpb.NewMessage(fd.Message())
