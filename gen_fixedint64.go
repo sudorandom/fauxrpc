@@ -5,31 +5,37 @@ import (
 
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	"github.com/brianvoe/gofakeit/v7"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type Fixed64Hints struct {
 	Rules *validate.Fixed64Rules
 }
 
-func GenerateFixed64(faker *gofakeit.Faker, hints Fixed64Hints) uint64 {
-	if hints.Rules == nil {
-		return faker.Uint64()
+func GenerateFixed64(fd protoreflect.FieldDescriptor) uint64 {
+	constraints := getResolver().ResolveFieldConstraints(fd)
+	if constraints == nil {
+		return gofakeit.Uint64()
+	}
+	rules := constraints.GetFixed64()
+	if rules == nil {
+		return gofakeit.Uint64()
 	}
 
-	if hints.Rules.Const != nil {
-		return *hints.Rules.Const
+	if rules.Const != nil {
+		return *rules.Const
 	}
 	minVal, maxVal := uint64(0), uint64(math.MaxInt64)
-	if hints.Rules.GreaterThan != nil {
-		switch v := hints.Rules.GreaterThan.(type) {
+	if rules.GreaterThan != nil {
+		switch v := rules.GreaterThan.(type) {
 		case *validate.Fixed64Rules_Gt:
 			minVal = v.Gt + 1
 		case *validate.Fixed64Rules_Gte:
 			minVal = v.Gte
 		}
 	}
-	if hints.Rules.LessThan != nil {
-		switch v := hints.Rules.LessThan.(type) {
+	if rules.LessThan != nil {
+		switch v := rules.LessThan.(type) {
 		case *validate.Fixed64Rules_Lt:
 			maxVal = v.Lt + 1
 		case *validate.Fixed64Rules_Lte:
@@ -37,9 +43,9 @@ func GenerateFixed64(faker *gofakeit.Faker, hints Fixed64Hints) uint64 {
 		}
 	}
 
-	if len(hints.Rules.In) > 0 {
-		return hints.Rules.In[faker.IntRange(0, len(hints.Rules.In)-1)]
+	if len(rules.In) > 0 {
+		return rules.In[gofakeit.IntRange(0, len(rules.In)-1)]
 	}
 
-	return uint64(faker.UintRange(uint(minVal), uint(maxVal)))
+	return uint64(gofakeit.UintRange(uint(minVal), uint(maxVal)))
 }

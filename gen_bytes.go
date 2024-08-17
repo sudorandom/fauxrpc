@@ -3,6 +3,7 @@ package fauxrpc
 import (
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	"github.com/brianvoe/gofakeit/v7"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type BytesHints struct {
@@ -15,32 +16,41 @@ type BytesHints struct {
 	Version   bool
 }
 
-func GenerateBytes(faker *gofakeit.Faker, hints BytesHints) []byte {
-	if hints.Rules == nil {
-		return []byte(faker.HipsterSentence(3))
+func generateBytesSimple() []byte {
+	return []byte(gofakeit.HipsterSentence(3))
+}
+
+func GenerateBytes(fd protoreflect.FieldDescriptor) []byte {
+	constraints := getResolver().ResolveFieldConstraints(fd)
+	if constraints == nil {
+		return generateBytesSimple()
+	}
+	rules := constraints.GetBytes()
+	if rules == nil {
+		return generateBytesSimple()
 	}
 
-	if hints.Rules.Const != nil {
-		return hints.Rules.Const
+	if rules.Const != nil {
+		return rules.Const
 	}
 	minLen, maxLen := uint64(0), uint64(20)
-	if hints.Rules.Len != nil {
-		minLen = *hints.Rules.Len
-		maxLen = *hints.Rules.Len
+	if rules.Len != nil {
+		minLen = *rules.Len
+		maxLen = *rules.Len
 	}
-	if hints.Rules.MinLen != nil {
-		minLen = *hints.Rules.MinLen
+	if rules.MinLen != nil {
+		minLen = *rules.MinLen
 	}
-	if hints.Rules.MaxLen != nil {
-		maxLen = *hints.Rules.MaxLen
+	if rules.MaxLen != nil {
+		maxLen = *rules.MaxLen
 	}
-	if hints.Rules.Pattern != nil {
-		return []byte(faker.Regex(*hints.Rules.Pattern))
-	}
-
-	if len(hints.Rules.In) > 0 {
-		return hints.Rules.In[faker.IntRange(0, len(hints.Rules.In)-1)]
+	if rules.Pattern != nil {
+		return []byte(gofakeit.Regex(*rules.Pattern))
 	}
 
-	return []byte(faker.Sentence(int(maxLen / uint64(4)))[minLen:maxLen])
+	if len(rules.In) > 0 {
+		return rules.In[gofakeit.IntRange(0, len(rules.In)-1)]
+	}
+
+	return []byte(gofakeit.Sentence(int(maxLen / uint64(4)))[minLen:maxLen])
 }

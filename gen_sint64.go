@@ -5,31 +5,37 @@ import (
 
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	"github.com/brianvoe/gofakeit/v7"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type SInt64Hints struct {
 	Rules *validate.SInt64Rules
 }
 
-func GenerateSInt64(faker *gofakeit.Faker, hints SInt64Hints) int64 {
-	if hints.Rules == nil {
-		return faker.Int64()
+func GenerateSInt64(fd protoreflect.FieldDescriptor) int64 {
+	constraints := getResolver().ResolveFieldConstraints(fd)
+	if constraints == nil {
+		return gofakeit.Int64()
+	}
+	rules := constraints.GetSint64()
+	if rules == nil {
+		return gofakeit.Int64()
 	}
 
-	if hints.Rules.Const != nil {
-		return *hints.Rules.Const
+	if rules.Const != nil {
+		return *rules.Const
 	}
 	minVal, maxVal := int64(0), int64(math.MaxInt64)
-	if hints.Rules.GreaterThan != nil {
-		switch v := hints.Rules.GreaterThan.(type) {
+	if rules.GreaterThan != nil {
+		switch v := rules.GreaterThan.(type) {
 		case *validate.SInt64Rules_Gt:
 			minVal = v.Gt + 1
 		case *validate.SInt64Rules_Gte:
 			minVal = v.Gte
 		}
 	}
-	if hints.Rules.LessThan != nil {
-		switch v := hints.Rules.LessThan.(type) {
+	if rules.LessThan != nil {
+		switch v := rules.LessThan.(type) {
 		case *validate.SInt64Rules_Lt:
 			maxVal = v.Lt + 1
 		case *validate.SInt64Rules_Lte:
@@ -37,9 +43,9 @@ func GenerateSInt64(faker *gofakeit.Faker, hints SInt64Hints) int64 {
 		}
 	}
 
-	if len(hints.Rules.In) > 0 {
-		return hints.Rules.In[faker.IntRange(0, len(hints.Rules.In)-1)]
+	if len(rules.In) > 0 {
+		return rules.In[gofakeit.IntRange(0, len(rules.In)-1)]
 	}
 
-	return int64(faker.IntRange(int(minVal), int(maxVal)))
+	return int64(gofakeit.IntRange(int(minVal), int(maxVal)))
 }

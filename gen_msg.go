@@ -4,10 +4,15 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/brianvoe/gofakeit/v7"
 	"google.golang.org/protobuf/types/dynamicpb"
 )
 
-func (g *dataGenerator) setDataOnMessage(msg *dynamicpb.Message, st state) {
+func SetDataOnMessage(msg *dynamicpb.Message) {
+	setDataOnMessage(msg, state{})
+}
+
+func setDataOnMessage(msg *dynamicpb.Message, st state) {
 	if st.Depth > MaxNestedDepth {
 		return
 	}
@@ -18,9 +23,9 @@ func (g *dataGenerator) setDataOnMessage(msg *dynamicpb.Message, st state) {
 		field := fields.Get(i)
 		if field.IsList() {
 			listVal := msg.NewField(field)
-			itemCount := g.faker.IntRange(0, 4)
+			itemCount := gofakeit.GlobalFaker.IntRange(0, 4)
 			for i := 0; i < itemCount; i++ {
-				if v := g.getFieldValue(field, st.Inc()); v != nil {
+				if v := getFieldValue(field, st.Inc()); v != nil {
 					listVal.List().Append(*v)
 				} else {
 					slog.Warn(fmt.Sprintf("Unknown list value %s %v", field.FullName(), field.Kind()))
@@ -32,10 +37,10 @@ func (g *dataGenerator) setDataOnMessage(msg *dynamicpb.Message, st state) {
 		}
 		if field.IsMap() {
 			mapVal := msg.NewField(field)
-			itemCount := g.faker.IntRange(0, 4)
+			itemCount := gofakeit.GlobalFaker.IntRange(0, 4)
 			for i := 0; i < itemCount; i++ {
-				v := g.getFieldValue(field.MapKey(), st.Inc())
-				w := g.getFieldValue(field.MapValue(), st.Inc())
+				v := getFieldValue(field.MapKey(), st.Inc())
+				w := getFieldValue(field.MapValue(), st.Inc())
 				if v != nil && w != nil {
 					mapVal.Map().Set((*v).MapKey(), *w)
 				} else {
@@ -45,7 +50,7 @@ func (g *dataGenerator) setDataOnMessage(msg *dynamicpb.Message, st state) {
 			msg.Set(field, mapVal)
 			return
 		}
-		if v := g.getFieldValue(field, st.Inc()); v != nil {
+		if v := getFieldValue(field, st.Inc()); v != nil {
 			msg.Set(field, *v)
 		}
 	}

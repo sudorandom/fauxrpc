@@ -14,7 +14,7 @@ import (
 	"google.golang.org/protobuf/types/dynamicpb"
 )
 
-func NewHandler(service protoreflect.ServiceDescriptor, generator fauxrpc.DataGenerator) http.Handler {
+func NewHandler(service protoreflect.ServiceDescriptor) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Trailer", "Grpc-Status,Grpc-Message")
 		w.Header().Add("Content-Type", "application/grpc")
@@ -42,14 +42,14 @@ func NewHandler(service protoreflect.ServiceDescriptor, generator fauxrpc.DataGe
 
 		// completely ignore the body. Maybe later we'll need it as input to the response message
 		go func() {
-			io.Copy(io.Discard, r.Body)
-			r.Body.Close()
+			_, _ = io.Copy(io.Discard, r.Body)
+			_ = r.Body.Close()
 		}()
 
 		slog.Info("Called method", slog.String("service", serviceName), slog.String("method", methodName))
 
 		out := dynamicpb.NewMessage(method.Output())
-		generator.SetData(out)
+		fauxrpc.SetDataOnMessage(out)
 
 		b, err := proto.Marshal(out)
 		if err != nil {

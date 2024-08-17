@@ -5,31 +5,37 @@ import (
 
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	"github.com/brianvoe/gofakeit/v7"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type Float32Hints struct {
 	Rules *validate.FloatRules
 }
 
-func GenerateFloat32(faker *gofakeit.Faker, hints Float32Hints) float32 {
-	if hints.Rules == nil {
-		return faker.Float32()
+func GenerateFloat32(fd protoreflect.FieldDescriptor) float32 {
+	constraints := getResolver().ResolveFieldConstraints(fd)
+	if constraints == nil {
+		return gofakeit.Float32()
+	}
+	rules := constraints.GetFloat()
+	if rules == nil {
+		return gofakeit.Float32()
 	}
 
-	if hints.Rules.Const != nil {
-		return *hints.Rules.Const
+	if rules.Const != nil {
+		return *rules.Const
 	}
 	minVal, maxVal := float32(0), float32(math.MaxFloat32)
-	if hints.Rules.GreaterThan != nil {
-		switch v := hints.Rules.GreaterThan.(type) {
+	if rules.GreaterThan != nil {
+		switch v := rules.GreaterThan.(type) {
 		case *validate.FloatRules_Gt:
 			minVal = v.Gt + 1
 		case *validate.FloatRules_Gte:
 			minVal = v.Gte
 		}
 	}
-	if hints.Rules.LessThan != nil {
-		switch v := hints.Rules.LessThan.(type) {
+	if rules.LessThan != nil {
+		switch v := rules.LessThan.(type) {
 		case *validate.FloatRules_Lt:
 			maxVal = v.Lt + 1
 		case *validate.FloatRules_Lte:
@@ -37,9 +43,9 @@ func GenerateFloat32(faker *gofakeit.Faker, hints Float32Hints) float32 {
 		}
 	}
 
-	if len(hints.Rules.In) > 0 {
-		return hints.Rules.In[faker.IntRange(0, len(hints.Rules.In)-1)]
+	if len(rules.In) > 0 {
+		return rules.In[gofakeit.IntRange(0, len(rules.In)-1)]
 	}
 
-	return faker.Float32Range(minVal, maxVal)
+	return gofakeit.Float32Range(minVal, maxVal)
 }

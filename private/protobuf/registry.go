@@ -48,7 +48,10 @@ type ServiceRegistry struct {
 func NewServiceRegistry() *ServiceRegistry {
 	files := new(protoregistry.Files)
 	protoregistry.GlobalFiles.RangeFiles(func(fd protoreflect.FileDescriptor) bool {
-		files.RegisterFile(fd)
+		err := files.RegisterFile(fd)
+		if err != nil {
+			slog.Error("error registering global file", slog.String("file", string(fd.FullName())))
+		}
 		return true
 	})
 

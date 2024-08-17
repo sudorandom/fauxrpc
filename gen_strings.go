@@ -7,6 +7,7 @@ import (
 
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	"github.com/brianvoe/gofakeit/v7"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type StringHints struct {
@@ -19,96 +20,113 @@ type StringHints struct {
 	Version   bool
 }
 
-func randInt64GeometricDist(faker *gofakeit.Faker, p float64) int64 {
-	return int64(math.Floor(math.Log(faker.Float64()) / math.Log(1.0-p)))
+func randInt64GeometricDist(p float64) int64 {
+	return int64(math.Floor(math.Log(gofakeit.Float64()) / math.Log(1.0-p)))
 }
 
-func GenerateString(faker *gofakeit.Faker, hints StringHints) string {
-	if hints.Rules == nil {
-		switch {
-		case hints.FirstName:
-			return faker.FirstName()
-		case hints.LastName:
-			return faker.LastName()
-		case hints.Name:
-			return faker.Name()
-		case hints.UUID:
-			return faker.UUID()
-		case hints.URL:
-			return faker.URL()
-		case hints.Version:
-			return faker.AppVersion()
-		}
-		return faker.HipsterSentence(int(randInt64GeometricDist(faker, 0.5) + 1))
+func generateStringSimple(fd protoreflect.FieldDescriptor) string {
+	lowerName := strings.ToLower(string(fd.Name()))
+	switch {
+	case strings.Contains(lowerName, "firstname"):
+		return gofakeit.FirstName()
+	case strings.Contains(lowerName, "lastname"):
+		return gofakeit.LastName()
+	case strings.Contains(lowerName, "name"):
+		return gofakeit.Name()
+	case strings.Contains(lowerName, "id"):
+		return gofakeit.UUID()
+	case strings.Contains(lowerName, "token"):
+		return gofakeit.UUID()
+	case strings.Contains(lowerName, "url"):
+		return gofakeit.URL()
+	case strings.Contains(lowerName, "version"):
+		return gofakeit.AppVersion()
 	}
 
-	if hints.Rules.Const != nil {
-		return *hints.Rules.Const
+	return gofakeit.HipsterSentence(int(randInt64GeometricDist(0.5) + 1))
+}
+
+func GenerateString(fd protoreflect.FieldDescriptor) string {
+	constraints := getResolver().ResolveFieldConstraints(fd)
+	if constraints == nil {
+		return generateStringSimple(fd)
+	}
+	rules := constraints.GetString_()
+	if rules == nil {
+		return generateStringSimple(fd)
+	}
+
+	if rules == nil {
+		return generateStringSimple(fd)
+	}
+
+	if rules.Const != nil {
+		return *rules.Const
 	}
 	minLen, maxLen := uint64(0), uint64(20)
-	if hints.Rules.Len != nil {
-		minLen = *hints.Rules.Len
-		maxLen = *hints.Rules.Len
+	if rules.Len != nil {
+		minLen = *rules.Len
+		maxLen = *rules.Len
 	}
-	if hints.Rules.MinLen != nil {
-		minLen = *hints.Rules.MinLen
+	if rules.MinLen != nil {
+		minLen = *rules.MinLen
 	}
-	if hints.Rules.MaxLen != nil {
-		maxLen = *hints.Rules.MaxLen
+	if rules.MaxLen != nil {
+		maxLen = *rules.MaxLen
 	}
-	if hints.Rules.MinBytes != nil {
-		maxLen = *hints.Rules.MinBytes
+	if rules.MinBytes != nil {
+		maxLen = *rules.MinBytes
 	}
-	if hints.Rules.MaxBytes != nil {
-		maxLen = *hints.Rules.MaxBytes
+	if rules.MaxBytes != nil {
+		maxLen = *rules.MaxBytes
 	}
-	if hints.Rules.Pattern != nil {
-		return faker.Regex(*hints.Rules.Pattern)
-	}
-
-	if len(hints.Rules.In) > 0 {
-		return faker.RandomString(hints.Rules.In)
+	if rules.Pattern != nil {
+		return gofakeit.Regex(*rules.Pattern)
 	}
 
-	if hints.Rules.WellKnown != nil {
-		switch hints.Rules.WellKnown.(type) {
+	if len(rules.In) > 0 {
+		return gofakeit.RandomString(rules.In)
+	}
+
+	if rules.WellKnown != nil {
+		switch rules.WellKnown.(type) {
 		case *validate.StringRules_Email:
-			return faker.Email()
+			return gofakeit.Email()
 		case *validate.StringRules_Hostname:
-			return strings.ToLower(faker.JobDescriptor())
+			return strings.ToLower(gofakeit.JobDescriptor())
 		case *validate.StringRules_Ip:
-			return faker.IPv4Address()
+			return gofakeit.IPv4Address()
 		case *validate.StringRules_Ipv4:
-			return faker.IPv4Address()
+			return gofakeit.IPv4Address()
 		case *validate.StringRules_Ipv6:
-			return faker.IPv6Address()
+			return gofakeit.IPv6Address()
 		case *validate.StringRules_Uri:
-			return faker.URL()
+			return gofakeit.URL()
 		case *validate.StringRules_Address:
-			return faker.DomainName()
+			return gofakeit.DomainName()
 		case *validate.StringRules_Uuid:
-			return faker.UUID()
+			return gofakeit.UUID()
 		case *validate.StringRules_Tuuid:
-			return strings.ReplaceAll(faker.UUID(), "-", "")
+			return strings.ReplaceAll(gofakeit.UUID(), "-", "")
 		case *validate.StringRules_IpWithPrefixlen:
-			return faker.IPv4Address() + "/30"
+			return gofakeit.IPv4Address() + "/30"
 		case *validate.StringRules_Ipv4WithPrefixlen:
-			return faker.IPv4Address() + "/30"
+			return gofakeit.IPv4Address() + "/30"
 		case *validate.StringRules_Ipv6Prefix:
-			return faker.IPv6Address() + "/64"
+			return gofakeit.IPv6Address() + "/64"
 		case *validate.StringRules_HostAndPort:
-			return strings.ToLower(faker.JobDescriptor()) + ":" + strconv.FormatInt(int64(faker.IntRange(443, 9000)), 10)
+			return strings.ToLower(gofakeit.JobDescriptor()) + ":" + strconv.FormatInt(int64(gofakeit.IntRange(443, 9000)), 10)
 		case *validate.StringRules_WellKnownRegex:
 		}
 	}
 
-	return generateHipsterText(faker, minLen, maxLen)
+	return generateHipsterText(minLen, maxLen)
 }
 
-func generateHipsterText(faker *gofakeit.Faker, minLen, maxLen uint64) string {
+func generateHipsterText(minLen, maxLen uint64) string {
 	b := &strings.Builder{}
 	addMoreText := func() {
-		b.WriteString(faker.HipsterSentence(int(randInt64GeometricDist(faker, 0.5) + 1)))
+		b.WriteString(gofakeit.HipsterSentence(int(randInt64GeometricDist(0.5) + 1)))
 	}
 	addMoreText()
 	for uint64(b.Len()) < minLen {

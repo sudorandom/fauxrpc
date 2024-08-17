@@ -9,7 +9,6 @@ import (
 
 	"connectrpc.com/grpcreflect"
 	"connectrpc.com/vanguard"
-	"github.com/sudorandom/fauxrpc"
 	"github.com/sudorandom/fauxrpc/private/protobuf"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
@@ -37,13 +36,12 @@ func (c *RunCmd) Run(globals *Globals) error {
 	// TODO: Add --no-reflection option
 	// TODO: Load descriptors from stdin (assume protocol descriptors in binary format)
 	// TODO: way more options for data generator, including a stub service for registering stubs
-	generator := fauxrpc.NewDataGenerator()
 
 	serviceNames := []string{}
 	vgservices := []*vanguard.Service{}
 	registry.ForEachService(func(sd protoreflect.ServiceDescriptor) {
 		vgservice := vanguard.NewServiceWithSchema(
-			sd, protobuf.NewHandler(sd, generator),
+			sd, protobuf.NewHandler(sd),
 			vanguard.WithTargetProtocols(vanguard.ProtocolGRPC),
 			vanguard.WithTargetCodecs(vanguard.CodecProto))
 		vgservices = append(vgservices, vgservice)
