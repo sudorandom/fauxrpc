@@ -10,8 +10,6 @@ import (
 	"connectrpc.com/grpcreflect"
 	"connectrpc.com/vanguard"
 	"github.com/sudorandom/fauxrpc/private/protobuf"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -55,13 +53,14 @@ func (c *RunCmd) Run(globals *Globals) error {
 	reflector := grpcreflect.NewReflector(&staticNames{names: serviceNames}, grpcreflect.WithDescriptorResolver(registry.Files()))
 
 	mux := http.NewServeMux()
+	mux.Handle("/", TraceHandler(transcoder))
 	mux.Handle(grpcreflect.NewHandlerV1(reflector))
 	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
 	server := &http.Server{
-		Addr:    c.Addr,
-		Handler: h2c.NewHandler(mux, &http2.Server{}),
+		Addr: c.Addr,
+		// Handler: h2c.NewHandler(mux, &http2.Server{}),
+		Handler: mux,
 	}
-	mux.Handle("/", transcoder)
 
 	slog.Info(fmt.Sprintf("Listening on http://%s", c.Addr))
 	slog.Info(fmt.Sprintf("See available methods: buf curl --http2-prior-knowledge http://%s --list-methods", c.Addr))

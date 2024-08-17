@@ -3,8 +3,15 @@ package main
 import (
 	"fmt"
 	"log/slog"
+	"runtime"
 
 	"github.com/alecthomas/kong"
+)
+
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
 )
 
 type Globals struct {
@@ -29,9 +36,10 @@ type CLI struct {
 }
 
 func main() {
+	version := fullVersion()
 	cli := CLI{
 		Globals: Globals{
-			Version: VersionFlag("0.0.1"),
+			Version: VersionFlag(version),
 		},
 	}
 
@@ -43,7 +51,7 @@ func main() {
 			Compact: true,
 		}),
 		kong.Vars{
-			"version": "0.0.1",
+			"version": version,
 		})
 	switch cli.Globals.LogLevel {
 	case "debug":
@@ -66,4 +74,8 @@ type staticNames struct {
 
 func (n *staticNames) Names() []string {
 	return n.names
+}
+
+func fullVersion() string {
+	return fmt.Sprintf("fauxrpc: %s (%s) @ %s; %s", version, commit, date, runtime.Version())
 }
