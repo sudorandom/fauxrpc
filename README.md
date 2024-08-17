@@ -1,12 +1,22 @@
 # FauxRPC
 ![](<assets/logo-wide.jpg>)
 
-Quickly and easily set up a mock gRPC/gRPC-Web/Connect/Protobuf-powered REST API that returns random test data. No complicated code generation step, just pass the protobuf descriptors and go!
+FauxRPC is a powerful tool that empowers you to accelerate development and testing by effortlessly generating fake implementations of gRPC, gRPC-Web, Connect, and REST services. If you have a protobuf-based workflow, this tool could help.
+
+## Why FauxRPC?
+* **Faster Development & Testing:** Work independently without relying on fully functional backend services.
+* **Isolation & Control:** Test frontend components in isolation with controlled fake data.
+* **Multi-Protocol Support:** Supports multiple protocols (gRPC, gRPC-Web, Connect, and REST).
+* **Prototyping & Demos:** Create prototypes and demos quickly without building the full backend. Fake it till you make it.
+* **Improved Collaboration:** Bridge the gap between frontend and backend teams.
+* **Plays well with others:** Test data from FauxRPC will try to automatically follow any [protovalidate](https://github.com/bufbuild/protovalidate) constraints that are defined.
+
+## How it Works
+FauxRPC leverages your Protobuf definitions to generate fake services that mimic the behavior of real ones. You can easily configure the fake data returned, allowing you to simulate various scenarios and edge cases. It takes in `*.proto` files or protobuf descriptors (in binpb, json, txtpb, yaml formats), then it automatically starts up a server that can speak gRPC/gRPC-Web/Connect and REST (as long as there are `google.api.http` annotations defined). Descriptors contain all of the information found in a set of `.proto` files. You can generate them with `protoc` or the `buf build` command.
 
 ![](<assets/diagram.svg>)
 
 ## Get Started
-FauxRPC is available as an open-source project.
 
 ### Install via source
 ```
@@ -16,7 +26,7 @@ go install github.com/sudorandom/fauxrpc/cmd/fauxrpc@latest
 ### Pre-built binaries
 Binaries are built for several platforms for each release. See the latest ones on [the releases page](https://github.com/sudorandom/fauxrpc/releases/latest).
 
-### Use Descriptors
+### Using Descriptors
 Make an `example.proto` file (or use a file that already exists):
 ```protobuf
 syntax = "proto3";
@@ -52,7 +62,7 @@ $ buf curl --http2-prior-knowledge http://127.0.0.1:6660/greet.v1.GreetService/G
 }
 ```
 
-### Server Reflection
+### Using Server Reflection
 If there's an existing gRPC service running that you want to emulate, you can use server reflection to start the FauxRPC service:
 ```shell
 $ fauxrpc run --schema=https://demo.connectrpc.com
