@@ -120,7 +120,7 @@ Now that we have the server running we can test this with the "normal" curl:
 $ curl http://127.0.0.1:6660/v1/messages/123456
 {"text":"Retro."}⏎
 ```
-Sweet. You can now easily support REST alongside gRPC. If you are wondering how to do this with "real" services, look into [vangaurd-go](https://github.com/connectrpc/vanguard-go). This library is doing the real heavy lifting.
+Sweet. You can now easily support REST alongside gRPC. If you are wondering how to do this with "real" services, look into [vanguard-go](https://github.com/connectrpc/vanguard-go). This library is doing the real heavy lifting.
 
 ## What does the fake data look like?
 You might be wondering what actual responses look like. FauxRPC's fake data generation is continually improving so these details might change as time goes on. It uses a library called [fakeit](https://github.com/brianvoe/gofakeit) to generate fake data. Because protobufs have pretty well-defined types, we can easily generate data that technically matches the types. This works well for most use cases, but FauxRPC tries to be a little bit better. If you annotate your protobuf files with [protovalidate](https://github.com/bufbuild/protovalidate) constraints, FauxRPC will try its best to generate data that matches these constraints. Let's look at some examples!
