@@ -1,20 +1,9 @@
 package fauxrpc
 
 import (
-	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	"github.com/brianvoe/gofakeit/v7"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
-
-type BytesHints struct {
-	Rules     *validate.BytesRules
-	FirstName bool
-	LastName  bool
-	Name      bool
-	UUID      bool
-	URL       bool
-	Version   bool
-}
 
 func generateBytesSimple() []byte {
 	return []byte(gofakeit.HipsterSentence(3))

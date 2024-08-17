@@ -10,16 +10,6 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-type StringHints struct {
-	Rules     *validate.StringRules
-	FirstName bool
-	LastName  bool
-	Name      bool
-	UUID      bool
-	URL       bool
-	Version   bool
-}
-
 func randInt64GeometricDist(p float64) int64 {
 	return int64(math.Floor(math.Log(gofakeit.Float64()) / math.Log(1.0-p)))
 }

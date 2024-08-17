@@ -8,10 +8,6 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-type SFixedInt32Hints struct {
-	Rules *validate.SFixed32Rules
-}
-
 func GenerateSFixedInt32(fd protoreflect.FieldDescriptor) int32 {
 	constraints := getResolver().ResolveFieldConstraints(fd)
 	if constraints == nil {

@@ -8,10 +8,6 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-type Int32Hints struct {
-	Rules *validate.Int32Rules
-}
-
 func GenerateInt32(fd protoreflect.FieldDescriptor) int32 {
 	constraints := getResolver().ResolveFieldConstraints(fd)
 	if constraints == nil {

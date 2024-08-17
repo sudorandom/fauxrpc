@@ -8,10 +8,6 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-type Float64Hints struct {
-	Rules *validate.DoubleRules
-}
-
 func GenerateFloat64(fd protoreflect.FieldDescriptor) float64 {
 	constraints := getResolver().ResolveFieldConstraints(fd)
 	if constraints == nil {

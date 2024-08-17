@@ -8,10 +8,6 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-type Int64Hints struct {
-	Rules *validate.Int64Rules
-}
-
 func GenerateInt64(fd protoreflect.FieldDescriptor) int64 {
 	constraints := getResolver().ResolveFieldConstraints(fd)
 	if constraints == nil {

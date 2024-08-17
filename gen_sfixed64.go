@@ -8,10 +8,6 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-type SFixed64Hints struct {
-	Rules *validate.SFixed64Rules
-}
-
 func GenerateSFixed64(fd protoreflect.FieldDescriptor) int64 {
 	constraints := getResolver().ResolveFieldConstraints(fd)
 	if constraints == nil {
