@@ -16,12 +16,16 @@ func (g *dataGenerator) getFieldValue(field protoreflect.FieldDescriptor, st sta
 	case protoreflect.MessageKind:
 		switch string(field.Message().FullName()) {
 		case "google.protobuf.Duration":
+			// TODO: hints
 			return g.genGoogleDuration()
 		case "google.protobuf.Timestamp":
+			// TODO: hints
 			return g.genGoogleTimestamp()
 		case "google.protobuf.Any":
+			// TODO: hints
 			return nil
 		case "google.protobuf.Value":
+			// TODO: hints
 			return g.genGoogleValue()
 		default:
 			nested := dynamicpb.NewMessage(field.Message())
@@ -63,44 +67,57 @@ func (g *dataGenerator) getFieldValue(field protoreflect.FieldDescriptor, st sta
 		}
 		v := protoreflect.ValueOfString(GenerateString(g.faker, hints))
 		return &v
+	case protoreflect.BytesKind:
+		hints := BytesHints{Rules: constraints.GetBytes()}
+		v := protoreflect.ValueOfBytes(GenerateBytes(g.faker, hints))
+		return &v
 	case protoreflect.Int32Kind:
-		v := protoreflect.ValueOfInt32(g.faker.Int32())
+		hints := Int32Hints{Rules: constraints.GetInt32()}
+		v := protoreflect.ValueOfInt32(GenerateInt32(g.faker, hints))
 		return &v
 	case protoreflect.Sint32Kind:
-		v := protoreflect.ValueOfInt32(g.faker.Int32())
+		hints := SInt32Hints{Rules: constraints.GetSint32()}
+		v := protoreflect.ValueOfInt32(GenerateSInt32(g.faker, hints))
 		return &v
 	case protoreflect.Sfixed32Kind:
-		v := protoreflect.ValueOfInt32(g.faker.Int32())
+		hints := SFixedInt32Hints{Rules: constraints.GetSfixed32()}
+		v := protoreflect.ValueOfInt32(GenerateSFixedInt32(g.faker, hints))
 		return &v
 	case protoreflect.Uint32Kind:
-		v := protoreflect.ValueOfUint32(g.faker.Uint32())
+		hints := UInt32Hints{Rules: constraints.GetUint32()}
+		v := protoreflect.ValueOfUint32(GenerateUInt32(g.faker, hints))
 		return &v
 	case protoreflect.Fixed32Kind:
-		v := protoreflect.ValueOfUint32(g.faker.Uint32())
+		hints := Fixed32Hints{Rules: constraints.GetFixed32()}
+		v := protoreflect.ValueOfUint32(GenerateFixed32(g.faker, hints))
 		return &v
 	case protoreflect.Int64Kind:
-		v := protoreflect.ValueOfInt64(g.faker.Int64())
+		hints := Int64Hints{Rules: constraints.GetInt64()}
+		v := protoreflect.ValueOfInt64(GenerateInt64(g.faker, hints))
 		return &v
 	case protoreflect.Sint64Kind:
-		v := protoreflect.ValueOfInt64(g.faker.Int64())
+		hints := SInt64Hints{Rules: constraints.GetSint64()}
+		v := protoreflect.ValueOfInt64(GenerateSInt64(g.faker, hints))
 		return &v
 	case protoreflect.Sfixed64Kind:
-		v := protoreflect.ValueOfInt64(g.faker.Int64())
+		hints := SFixed64Hints{Rules: constraints.GetSfixed64()}
+		v := protoreflect.ValueOfInt64(GenerateSFixed64(g.faker, hints))
 		return &v
 	case protoreflect.Uint64Kind:
-		v := protoreflect.ValueOfUint64(g.faker.Uint64())
+		hints := UInt64Hints{Rules: constraints.GetUint64()}
+		v := protoreflect.ValueOfUint64(GenerateUInt64(g.faker, hints))
 		return &v
 	case protoreflect.Fixed64Kind:
-		v := protoreflect.ValueOfUint64(g.faker.Uint64())
+		hints := Fixed64Hints{Rules: constraints.GetFixed64()}
+		v := protoreflect.ValueOfUint64(GenerateFixed64(g.faker, hints))
 		return &v
 	case protoreflect.FloatKind:
-		v := protoreflect.ValueOfFloat32(g.faker.Float32())
+		hints := Float32Hints{Rules: constraints.GetFloat()}
+		v := protoreflect.ValueOfFloat32(GenerateFloat32(g.faker, hints))
 		return &v
 	case protoreflect.DoubleKind:
-		v := protoreflect.ValueOfFloat64(g.faker.Float64())
-		return &v
-	case protoreflect.BytesKind:
-		v := protoreflect.ValueOfBytes([]byte(g.faker.LoremIpsumSentence(10)))
+		hints := Float64Hints{Rules: constraints.GetDouble()}
+		v := protoreflect.ValueOfFloat64(GenerateFloat64(g.faker, hints))
 		return &v
 	default:
 		return nil
