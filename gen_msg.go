@@ -29,6 +29,8 @@ func setDataOnMessage(msg *dynamicpb.Message, st state) {
 			field := fields.Get(i)
 			oneOfFields[field.FullName()] = struct{}{}
 		}
+
+		// pick oneOf the fields to create data for
 		options := oneOf.Fields()
 		idx := gofakeit.IntRange(0, options.Len()-1)
 		field := options.Get(idx)

@@ -40,8 +40,6 @@ func mustCompileField(fieldType, fieldName, fieldOptions string) protoreflect.Fi
 	if err != nil {
 		panic(fmt.Errorf("convert from AST: %w", err))
 	}
-	// fdText, _ := protojson.MarshalOptions{Indent: "    "}.Marshal(res.FileDescriptorProto())
-	// fmt.Println(string(fdText))
 	fd, err := protodesc.NewFile(res.FileDescriptorProto(), protoregistry.GlobalFiles)
 	if err != nil {
 		panic(fmt.Errorf("protodesc.NewFile: %w", err))
