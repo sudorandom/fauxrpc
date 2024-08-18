@@ -46,7 +46,7 @@ func NewHandler(service protoreflect.ServiceDescriptor) http.Handler {
 			_ = r.Body.Close()
 		}()
 
-		slog.Info("Called method", slog.String("service", serviceName), slog.String("method", methodName))
+		slog.Info("MethodCalled", slog.String("service", serviceName), slog.String("method", methodName))
 
 		out := dynamicpb.NewMessage(method.Output())
 		fauxrpc.SetDataOnMessage(out)

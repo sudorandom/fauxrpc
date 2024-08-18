@@ -103,7 +103,7 @@ func GenerateGoogleTimestamp(fd protoreflect.FieldDescriptor) *timestamppb.Times
 
 	delta := max - min
 
-	return timestamppb.New(time.Unix(0, (gofakeit.GlobalFaker.Int64()%delta)+min))
+	return timestamppb.New(time.Unix(0, (gofakeit.Int64()%delta)+min))
 }
 
 func GenerateGoogleValue(fd protoreflect.FieldDescriptor, st state) *structpb.Value {
@@ -114,7 +114,7 @@ func GenerateGoogleValue(fd protoreflect.FieldDescriptor, st state) *structpb.Va
 		func() *structpb.Value { return structpb.NewStringValue(GenerateString(fd)) },
 		func() *structpb.Value {
 			list := &structpb.ListValue{}
-			itemCount := gofakeit.GlobalFaker.IntRange(0, 4)
+			itemCount := gofakeit.IntRange(0, 4)
 			for i := 0; i < itemCount; i++ {
 				list.Values = append(list.Values, GenerateGoogleValue(fd, st.Inc()))
 			}
@@ -122,7 +122,7 @@ func GenerateGoogleValue(fd protoreflect.FieldDescriptor, st state) *structpb.Va
 		},
 		func() *structpb.Value {
 			obj := &structpb.Struct{}
-			itemCount := gofakeit.GlobalFaker.IntRange(0, 4)
+			itemCount := gofakeit.IntRange(0, 4)
 			for i := 0; i < itemCount; i++ {
 				obj.Fields[strings.ToLower(gofakeit.Word())] = GenerateGoogleValue(fd, st.Inc())
 			}

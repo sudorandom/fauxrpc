@@ -5,6 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/brianvoe/gofakeit/v7"
+	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/dynamicpb"
 )
 
@@ -18,13 +19,33 @@ func setDataOnMessage(msg *dynamicpb.Message, st state) {
 		return
 	}
 	desc := msg.Descriptor()
-	fields := desc.Fields()
+	oneOfFields := map[protoreflect.FullName]struct{}{}
+	oneOfs := desc.Oneofs()
+	// gather one-of fields
+	for i := 0; i < oneOfs.Len(); i++ {
+		oneOf := oneOfs.Get(i)
+		fields := oneOf.Fields()
+		for i := 0; i < fields.Len(); i++ {
+			field := fields.Get(i)
+			oneOfFields[field.FullName()] = struct{}{}
+		}
+		options := oneOf.Fields()
+		idx := gofakeit.IntRange(0, options.Len()-1)
+		field := options.Get(idx)
+		if v := getFieldValue(field, st.Inc()); v != nil {
+			msg.Set(field, *v)
+		}
+	}
 
+	fields := desc.Fields()
 	for i := 0; i < fields.Len(); i++ {
 		field := fields.Get(i)
+		if _, ok := oneOfFields[field.FullName()]; ok {
+			continue
+		}
 		if field.IsList() {
 			listVal := msg.NewField(field)
-			itemCount := gofakeit.GlobalFaker.IntRange(0, 4)
+			itemCount := gofakeit.IntRange(0, 4)
 			for i := 0; i < itemCount; i++ {
 				if v := getFieldValue(field, st.Inc()); v != nil {
 					listVal.List().Append(*v)
@@ -38,7 +59,7 @@ func setDataOnMessage(msg *dynamicpb.Message, st state) {
 		}
 		if field.IsMap() {
 			mapVal := msg.NewField(field)
-			itemCount := gofakeit.GlobalFaker.IntRange(0, 4)
+			itemCount := gofakeit.IntRange(0, 4)
 			for i := 0; i < itemCount; i++ {
 				v := getFieldValue(field.MapKey(), st.Inc())
 				w := getFieldValue(field.MapValue(), st.Inc())

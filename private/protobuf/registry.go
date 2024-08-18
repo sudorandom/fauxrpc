@@ -165,7 +165,6 @@ func AddServicesFromProtoFile(registry *ServiceRegistry, filepath string) error 
 	if err != nil {
 		return err
 	}
-
 	res, err := parser.ResultFromAST(ast, true, handler)
 	if err != nil {
 		return fmt.Errorf("convert from AST: %w", err)
