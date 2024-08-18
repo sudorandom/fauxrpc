@@ -25,7 +25,7 @@ func TestGenerateString(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.expectedFn(t, fauxrpc.GenerateString(tc.fd))
+			tc.expectedFn(t, fauxrpc.String(tc.fd))
 		})
 	}
 }

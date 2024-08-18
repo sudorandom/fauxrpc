@@ -8,8 +8,8 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-// GenerateUInt32 returns a fake uint32 value given a field descriptor.
-func GenerateUInt32(fd protoreflect.FieldDescriptor) uint32 {
+// UInt32 returns a fake uint32 value given a field descriptor.
+func UInt32(fd protoreflect.FieldDescriptor) uint32 {
 	constraints := getResolver().ResolveFieldConstraints(fd)
 	if constraints == nil {
 		return gofakeit.Uint32()
@@ -47,8 +47,8 @@ func GenerateUInt32(fd protoreflect.FieldDescriptor) uint32 {
 	return uint32(gofakeit.IntRange(int(minVal), int(maxVal)))
 }
 
-// GenerateUInt64 returns a fake uint64 value given a field descriptor.
-func GenerateUInt64(fd protoreflect.FieldDescriptor) uint64 {
+// UInt64 returns a fake uint64 value given a field descriptor.
+func UInt64(fd protoreflect.FieldDescriptor) uint64 {
 	constraints := getResolver().ResolveFieldConstraints(fd)
 	if constraints == nil {
 		return gofakeit.Uint64()
@@ -86,8 +86,8 @@ func GenerateUInt64(fd protoreflect.FieldDescriptor) uint64 {
 	return uint64(gofakeit.UintRange(uint(minVal), uint(maxVal)))
 }
 
-// GenerateFixed32 returns a fake fixed32 value given a field descriptor.
-func GenerateFixed32(fd protoreflect.FieldDescriptor) uint32 {
+// Fixed32 returns a fake fixed32 value given a field descriptor.
+func Fixed32(fd protoreflect.FieldDescriptor) uint32 {
 	constraints := getResolver().ResolveFieldConstraints(fd)
 	if constraints == nil {
 		return gofakeit.Uint32()
@@ -125,8 +125,8 @@ func GenerateFixed32(fd protoreflect.FieldDescriptor) uint32 {
 	return uint32(gofakeit.IntRange(int(minVal), int(maxVal)))
 }
 
-// GenerateFixed64 returns a fake fixed64 value given a field descriptor.
-func GenerateFixed64(fd protoreflect.FieldDescriptor) uint64 {
+// Fixed64 returns a fake fixed64 value given a field descriptor.
+func Fixed64(fd protoreflect.FieldDescriptor) uint64 {
 	constraints := getResolver().ResolveFieldConstraints(fd)
 	if constraints == nil {
 		return gofakeit.Uint64()

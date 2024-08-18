@@ -8,8 +8,8 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-// GenerateFloat32 returns a fake float32 value given a field descriptor.
-func GenerateFloat32(fd protoreflect.FieldDescriptor) float32 {
+// Float32 returns a fake float32 value given a field descriptor.
+func Float32(fd protoreflect.FieldDescriptor) float32 {
 	constraints := getResolver().ResolveFieldConstraints(fd)
 	if constraints == nil {
 		return gofakeit.Float32()
@@ -47,8 +47,8 @@ func GenerateFloat32(fd protoreflect.FieldDescriptor) float32 {
 	return gofakeit.Float32Range(minVal, maxVal)
 }
 
-// GenerateFloat64 returns a fake float64 value given a field descriptor.
-func GenerateFloat64(fd protoreflect.FieldDescriptor) float64 {
+// Float64 returns a fake float64 value given a field descriptor.
+func Float64(fd protoreflect.FieldDescriptor) float64 {
 	constraints := getResolver().ResolveFieldConstraints(fd)
 	if constraints == nil {
 		return gofakeit.Float64()

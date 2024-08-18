@@ -14,7 +14,7 @@ func randInt64GeometricDist(p float64) int64 {
 	return int64(math.Floor(math.Log(gofakeit.Float64()) / math.Log(1.0-p)))
 }
 
-func generateStringSimple(fd protoreflect.FieldDescriptor) string {
+func stringSimple(fd protoreflect.FieldDescriptor) string {
 	lowerName := strings.ToLower(string(fd.Name()))
 	switch {
 	case strings.Contains(lowerName, "firstname"):
@@ -36,19 +36,19 @@ func generateStringSimple(fd protoreflect.FieldDescriptor) string {
 	return gofakeit.HipsterSentence(int(randInt64GeometricDist(0.5) + 1))
 }
 
-// GenerateString returns a fake string value given a field descriptor.
-func GenerateString(fd protoreflect.FieldDescriptor) string {
+// String returns a fake string value given a field descriptor.
+func String(fd protoreflect.FieldDescriptor) string {
 	constraints := getResolver().ResolveFieldConstraints(fd)
 	if constraints == nil {
-		return generateStringSimple(fd)
+		return stringSimple(fd)
 	}
 	rules := constraints.GetString_()
 	if rules == nil {
-		return generateStringSimple(fd)
+		return stringSimple(fd)
 	}
 
 	if rules == nil {
-		return generateStringSimple(fd)
+		return stringSimple(fd)
 	}
 
 	if rules.Const != nil {

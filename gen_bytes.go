@@ -9,8 +9,8 @@ func generateBytesSimple() []byte {
 	return []byte(gofakeit.HipsterSentence(3))
 }
 
-// GenerateBytes returns a fake []byte value given a field descriptor.
-func GenerateBytes(fd protoreflect.FieldDescriptor) []byte {
+// Bytes returns a fake []byte value given a field descriptor.
+func Bytes(fd protoreflect.FieldDescriptor) []byte {
 	constraints := getResolver().ResolveFieldConstraints(fd)
 	if constraints == nil {
 		return generateBytesSimple()

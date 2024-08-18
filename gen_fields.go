@@ -11,63 +11,63 @@ var kindToGenerator = map[protoreflect.Kind]func(fd protoreflect.FieldDescriptor
 		return &v
 	},
 	protoreflect.EnumKind: func(fd protoreflect.FieldDescriptor) *protoreflect.Value {
-		v := protoreflect.ValueOfEnum(GenerateEnum(fd))
+		v := protoreflect.ValueOfEnum(Enum(fd))
 		return &v
 	},
 	protoreflect.StringKind: func(fd protoreflect.FieldDescriptor) *protoreflect.Value {
-		v := protoreflect.ValueOfString(GenerateString(fd))
+		v := protoreflect.ValueOfString(String(fd))
 		return &v
 	},
 	protoreflect.BytesKind: func(fd protoreflect.FieldDescriptor) *protoreflect.Value {
-		v := protoreflect.ValueOfBytes(GenerateBytes(fd))
+		v := protoreflect.ValueOfBytes(Bytes(fd))
 		return &v
 	},
 	protoreflect.Int32Kind: func(fd protoreflect.FieldDescriptor) *protoreflect.Value {
-		v := protoreflect.ValueOfInt32(GenerateInt32(fd))
+		v := protoreflect.ValueOfInt32(Int32(fd))
 		return &v
 	},
 	protoreflect.Sint32Kind: func(fd protoreflect.FieldDescriptor) *protoreflect.Value {
-		v := protoreflect.ValueOfInt32(GenerateSInt32(fd))
+		v := protoreflect.ValueOfInt32(SInt32(fd))
 		return &v
 	},
 	protoreflect.Sfixed32Kind: func(fd protoreflect.FieldDescriptor) *protoreflect.Value {
-		v := protoreflect.ValueOfInt32(GenerateSFixed32(fd))
+		v := protoreflect.ValueOfInt32(SFixed32(fd))
 		return &v
 	},
 	protoreflect.Uint32Kind: func(fd protoreflect.FieldDescriptor) *protoreflect.Value {
-		v := protoreflect.ValueOfUint32(GenerateUInt32(fd))
+		v := protoreflect.ValueOfUint32(UInt32(fd))
 		return &v
 	},
 	protoreflect.Fixed32Kind: func(fd protoreflect.FieldDescriptor) *protoreflect.Value {
-		v := protoreflect.ValueOfUint32(GenerateFixed32(fd))
+		v := protoreflect.ValueOfUint32(Fixed32(fd))
 		return &v
 	},
 	protoreflect.Int64Kind: func(fd protoreflect.FieldDescriptor) *protoreflect.Value {
-		v := protoreflect.ValueOfInt64(GenerateInt64(fd))
+		v := protoreflect.ValueOfInt64(Int64(fd))
 		return &v
 	},
 	protoreflect.Sint64Kind: func(fd protoreflect.FieldDescriptor) *protoreflect.Value {
-		v := protoreflect.ValueOfInt64(GenerateSInt64(fd))
+		v := protoreflect.ValueOfInt64(SInt64(fd))
 		return &v
 	},
 	protoreflect.Sfixed64Kind: func(fd protoreflect.FieldDescriptor) *protoreflect.Value {
-		v := protoreflect.ValueOfInt64(GenerateSFixed64(fd))
+		v := protoreflect.ValueOfInt64(SFixed64(fd))
 		return &v
 	},
 	protoreflect.Uint64Kind: func(fd protoreflect.FieldDescriptor) *protoreflect.Value {
-		v := protoreflect.ValueOfUint64(GenerateUInt64(fd))
+		v := protoreflect.ValueOfUint64(UInt64(fd))
 		return &v
 	},
 	protoreflect.Fixed64Kind: func(fd protoreflect.FieldDescriptor) *protoreflect.Value {
-		v := protoreflect.ValueOfUint64(GenerateFixed64(fd))
+		v := protoreflect.ValueOfUint64(Fixed64(fd))
 		return &v
 	},
 	protoreflect.FloatKind: func(fd protoreflect.FieldDescriptor) *protoreflect.Value {
-		v := protoreflect.ValueOfFloat32(GenerateFloat32(fd))
+		v := protoreflect.ValueOfFloat32(Float32(fd))
 		return &v
 	},
 	protoreflect.DoubleKind: func(fd protoreflect.FieldDescriptor) *protoreflect.Value {
-		v := protoreflect.ValueOfFloat64(GenerateFloat64(fd))
+		v := protoreflect.ValueOfFloat64(Float64(fd))
 		return &v
 	},
 }
@@ -77,19 +77,19 @@ func getFieldValue(fd protoreflect.FieldDescriptor, st state) *protoreflect.Valu
 	case protoreflect.MessageKind:
 		switch string(fd.Message().FullName()) {
 		case "google.protobuf.Duration":
-			if val := GenerateGoogleDuration(fd); val != nil {
+			if val := GoogleDuration(fd); val != nil {
 				v := protoreflect.ValueOf(val.ProtoReflect())
 				return &v
 			}
 		case "google.protobuf.Timestamp":
-			if val := GenerateGoogleTimestamp(fd); val != nil {
+			if val := GoogleTimestamp(fd); val != nil {
 				v := protoreflect.ValueOf(val.ProtoReflect())
 				return &v
 			}
 		case "google.protobuf.Any":
 			return nil
 		case "google.protobuf.Value":
-			if val := GenerateGoogleValue(fd, st); val != nil {
+			if val := GoogleValue(fd, st); val != nil {
 				v := protoreflect.ValueOf(val.ProtoReflect())
 				return &v
 			}

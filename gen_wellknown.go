@@ -12,20 +12,20 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func generateDurationSimple() *durationpb.Duration {
+func durationSimple() *durationpb.Duration {
 	duration := time.Duration(gofakeit.Uint64() % uint64(30*time.Hour*24))
 	return durationpb.New(duration)
 }
 
-// GenerateGoogleDuration generates a random google.protobuf.Duration value.
-func GenerateGoogleDuration(fd protoreflect.FieldDescriptor) *durationpb.Duration {
+// GoogleDuration generates a random google.protobuf.Duration value.
+func GoogleDuration(fd protoreflect.FieldDescriptor) *durationpb.Duration {
 	constraints := getResolver().ResolveFieldConstraints(fd)
 	if constraints == nil {
-		return generateDurationSimple()
+		return durationSimple()
 	}
 	rules := constraints.GetDuration()
 	if rules == nil {
-		return generateDurationSimple()
+		return durationSimple()
 	}
 
 	if rules.Const != nil {
@@ -61,8 +61,8 @@ func generateTimestampSimple() *timestamppb.Timestamp {
 	return timestamppb.New(gofakeit.Date())
 }
 
-// GenerateGoogleTimestamp generates a random google.protobuf.Timestamp value.
-func GenerateGoogleTimestamp(fd protoreflect.FieldDescriptor) *timestamppb.Timestamp {
+// GoogleTimestamp generates a random google.protobuf.Timestamp value.
+func GoogleTimestamp(fd protoreflect.FieldDescriptor) *timestamppb.Timestamp {
 	constraints := getResolver().ResolveFieldConstraints(fd)
 	if constraints == nil {
 		return generateTimestampSimple()
@@ -106,17 +106,17 @@ func GenerateGoogleTimestamp(fd protoreflect.FieldDescriptor) *timestamppb.Times
 	return timestamppb.New(time.Unix(0, (gofakeit.Int64()%delta)+min))
 }
 
-func GenerateGoogleValue(fd protoreflect.FieldDescriptor, st state) *structpb.Value {
+func GoogleValue(fd protoreflect.FieldDescriptor, st state) *structpb.Value {
 	options := []func() *structpb.Value{
 		func() *structpb.Value { return structpb.NewNullValue() },
-		func() *structpb.Value { return structpb.NewBoolValue(GenerateBool(fd)) },
-		func() *structpb.Value { return structpb.NewNumberValue(GenerateFloat64(fd)) },
-		func() *structpb.Value { return structpb.NewStringValue(GenerateString(fd)) },
+		func() *structpb.Value { return structpb.NewBoolValue(Bool(fd)) },
+		func() *structpb.Value { return structpb.NewNumberValue(Float64(fd)) },
+		func() *structpb.Value { return structpb.NewStringValue(String(fd)) },
 		func() *structpb.Value {
 			list := &structpb.ListValue{}
 			itemCount := gofakeit.IntRange(0, 4)
 			for i := 0; i < itemCount; i++ {
-				list.Values = append(list.Values, GenerateGoogleValue(fd, st.Inc()))
+				list.Values = append(list.Values, GoogleValue(fd, st.Inc()))
 			}
 			return structpb.NewListValue(list)
 		},
@@ -124,7 +124,7 @@ func GenerateGoogleValue(fd protoreflect.FieldDescriptor, st state) *structpb.Va
 			obj := &structpb.Struct{}
 			itemCount := gofakeit.IntRange(0, 4)
 			for i := 0; i < itemCount; i++ {
-				obj.Fields[strings.ToLower(gofakeit.Word())] = GenerateGoogleValue(fd, st.Inc())
+				obj.Fields[strings.ToLower(gofakeit.Word())] = GoogleValue(fd, st.Inc())
 			}
 			return structpb.NewStructValue(obj)
 		},

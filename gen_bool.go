@@ -4,8 +4,8 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-// GenerateBool returns a fake boolean value given a field descriptor.
-func GenerateBool(fd protoreflect.FieldDescriptor) bool {
+// Bool returns a fake boolean value given a field descriptor.
+func Bool(fd protoreflect.FieldDescriptor) bool {
 	constraints := getResolver().ResolveFieldConstraints(fd)
 	if constraints == nil {
 		return true
