@@ -1,16 +1,27 @@
 package fauxrpc_test
 
 import (
+	"fmt"
 	"testing"
 
-	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/types/dynamicpb"
-
+	elizav1 "buf.build/gen/go/connectrpc/eliza/protocolbuffers/go/connectrpc/eliza/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/sudorandom/fauxrpc"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/types/dynamicpb"
+
 	testv1 "github.com/sudorandom/fauxrpc/private/proto/gen/test/v1"
 )
+
+var AllTypes = testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
+
+func ExampleNewMessage() {
+	msg := fauxrpc.NewMessage(elizav1.File_connectrpc_eliza_v1_eliza_proto.Messages().ByName("SayResponse"))
+	b, _ := protojson.MarshalOptions{Indent: "  "}.Marshal(msg)
+	fmt.Println(string(b))
+}
 
 func requireFieldByName(t *testing.T, md protoreflect.MessageDescriptor, msg *dynamicpb.Message, fieldName string) protoreflect.Value {
 	fd := md.Fields().ByJSONName(fieldName)
