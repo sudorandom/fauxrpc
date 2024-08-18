@@ -9,6 +9,13 @@ import (
 	"google.golang.org/protobuf/types/dynamicpb"
 )
 
+// NewMessage creates a new message populated with fake data given a protoreflect.MessageDescriptor
+func NewMessage(md protoreflect.MessageDescriptor) *dynamicpb.Message {
+	msg := dynamicpb.NewMessage(md)
+	setDataOnMessage(msg, state{})
+	return msg
+}
+
 // SetDataOnMessage generates fake data given a *dynamicpb.Message and sets the field values.
 func SetDataOnMessage(msg *dynamicpb.Message) {
 	setDataOnMessage(msg, state{})

@@ -11,7 +11,6 @@ import (
 	"github.com/sudorandom/fauxrpc"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/types/dynamicpb"
 )
 
 func NewHandler(service protoreflect.ServiceDescriptor) http.Handler {
@@ -48,8 +47,7 @@ func NewHandler(service protoreflect.ServiceDescriptor) http.Handler {
 
 		slog.Info("MethodCalled", slog.String("service", serviceName), slog.String("method", methodName))
 
-		out := dynamicpb.NewMessage(method.Output())
-		fauxrpc.SetDataOnMessage(out)
+		out := fauxrpc.NewMessage(method.Output())
 
 		b, err := proto.Marshal(out)
 		if err != nil {
