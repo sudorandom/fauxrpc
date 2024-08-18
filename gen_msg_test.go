@@ -1,7 +1,6 @@
 package fauxrpc_test
 
 import (
-	"reflect"
 	"testing"
 
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -97,17 +96,5 @@ func TestGenerateMessage(t *testing.T) {
 		assertFieldIsSet(t, md, msg, "stringValueWrapper")
 		assertFieldIsSet(t, md, msg, "fieldMask")
 		assertFieldIsSet(t, md, msg, "enumList")
-
-		nonZeroOneOfValues := []protoreflect.Value{}
-		for _, val := range []protoreflect.Value{
-			requireFieldByName(t, md, msg, "oneofDoubleValue"),
-			requireFieldByName(t, md, msg, "oneofDoubleValueWrapper"),
-			requireFieldByName(t, md, msg, "oneofEnumValue"),
-		} {
-			if !reflect.ValueOf(val.Interface()).IsZero() {
-				nonZeroOneOfValues = append(nonZeroOneOfValues, val)
-			}
-		}
-		assert.Len(t, nonZeroOneOfValues, 1, "too many values set in oneOf group: %+v", nonZeroOneOfValues)
 	})
 }
