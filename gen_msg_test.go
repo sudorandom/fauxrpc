@@ -23,21 +23,21 @@ func ExampleNewMessage() {
 	fmt.Println(string(b))
 }
 
-func requireFieldByName(t *testing.T, md protoreflect.MessageDescriptor, msg *dynamicpb.Message, fieldName string) protoreflect.Value {
+func requireFieldByName(t *testing.T, md protoreflect.MessageDescriptor, msg protoreflect.Message, fieldName string) protoreflect.Value {
 	fd := md.Fields().ByJSONName(fieldName)
 	require.NotNil(t, fd, "field %s does not exist", fieldName)
 	return msg.Get(fd)
 }
 
-func assertFieldIsSet(t *testing.T, md protoreflect.MessageDescriptor, msg *dynamicpb.Message, fieldName string) {
+func assertFieldIsSet(t *testing.T, md protoreflect.MessageDescriptor, msg protoreflect.Message, fieldName string) {
 	value := requireFieldByName(t, md, msg, fieldName)
 	assert.NotNil(t, value, "field not set: %s", fieldName)
 	assert.NotZero(t, value.Interface())
 	assert.True(t, value.IsValid())
 }
 
-func TestGenerateMessage(t *testing.T) {
-	t.Run("AllTypes", func(t *testing.T) {
+func TestNewMessage(t *testing.T) {
+	t.Run("AllTypes - dynamicpb", func(t *testing.T) {
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
 		msg := dynamicpb.NewMessage(md)
 		fauxrpc.SetDataOnMessage(msg)
@@ -75,7 +75,46 @@ func TestGenerateMessage(t *testing.T) {
 		assertFieldIsSet(t, md, msg, "optMsgValue")
 	})
 
-	t.Run("ParameterValues", func(t *testing.T) {
+	t.Run("AllTypes - concrete", func(t *testing.T) {
+		msg := &testv1.AllTypes{}
+		fauxrpc.SetDataOnMessage(msg)
+		md := msg.ProtoReflect().Descriptor()
+		pmsg := msg.ProtoReflect()
+		assertFieldIsSet(t, md, pmsg, "doubleValue")
+		assertFieldIsSet(t, md, pmsg, "doubleValue")
+		assertFieldIsSet(t, md, pmsg, "floatValue")
+		assertFieldIsSet(t, md, pmsg, "int32Value")
+		assertFieldIsSet(t, md, pmsg, "int64Value")
+		assertFieldIsSet(t, md, pmsg, "uint32Value")
+		assertFieldIsSet(t, md, pmsg, "uint64Value")
+		assertFieldIsSet(t, md, pmsg, "sint32Value")
+		assertFieldIsSet(t, md, pmsg, "sint64Value")
+		assertFieldIsSet(t, md, pmsg, "fixed32Value")
+		assertFieldIsSet(t, md, pmsg, "fixed64Value")
+		assertFieldIsSet(t, md, pmsg, "sfixed32Value")
+		assertFieldIsSet(t, md, pmsg, "sfixed64Value")
+		assertFieldIsSet(t, md, pmsg, "boolValue")
+		assertFieldIsSet(t, md, pmsg, "stringValue")
+		assertFieldIsSet(t, md, pmsg, "bytesValue")
+		assertFieldIsSet(t, md, pmsg, "optDoubleValue")
+		assertFieldIsSet(t, md, pmsg, "optFloatValue")
+		assertFieldIsSet(t, md, pmsg, "optInt32Value")
+		assertFieldIsSet(t, md, pmsg, "optInt64Value")
+		assertFieldIsSet(t, md, pmsg, "optUint32Value")
+		assertFieldIsSet(t, md, pmsg, "optUint64Value")
+		assertFieldIsSet(t, md, pmsg, "optSint32Value")
+		assertFieldIsSet(t, md, pmsg, "optSint64Value")
+		assertFieldIsSet(t, md, pmsg, "optFixed32Value")
+		assertFieldIsSet(t, md, pmsg, "optFixed64Value")
+		assertFieldIsSet(t, md, pmsg, "optSfixed32Value")
+		assertFieldIsSet(t, md, pmsg, "optSfixed64Value")
+		assertFieldIsSet(t, md, pmsg, "optBoolValue")
+		assertFieldIsSet(t, md, pmsg, "optStringValue")
+		assertFieldIsSet(t, md, pmsg, "optBytesValue")
+		assertFieldIsSet(t, md, pmsg, "optMsgValue")
+	})
+
+	t.Run("ParameterValues - dynamicpb", func(t *testing.T) {
 		md := testv1.File_test_v1_test_proto.Messages().ByName("ParameterValues")
 		msg := dynamicpb.NewMessage(md)
 		fauxrpc.SetDataOnMessage(msg)
@@ -107,5 +146,40 @@ func TestGenerateMessage(t *testing.T) {
 		assertFieldIsSet(t, md, msg, "stringValueWrapper")
 		assertFieldIsSet(t, md, msg, "fieldMask")
 		assertFieldIsSet(t, md, msg, "enumList")
+	})
+
+	t.Run("ParameterValues - concrete", func(t *testing.T) {
+		msg := &testv1.ParameterValues{}
+		fauxrpc.SetDataOnMessage(msg)
+		md := msg.ProtoReflect().Descriptor()
+		pmsg := msg.ProtoReflect()
+		assertFieldIsSet(t, md, pmsg, "doubleValue")
+		assertFieldIsSet(t, md, pmsg, "floatValue")
+		assertFieldIsSet(t, md, pmsg, "int32Value")
+		assertFieldIsSet(t, md, pmsg, "int64Value")
+		assertFieldIsSet(t, md, pmsg, "uint32Value")
+		assertFieldIsSet(t, md, pmsg, "uint64Value")
+		assertFieldIsSet(t, md, pmsg, "sint32Value")
+		assertFieldIsSet(t, md, pmsg, "sint64Value")
+		assertFieldIsSet(t, md, pmsg, "fixed32Value")
+		assertFieldIsSet(t, md, pmsg, "fixed64Value")
+		assertFieldIsSet(t, md, pmsg, "sfixed32Value")
+		assertFieldIsSet(t, md, pmsg, "sfixed64Value")
+		assertFieldIsSet(t, md, pmsg, "boolValue")
+		assertFieldIsSet(t, md, pmsg, "stringValue")
+		assertFieldIsSet(t, md, pmsg, "bytesValue")
+		assertFieldIsSet(t, md, pmsg, "timestamp")
+		assertFieldIsSet(t, md, pmsg, "duration")
+		assertFieldIsSet(t, md, pmsg, "boolValueWrapper")
+		assertFieldIsSet(t, md, pmsg, "int32ValueWrapper")
+		assertFieldIsSet(t, md, pmsg, "int64ValueWrapper")
+		assertFieldIsSet(t, md, pmsg, "uint32ValueWrapper")
+		assertFieldIsSet(t, md, pmsg, "uint64ValueWrapper")
+		assertFieldIsSet(t, md, pmsg, "floatValueWrapper")
+		assertFieldIsSet(t, md, pmsg, "doubleValueWrapper")
+		assertFieldIsSet(t, md, pmsg, "bytesValueWrapper")
+		assertFieldIsSet(t, md, pmsg, "stringValueWrapper")
+		assertFieldIsSet(t, md, pmsg, "fieldMask")
+		assertFieldIsSet(t, md, pmsg, "enumList")
 	})
 }

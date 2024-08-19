@@ -2,6 +2,7 @@ package fauxrpc
 
 import (
 	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/reflect/protoregistry"
 	"google.golang.org/protobuf/types/dynamicpb"
 )
 
@@ -95,13 +96,25 @@ func getFieldValue(fd protoreflect.FieldDescriptor, st state) *protoreflect.Valu
 			}
 		}
 
-		nested := dynamicpb.NewMessage(fd.Message())
-		setDataOnMessage(nested, st.Inc())
+		var nested protoreflect.Message
+		mt, err := protoregistry.GlobalTypes.FindMessageByName(fd.Message().FullName())
+		if err != nil {
+			nested = dynamicpb.NewMessageType(fd.Message()).New()
+		} else {
+			nested = mt.New()
+		}
+		setDataOnMessage(nested.Interface(), st.Inc())
 		v := protoreflect.ValueOf(nested)
 		return &v
 	case protoreflect.GroupKind:
-		nested := dynamicpb.NewMessage(fd.Message())
-		setDataOnMessage(nested, st.Inc())
+		var nested protoreflect.Message
+		mt, err := protoregistry.GlobalTypes.FindMessageByName(fd.Message().FullName())
+		if err != nil {
+			nested = dynamicpb.NewMessageType(fd.Message()).New()
+		} else {
+			nested = mt.New()
+		}
+		setDataOnMessage(nested.Interface(), st.Inc())
 		v := protoreflect.ValueOf(nested)
 		return &v
 	}

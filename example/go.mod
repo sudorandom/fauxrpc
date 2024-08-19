@@ -1,4 +1,4 @@
-module github.com/sudorandom/fauxrpc/examples/generate-messages
+module github.com/sudorandom/fauxrpc/examples
 
 go 1.22.4
 
@@ -16,3 +16,5 @@ require (
 	github.com/brianvoe/gofakeit/v7 v7.0.4 // indirect
 	github.com/bufbuild/protovalidate-go v0.6.3 // indirect
 )
+
+replace github.com/sudorandom/fauxrpc => ../
