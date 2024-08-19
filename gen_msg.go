@@ -10,21 +10,22 @@ import (
 )
 
 // NewMessage creates a new message populated with fake data given a protoreflect.MessageDescriptor
-func NewMessage(md protoreflect.MessageDescriptor) *dynamicpb.Message {
+func NewMessage(md protoreflect.MessageDescriptor) protoreflect.ProtoMessage {
 	msg := dynamicpb.NewMessage(md)
 	setDataOnMessage(msg, state{})
 	return msg
 }
 
-// SetDataOnMessage generates fake data given a *dynamicpb.Message and sets the field values.
-func SetDataOnMessage(msg *dynamicpb.Message) {
+// SetDataOnMessage generates fake data given a protoreflect.ProtoMessage and sets the field values.
+func SetDataOnMessage(msg protoreflect.ProtoMessage) {
 	setDataOnMessage(msg, state{})
 }
 
-func setDataOnMessage(msg *dynamicpb.Message, st state) {
+func setDataOnMessage(pm protoreflect.ProtoMessage, st state) {
 	if st.Depth > MaxNestedDepth {
 		return
 	}
+	msg := pm.ProtoReflect()
 	desc := msg.Descriptor()
 	oneOfFields := map[protoreflect.FullName]struct{}{}
 	oneOfs := desc.Oneofs()
