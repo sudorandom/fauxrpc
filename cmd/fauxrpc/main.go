@@ -77,5 +77,5 @@ func (n *staticNames) Names() []string {
 }
 
 func fullVersion() string {
-	return fmt.Sprintf("fauxrpc: %s (%s) @ %s; %s", version, commit, date, runtime.Version())
+	return fmt.Sprintf("%s (%s) @ %s; %s", version, commit, date, runtime.Version())
 }

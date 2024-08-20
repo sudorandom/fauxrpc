@@ -98,7 +98,7 @@ func (r *ServiceRegistry) ForEachService(cb func(protoreflect.ServiceDescriptor)
 	}
 }
 
-func (r *ServiceRegistry) Files() protodesc.Resolver {
+func (r *ServiceRegistry) Files() *protoregistry.Files {
 	return r.files
 }
 
