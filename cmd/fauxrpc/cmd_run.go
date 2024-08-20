@@ -80,7 +80,7 @@ func (c *RunCmd) Run(globals *Globals) error {
 		Handler: h2c.NewHandler(mux, &http2.Server{}),
 	}
 
-	fmt.Printf("FauxRPC (%s)", fullVersion())
+	fmt.Printf("FauxRPC (%s)\n", fullVersion())
 	fmt.Printf("Listening on http://%s\n", c.Addr)
 	fmt.Printf("OpenAPI documentation: http://%s/fauxrpc.openapi.html\n", c.Addr)
 	fmt.Println()
