@@ -3,7 +3,7 @@ package stubs
 import (
 	"context"
 	"fmt"
-	"log"
+	"strings"
 
 	"connectrpc.com/connect"
 	stubsv1 "github.com/sudorandom/fauxrpc/private/proto/gen/stubs/v1"
@@ -33,7 +33,10 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 	names := make([]protoreflect.FullName, len(req.Msg.Stubs))
 	values := make([]protoreflect.ProtoMessage, len(req.Msg.Stubs))
 	for i, stub := range req.Msg.Stubs {
-		name := protoreflect.FullName(stub.GetRef().GetTarget())
+		name, err := normalizeTargetName(stub.GetRef().GetTarget())
+		if err != nil {
+			return nil, err
+		}
 		desc, err := h.registry.Files().FindDescriptorByName(name)
 		if err != nil {
 			return nil, err
@@ -50,10 +53,8 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 		default:
 			return nil, fmt.Errorf("not valid for %T", desc)
 		}
-		fmt.Println(md, md.FullName())
-		fmt.Printf("%+T", md)
-		msg := newMessage(md).Interface()
 
+		msg := newMessage(md).Interface()
 		switch t := stub.GetContent().(type) {
 		case *stubsv1.Stub_Json:
 			if err := protojson.Unmarshal([]byte(t.Json), msg); err != nil {
@@ -67,7 +68,6 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 		ids[i] = stub.GetRef().GetId()
 		names[i] = name
 		values[i] = msg
-		log.Printf("MSG %T %+v", msg, msg)
 	}
 
 	for i, id := range ids {
@@ -80,7 +80,11 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 // ListStubs implements stubsv1connect.StubsServiceHandler.
 func (h *handler) ListStubs(ctx context.Context, req *connect.Request[stubsv1.ListStubsRequest]) (*connect.Response[stubsv1.ListStubsResponse], error) {
 	ref := req.Msg.GetStubRef()
-	pbstubs, err := stubsToProto(h.db.ListStubs(protoreflect.FullName(ref.GetTarget()), ref.GetId()))
+	targetName, err := normalizeTargetName(ref.GetTarget())
+	if err != nil {
+		return nil, err
+	}
+	pbstubs, err := stubsToProto(h.db.ListStubs(targetName, ref.GetId()))
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +100,11 @@ func (h *handler) RemoveAllStubs(context.Context, *connect.Request[stubsv1.Remov
 // RemoveStubs implements stubsv1connect.StubsServiceHandler.
 func (h *handler) RemoveStubs(ctx context.Context, msg *connect.Request[stubsv1.RemoveStubsRequest]) (*connect.Response[stubsv1.RemoveStubsResponse], error) {
 	for _, ref := range msg.Msg.GetStubRefs() {
-		h.db.RemoveStub(protoreflect.FullName(ref.GetTarget()), ref.GetId())
+		targetName, err := normalizeTargetName(ref.GetTarget())
+		if err != nil {
+			return nil, err
+		}
+		h.db.RemoveStub(targetName, ref.GetId())
 	}
 	return connect.NewResponse(&stubsv1.RemoveStubsResponse{}), nil
 }
@@ -122,15 +130,20 @@ func stubsToProto(allStubs map[protoreflect.FullName]map[string]protoreflect.Pro
 }
 
 func newMessage(md protoreflect.MessageDescriptor) protoreflect.Message {
-	protoregistry.GlobalTypes.RangeMessages(func(mt protoreflect.MessageType) bool {
-		log.Printf("SUPPORTED MESSAGE: %s", mt.Descriptor().FullName())
-		return true
-	})
-	fmt.Println("LOOKING FOR", md.FullName())
 	mt, err := protoregistry.GlobalTypes.FindMessageByName(md.FullName())
 	if err != nil {
-		fmt.Println("ERR", err)
 		return dynamicpb.NewMessageType(md).New()
 	}
 	return mt.New()
+}
+
+func normalizeTargetName(target string) (protoreflect.FullName, error) {
+	switch strings.Count(target, "/") {
+	case 0:
+	case 1:
+		target = strings.ReplaceAll(target, "/", ".")
+	default:
+		return "", fmt.Errorf("target name has %d slashes when at most one is acceptable", strings.Count(target, "/"))
+	}
+	return protoreflect.FullName(target), nil
 }

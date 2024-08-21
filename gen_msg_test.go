@@ -17,12 +17,18 @@ import (
 
 var AllTypes = testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
 
+func ExampleSetDataOnMessage() {
+	msg := &elizav1.SayResponse{}
+	fauxrpc.SetDataOnMessage(msg, fauxrpc.GenOptions{})
+	b, _ := protojson.MarshalOptions{Indent: "  "}.Marshal(msg)
+	fmt.Println(string(b))
+}
+
 func ExampleNewMessage() {
 	msg := fauxrpc.NewMessage(elizav1.File_connectrpc_eliza_v1_eliza_proto.Messages().ByName("SayResponse"), fauxrpc.GenOptions{})
 	b, _ := protojson.MarshalOptions{Indent: "  "}.Marshal(msg)
 	fmt.Println(string(b))
 }
-
 func requireFieldByName(t *testing.T, md protoreflect.MessageDescriptor, msg protoreflect.Message, fieldName string) protoreflect.Value {
 	fd := md.Fields().ByJSONName(fieldName)
 	require.NotNil(t, fd, "field %s does not exist", fieldName)

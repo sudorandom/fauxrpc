@@ -43,7 +43,9 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) {
 			fields := desc.Fields()
 			for i := 0; i < fields.Len(); i++ {
 				field := fields.Get(i)
-				msg.Set(field, other.ProtoReflect().Get(field))
+				if other.ProtoReflect().Has(field) {
+					msg.Set(field, other.ProtoReflect().Get(field))
+				}
 			}
 			return
 		}
