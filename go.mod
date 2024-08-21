@@ -9,6 +9,7 @@ require (
 	buf.build/gen/go/grpc/grpc/protocolbuffers/go v1.34.1-20240809200651-8507e5a24938.1
 	connectrpc.com/connect v1.16.2
 	connectrpc.com/grpcreflect v1.2.0
+	connectrpc.com/validate v0.1.0
 	connectrpc.com/vanguard v0.2.0
 	github.com/alecthomas/kong v0.9.0
 	github.com/brianvoe/gofakeit/v7 v7.0.4
@@ -32,6 +33,7 @@ require (
 	github.com/google/cel-go v0.21.0 // indirect
 	github.com/google/gnostic v0.7.0 // indirect
 	github.com/google/gnostic-models v0.6.9-0.20230804172637-c7be7c783f49 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/lmittmann/tint v1.0.5 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/pb33f/libopenapi v0.16.14 // indirect

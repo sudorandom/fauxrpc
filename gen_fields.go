@@ -2,8 +2,6 @@ package fauxrpc
 
 import (
 	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/reflect/protoregistry"
-	"google.golang.org/protobuf/types/dynamicpb"
 )
 
 var kindToGenerator = map[protoreflect.Kind]func(fd protoreflect.FieldDescriptor) *protoreflect.Value{
@@ -73,7 +71,7 @@ var kindToGenerator = map[protoreflect.Kind]func(fd protoreflect.FieldDescriptor
 	},
 }
 
-func getFieldValue(fd protoreflect.FieldDescriptor, st state) *protoreflect.Value {
+func getFieldValue(fd protoreflect.FieldDescriptor, opts GenOptions) *protoreflect.Value {
 	switch fd.Kind() {
 	case protoreflect.MessageKind:
 		switch string(fd.Message().FullName()) {
@@ -90,31 +88,19 @@ func getFieldValue(fd protoreflect.FieldDescriptor, st state) *protoreflect.Valu
 		case "google.protobuf.Any":
 			return nil
 		case "google.protobuf.Value":
-			if val := GoogleValue(fd, st); val != nil {
+			if val := GoogleValue(fd, opts); val != nil {
 				v := protoreflect.ValueOf(val.ProtoReflect())
 				return &v
 			}
 		}
 
-		var nested protoreflect.Message
-		mt, err := protoregistry.GlobalTypes.FindMessageByName(fd.Message().FullName())
-		if err != nil {
-			nested = dynamicpb.NewMessageType(fd.Message()).New()
-		} else {
-			nested = mt.New()
-		}
-		setDataOnMessage(nested.Interface(), st.Inc())
+		nested := newMessage(fd.Message())
+		setDataOnMessage(nested.Interface(), opts.nested())
 		v := protoreflect.ValueOf(nested)
 		return &v
 	case protoreflect.GroupKind:
-		var nested protoreflect.Message
-		mt, err := protoregistry.GlobalTypes.FindMessageByName(fd.Message().FullName())
-		if err != nil {
-			nested = dynamicpb.NewMessageType(fd.Message()).New()
-		} else {
-			nested = mt.New()
-		}
-		setDataOnMessage(nested.Interface(), st.Inc())
+		nested := newMessage(fd.Message())
+		setDataOnMessage(nested.Interface(), opts.nested())
 		v := protoreflect.ValueOf(nested)
 		return &v
 	}

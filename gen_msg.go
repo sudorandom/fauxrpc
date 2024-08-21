@@ -6,27 +6,49 @@ import (
 
 	"github.com/brianvoe/gofakeit/v7"
 	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/types/dynamicpb"
 )
 
+const defaultMaxDepth = 20
+
 // NewMessage creates a new message populated with fake data given a protoreflect.MessageDescriptor
-func NewMessage(md protoreflect.MessageDescriptor) protoreflect.ProtoMessage {
-	msg := dynamicpb.NewMessage(md)
-	setDataOnMessage(msg, state{})
+func NewMessage(md protoreflect.MessageDescriptor, opts GenOptions) protoreflect.ProtoMessage {
+	if opts.MaxDepth == 0 {
+		opts.MaxDepth = defaultMaxDepth
+	}
+	msg := newMessage(md).Interface()
+	setDataOnMessage(msg, opts)
 	return msg
 }
 
 // SetDataOnMessage generates fake data given a protoreflect.ProtoMessage and sets the field values.
-func SetDataOnMessage(msg protoreflect.ProtoMessage) {
-	setDataOnMessage(msg, state{})
+func SetDataOnMessage(msg protoreflect.ProtoMessage, opts GenOptions) {
+	if opts.MaxDepth == 0 {
+		opts.MaxDepth = defaultMaxDepth
+	}
+	setDataOnMessage(msg, opts)
 }
 
-func setDataOnMessage(pm protoreflect.ProtoMessage, st state) {
-	if st.Depth > MaxNestedDepth {
+func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) {
+	if opts.MaxDepth <= 0 {
 		return
 	}
 	msg := pm.ProtoReflect()
 	desc := msg.Descriptor()
+
+	if opts.StubDB != nil {
+		stubs := opts.StubDB.GetStubs(desc.FullName())
+		if len(stubs) > 0 {
+			idx := gofakeit.IntRange(0, len(stubs)-1)
+			other := stubs[idx]
+			fields := desc.Fields()
+			for i := 0; i < fields.Len(); i++ {
+				field := fields.Get(i)
+				msg.Set(field, other.ProtoReflect().Get(field))
+			}
+			return
+		}
+	}
+
 	oneOfFields := map[protoreflect.FullName]struct{}{}
 	oneOfs := desc.Oneofs()
 	// gather one-of fields
@@ -42,7 +64,7 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, st state) {
 		options := oneOf.Fields()
 		idx := gofakeit.IntRange(0, options.Len()-1)
 		field := options.Get(idx)
-		if v := getFieldValue(field, st.Inc()); v != nil {
+		if v := getFieldValue(field, opts.nested()); v != nil {
 			msg.Set(field, *v)
 		}
 	}
@@ -57,7 +79,7 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, st state) {
 			listVal := msg.NewField(field)
 			itemCount := gofakeit.IntRange(0, 4)
 			for i := 0; i < itemCount; i++ {
-				if v := getFieldValue(field, st.Inc()); v != nil {
+				if v := getFieldValue(field, opts.nested()); v != nil {
 					listVal.List().Append(*v)
 				} else {
 					slog.Warn(fmt.Sprintf("Unknown list value %s %v", field.FullName(), field.Kind()))
@@ -71,8 +93,8 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, st state) {
 			mapVal := msg.NewField(field)
 			itemCount := gofakeit.IntRange(0, 4)
 			for i := 0; i < itemCount; i++ {
-				v := getFieldValue(field.MapKey(), st.Inc())
-				w := getFieldValue(field.MapValue(), st.Inc())
+				v := getFieldValue(field.MapKey(), opts.nested())
+				w := getFieldValue(field.MapValue(), opts.nested())
 				if v != nil && w != nil {
 					mapVal.Map().Set((*v).MapKey(), *w)
 				} else {
@@ -82,7 +104,7 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, st state) {
 			msg.Set(field, mapVal)
 			return
 		}
-		if v := getFieldValue(field, st.Inc()); v != nil {
+		if v := getFieldValue(field, opts.nested()); v != nil {
 			msg.Set(field, *v)
 		}
 	}

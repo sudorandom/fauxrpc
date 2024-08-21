@@ -1,4 +1,4 @@
-package protobuf
+package server
 
 import (
 	"fmt"
@@ -9,11 +9,12 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/sudorandom/fauxrpc"
+	"github.com/sudorandom/fauxrpc/private/stubs"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-func NewHandler(service protoreflect.ServiceDescriptor) http.Handler {
+func NewHandler(service protoreflect.ServiceDescriptor, db stubs.StubDatabase) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Trailer", "Grpc-Status,Grpc-Message")
 		w.Header().Add("Content-Type", "application/grpc")
@@ -47,7 +48,7 @@ func NewHandler(service protoreflect.ServiceDescriptor) http.Handler {
 
 		slog.Info("MethodCalled", slog.String("service", serviceName), slog.String("method", methodName))
 
-		out := fauxrpc.NewMessage(method.Output())
+		out := fauxrpc.NewMessage(method.Output(), fauxrpc.GenOptions{MaxDepth: 20, StubDB: db})
 
 		b, err := proto.Marshal(out)
 		if err != nil {

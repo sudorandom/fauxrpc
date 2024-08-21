@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package stubs.v1;
+
+import "stubs/v1/stubs.proto";
+
+service StubsService {
+  rpc AddStubs(AddStubsRequest) returns (AddStubsResponse) {}
+  rpc RemoveStubs(RemoveStubsRequest) returns (RemoveStubsResponse) {}
+  rpc RemoveAllStubs(RemoveAllStubsRequest) returns (RemoveAllStubsResponse) {}
+  rpc ListStubs(ListStubsRequest) returns (ListStubsResponse) {}
+}
+
+message AddStubsRequest {
+  repeated stubs.v1.Stub stubs = 1;
+}
+
+message AddStubsResponse {}
+
+message RemoveStubsRequest {
+  repeated StubRef stub_refs = 1;
+}
+
+message RemoveStubsResponse {}
+
+message RemoveAllStubsRequest {}
+
+message RemoveAllStubsResponse {}
+
+message ListStubsRequest {
+  StubRef stub_ref = 1;
+}
+
+message ListStubsResponse {
+  repeated stubs.v1.Stub stubs = 1;
+}

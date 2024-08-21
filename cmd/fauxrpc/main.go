@@ -32,7 +32,8 @@ func (v VersionFlag) BeforeApply(app *kong.Kong, vars kong.Vars) error {
 type CLI struct {
 	Globals
 
-	Run RunCmd `cmd:"" help:"Run the FauxRPC server"`
+	Run  RunCmd  `cmd:"" help:"Run the FauxRPC server"`
+	Stub StubCmd `cmd:"" help:"Contains stub commands"`
 }
 
 func main() {

@@ -18,7 +18,7 @@ import (
 var AllTypes = testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
 
 func ExampleNewMessage() {
-	msg := fauxrpc.NewMessage(elizav1.File_connectrpc_eliza_v1_eliza_proto.Messages().ByName("SayResponse"))
+	msg := fauxrpc.NewMessage(elizav1.File_connectrpc_eliza_v1_eliza_proto.Messages().ByName("SayResponse"), fauxrpc.GenOptions{})
 	b, _ := protojson.MarshalOptions{Indent: "  "}.Marshal(msg)
 	fmt.Println(string(b))
 }
@@ -40,7 +40,7 @@ func TestNewMessage(t *testing.T) {
 	t.Run("AllTypes - dynamicpb", func(t *testing.T) {
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
 		msg := dynamicpb.NewMessage(md)
-		fauxrpc.SetDataOnMessage(msg)
+		fauxrpc.SetDataOnMessage(msg, fauxrpc.GenOptions{})
 		assertFieldIsSet(t, md, msg, "doubleValue")
 		assertFieldIsSet(t, md, msg, "doubleValue")
 		assertFieldIsSet(t, md, msg, "floatValue")
@@ -77,7 +77,7 @@ func TestNewMessage(t *testing.T) {
 
 	t.Run("AllTypes - concrete", func(t *testing.T) {
 		msg := &testv1.AllTypes{}
-		fauxrpc.SetDataOnMessage(msg)
+		fauxrpc.SetDataOnMessage(msg, fauxrpc.GenOptions{})
 		md := msg.ProtoReflect().Descriptor()
 		pmsg := msg.ProtoReflect()
 		assertFieldIsSet(t, md, pmsg, "doubleValue")
@@ -117,7 +117,7 @@ func TestNewMessage(t *testing.T) {
 	t.Run("ParameterValues - dynamicpb", func(t *testing.T) {
 		md := testv1.File_test_v1_test_proto.Messages().ByName("ParameterValues")
 		msg := dynamicpb.NewMessage(md)
-		fauxrpc.SetDataOnMessage(msg)
+		fauxrpc.SetDataOnMessage(msg, fauxrpc.GenOptions{})
 		assertFieldIsSet(t, md, msg, "doubleValue")
 		assertFieldIsSet(t, md, msg, "floatValue")
 		assertFieldIsSet(t, md, msg, "int32Value")
@@ -150,7 +150,7 @@ func TestNewMessage(t *testing.T) {
 
 	t.Run("ParameterValues - concrete", func(t *testing.T) {
 		msg := &testv1.ParameterValues{}
-		fauxrpc.SetDataOnMessage(msg)
+		fauxrpc.SetDataOnMessage(msg, fauxrpc.GenOptions{})
 		md := msg.ProtoReflect().Descriptor()
 		pmsg := msg.ProtoReflect()
 		assertFieldIsSet(t, md, pmsg, "doubleValue")

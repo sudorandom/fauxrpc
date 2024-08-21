@@ -1,4 +1,4 @@
-package protobuf
+package server
 
 import (
 	"encoding/binary"

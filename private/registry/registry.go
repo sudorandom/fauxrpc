@@ -1,4 +1,4 @@
-package protobuf
+package registry
 
 import (
 	"context"

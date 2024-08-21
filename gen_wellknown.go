@@ -106,7 +106,7 @@ func GoogleTimestamp(fd protoreflect.FieldDescriptor) *timestamppb.Timestamp {
 	return timestamppb.New(time.Unix(0, (gofakeit.Int64()%delta)+min))
 }
 
-func GoogleValue(fd protoreflect.FieldDescriptor, st state) *structpb.Value {
+func GoogleValue(fd protoreflect.FieldDescriptor, opts GenOptions) *structpb.Value {
 	options := []func() *structpb.Value{
 		func() *structpb.Value { return structpb.NewNullValue() },
 		func() *structpb.Value { return structpb.NewBoolValue(Bool(fd)) },
@@ -116,7 +116,7 @@ func GoogleValue(fd protoreflect.FieldDescriptor, st state) *structpb.Value {
 			list := &structpb.ListValue{}
 			itemCount := gofakeit.IntRange(0, 4)
 			for i := 0; i < itemCount; i++ {
-				list.Values = append(list.Values, GoogleValue(fd, st.Inc()))
+				list.Values = append(list.Values, GoogleValue(fd, opts.nested()))
 			}
 			return structpb.NewListValue(list)
 		},
@@ -124,7 +124,7 @@ func GoogleValue(fd protoreflect.FieldDescriptor, st state) *structpb.Value {
 			obj := &structpb.Struct{}
 			itemCount := gofakeit.IntRange(0, 4)
 			for i := 0; i < itemCount; i++ {
-				obj.Fields[strings.ToLower(gofakeit.Word())] = GoogleValue(fd, st.Inc())
+				obj.Fields[strings.ToLower(gofakeit.Word())] = GoogleValue(fd, opts.nested())
 			}
 			return structpb.NewStructValue(obj)
 		},
