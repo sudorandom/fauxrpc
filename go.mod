@@ -17,7 +17,7 @@ require (
 	github.com/bufbuild/protoyaml-go v0.1.11
 	github.com/golang/protobuf v1.5.4
 	github.com/stretchr/testify v1.9.0
-	github.com/sudorandom/protoc-gen-connect-openapi v0.8.10
+	github.com/sudorandom/protoc-gen-connect-openapi v0.8.11
 	golang.org/x/net v0.28.0
 	google.golang.org/protobuf v1.34.2
 	gopkg.in/yaml.v3 v3.0.1
@@ -41,6 +41,6 @@ require (
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
 	golang.org/x/exp v0.0.0-20240808152545-0cdaa3abc0fa // indirect
 	golang.org/x/text v0.17.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240814211410-ddb44dafa142 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240820151423-278611b39280 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240814211410-ddb44dafa142 // indirect
 )

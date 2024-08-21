@@ -38,11 +38,11 @@ func NewHandler(service protoreflect.ServiceDescriptor) http.Handler {
 			w.Header().Set("Grpc-Message", "method not found")
 			return
 		}
+		defer r.Body.Close()
 
 		// completely ignore the body. Maybe later we'll need it as input to the response message
 		go func() {
 			_, _ = io.Copy(io.Discard, r.Body)
-			_ = r.Body.Close()
 		}()
 
 		slog.Info("MethodCalled", slog.String("service", serviceName), slog.String("method", methodName))

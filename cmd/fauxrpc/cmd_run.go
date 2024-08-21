@@ -23,8 +23,10 @@ import (
 )
 
 type RunCmd struct {
-	Schema []string `help:"The modules to use for the RPC schema. It can be protobuf descriptors (binpb, json, yaml), a URL for reflection or a directory of descriptors."`
-	Addr   string   `short:"a" help:"Address to bind to." default:"127.0.0.1:6660"`
+	Schema       []string `help:"The modules to use for the RPC schema. It can be protobuf descriptors (binpb, json, yaml), a URL for reflection or a directory of descriptors."`
+	Addr         string   `short:"a" help:"Address to bind to." default:"127.0.0.1:6660"`
+	NoReflection bool     `help:"Disables the server reflection service."`
+	NoDocPage    bool     `help:"Disables the documentation page."`
 }
 
 func (c *RunCmd) Run(globals *Globals) error {
@@ -39,9 +41,6 @@ func (c *RunCmd) Run(globals *Globals) error {
 	if registry.ServiceCount() == 0 {
 		return errors.New("no services found in the given schemas")
 	}
-
-	// TODO: Add --no-reflection option
-	// TODO: Add --no-openapi option
 	// TODO: Load descriptors from stdin (assume protocol descriptors in binary format)
 	// TODO: add a stub service for registering stubs
 
@@ -60,20 +59,25 @@ func (c *RunCmd) Run(globals *Globals) error {
 	if err != nil {
 		log.Fatalf("err: %s", err)
 	}
-	reflector := grpcreflect.NewReflector(&staticNames{names: serviceNames}, grpcreflect.WithDescriptorResolver(registry.Files()))
 
 	mux := http.NewServeMux()
 	mux.Handle("/", transcoder)
-	mux.Handle(grpcreflect.NewHandlerV1(reflector))
-	mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
+
+	if !c.NoReflection {
+		reflector := grpcreflect.NewReflector(&staticNames{names: serviceNames}, grpcreflect.WithDescriptorResolver(registry.Files()))
+		mux.Handle(grpcreflect.NewHandlerV1(reflector))
+		mux.Handle(grpcreflect.NewHandlerV1Alpha(reflector))
+	}
 
 	// OpenAPI Stuff
-	resp, err := convertToOpenAPISpec(registry)
-	if err != nil {
-		return err
+	if !c.NoDocPage {
+		resp, err := convertToOpenAPISpec(registry)
+		if err != nil {
+			return err
+		}
+		mux.Handle("GET /fauxrpc.openapi.html", singleFileHandler(openapiHTML))
+		mux.Handle("GET /fauxrpc.openapi.yaml", singleFileHandler(resp.File[0].GetContent()))
 	}
-	mux.Handle("GET /fauxrpc.openapi.html", singleFileHandler(openapiHTML))
-	mux.Handle("GET /fauxrpc.openapi.yaml", singleFileHandler(resp.File[0].GetContent()))
 
 	server := &http.Server{
 		Addr:    c.Addr,
@@ -82,10 +86,14 @@ func (c *RunCmd) Run(globals *Globals) error {
 
 	fmt.Printf("FauxRPC (%s)\n", fullVersion())
 	fmt.Printf("Listening on http://%s\n", c.Addr)
-	fmt.Printf("OpenAPI documentation: http://%s/fauxrpc.openapi.html\n", c.Addr)
+	if !c.NoDocPage {
+		fmt.Printf("OpenAPI documentation: http://%s/fauxrpc.openapi.html\n", c.Addr)
+	}
 	fmt.Println()
 	fmt.Println("Example Commands:")
-	fmt.Printf("$ buf curl --http2-prior-knowledge http://%s --list-methods\n", c.Addr)
+	if !c.NoReflection {
+		fmt.Printf("$ buf curl --http2-prior-knowledge http://%s --list-methods\n", c.Addr)
+	}
 	fmt.Printf("$ buf curl --http2-prior-knowledge http://%s/[METHOD_NAME]\n", c.Addr)
 	return server.ListenAndServe()
 }
@@ -119,7 +127,7 @@ func convertToOpenAPISpec(registry *protobuf.ServiceRegistry) (*pluginpb.CodeGen
 	base := openAPIBase{
 		OpenAPI: "3.1.0",
 		Info: openAPIBaseInfo{
-			Title:       "FauxRPC Generated Documentation",
+			Title:       "FauxRPC Documentation",
 			Description: descBuilder.String(),
 			Version:     strings.TrimPrefix(version, "v"),
 		},
@@ -139,39 +147,7 @@ func convertToOpenAPISpec(registry *protobuf.ServiceRegistry) (*pluginpb.CodeGen
 
 func singleFileHandler(content string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+
 		fmt.Fprint(w, content)
 	}
-}
-
-const openapiHTML = `
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>Elements in HTML</title>
-    <!-- Embed elements Elements via Web Component -->
-    <script src="https://unpkg.com/@stoplight/elements/web-components.min.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/@stoplight/elements/styles.min.css">
-  </head>
-  <body>
-
-    <elements-api
-      apiDescriptionUrl="/fauxrpc.openapi.yaml"
-      router="hash"
-      layout="sidebar"
-    />
-
-  </body>
-</html>
-`
-
-type openAPIBaseInfo struct {
-	Description string `yaml:"description"`
-	Title       string `yaml:"title"`
-	Version     string `yaml:"version"`
-}
-type openAPIBase struct {
-	OpenAPI string          `yaml:"openapi"`
-	Info    openAPIBaseInfo `yaml:"info"`
 }
