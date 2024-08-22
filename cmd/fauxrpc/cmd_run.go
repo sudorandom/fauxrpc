@@ -5,22 +5,14 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"strings"
 
 	"connectrpc.com/connect"
 	"connectrpc.com/grpcreflect"
 	"connectrpc.com/validate"
 	"connectrpc.com/vanguard"
-	plugin_go "github.com/golang/protobuf/protoc-gen-go/plugin"
-	"github.com/sudorandom/protoc-gen-connect-openapi/converter"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/types/pluginpb"
-	"gopkg.in/yaml.v3"
 
 	"github.com/sudorandom/fauxrpc/private/proto/gen/stubs/v1/stubsv1connect"
 	"github.com/sudorandom/fauxrpc/private/registry"
@@ -111,53 +103,6 @@ func (c *RunCmd) Run(globals *Globals) error {
 	}
 	fmt.Printf("$ buf curl --http2-prior-knowledge http://%s/[METHOD_NAME]\n", c.Addr)
 	return server.ListenAndServe()
-}
-
-func convertToOpenAPISpec(registry *registry.ServiceRegistry) (*pluginpb.CodeGeneratorResponse, error) {
-	req := new(plugin_go.CodeGeneratorRequest)
-	files := registry.Files()
-	files.RangeFiles(func(fd protoreflect.FileDescriptor) bool {
-		if fd.Services().Len() > 0 {
-			req.FileToGenerate = append(req.FileToGenerate, string(fd.Path()))
-		}
-		req.ProtoFile = append(req.ProtoFile, protodesc.ToFileDescriptorProto(fd.ParentFile()))
-		return true
-	})
-	openapiBaseFile, err := os.CreateTemp("", "base.*.openapi.yaml")
-	if err != nil {
-		return nil, err
-	}
-	defer openapiBaseFile.Close()
-
-	descBuilder := strings.Builder{}
-	descBuilder.WriteString("This is a [FauxRPC](https://fauxrpc.com/) server that is currently hosting the following services:\n")
-	registry.ForEachService(func(sd protoreflect.ServiceDescriptor) {
-		descBuilder.WriteString("- ")
-		descBuilder.WriteString(string(sd.FullName()))
-		descBuilder.WriteByte('\n')
-	})
-	descBuilder.WriteByte('\n')
-	descBuilder.WriteString("FauxRPC is a mock server that supports gRPC, gRPC-Web, Connect and HTTP/JSON transcoding.")
-
-	base := openAPIBase{
-		OpenAPI: "3.1.0",
-		Info: openAPIBaseInfo{
-			Title:       "FauxRPC Documentation",
-			Description: descBuilder.String(),
-			Version:     strings.TrimPrefix(version, "v"),
-		},
-	}
-	b, err := yaml.Marshal(base)
-	if err != nil {
-		return nil, err
-	}
-	if _, err := openapiBaseFile.Write(b); err != nil {
-		return nil, err
-	}
-
-	req.Parameter = proto.String(fmt.Sprintf("path=all.openapi.yaml,base=%s", openapiBaseFile.Name()))
-
-	return converter.Convert(req)
 }
 
 func singleFileHandler(content string) http.HandlerFunc {
