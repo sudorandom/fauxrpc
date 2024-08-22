@@ -18,7 +18,7 @@ require (
 	github.com/bufbuild/protoyaml-go v0.1.11
 	github.com/golang/protobuf v1.5.4
 	github.com/stretchr/testify v1.9.0
-	github.com/sudorandom/protoc-gen-connect-openapi v0.8.11
+	github.com/sudorandom/protoc-gen-connect-openapi v0.9.0
 	golang.org/x/net v0.28.0
 	google.golang.org/protobuf v1.34.2
 	gopkg.in/yaml.v3 v3.0.1
@@ -33,11 +33,12 @@ require (
 	github.com/google/cel-go v0.21.0 // indirect
 	github.com/google/gnostic v0.7.0 // indirect
 	github.com/google/gnostic-models v0.6.9-0.20230804172637-c7be7c783f49 // indirect
-	github.com/google/uuid v1.6.0 // indirect
+	github.com/kr/pretty v0.3.1 // indirect
 	github.com/lmittmann/tint v1.0.5 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/pb33f/libopenapi v0.16.14 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/vmware-labs/yaml-jsonpath v0.3.2 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
