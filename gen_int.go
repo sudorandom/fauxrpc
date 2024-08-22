@@ -9,8 +9,8 @@ import (
 )
 
 // Int32 returns a fake int32 value given a field descriptor.
-func Int32(fd protoreflect.FieldDescriptor) int32 {
-	constraints := getResolver().ResolveFieldConstraints(fd)
+func Int32(fd protoreflect.FieldDescriptor, opts GenOptions) int32 {
+	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
 		return gofakeit.Int32()
 	}
@@ -48,8 +48,8 @@ func Int32(fd protoreflect.FieldDescriptor) int32 {
 }
 
 // Int64 returns a fake int64 value given a field descriptor.
-func Int64(fd protoreflect.FieldDescriptor) int64 {
-	constraints := getResolver().ResolveFieldConstraints(fd)
+func Int64(fd protoreflect.FieldDescriptor, opts GenOptions) int64 {
+	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
 		return gofakeit.Int64()
 	}
@@ -87,8 +87,8 @@ func Int64(fd protoreflect.FieldDescriptor) int64 {
 }
 
 // SInt32 returns a fake sint32 value given a field descriptor.
-func SInt32(fd protoreflect.FieldDescriptor) int32 {
-	constraints := getResolver().ResolveFieldConstraints(fd)
+func SInt32(fd protoreflect.FieldDescriptor, opts GenOptions) int32 {
+	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
 		return gofakeit.Int32()
 	}
@@ -126,8 +126,8 @@ func SInt32(fd protoreflect.FieldDescriptor) int32 {
 }
 
 // SInt64 returns a fake sint64 value given a field descriptor.
-func SInt64(fd protoreflect.FieldDescriptor) int64 {
-	constraints := getResolver().ResolveFieldConstraints(fd)
+func SInt64(fd protoreflect.FieldDescriptor, opts GenOptions) int64 {
+	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
 		return gofakeit.Int64()
 	}
@@ -165,8 +165,8 @@ func SInt64(fd protoreflect.FieldDescriptor) int64 {
 }
 
 // SFixed32 returns a fake sfixedint32 value given a field descriptor.
-func SFixed32(fd protoreflect.FieldDescriptor) int32 {
-	constraints := getResolver().ResolveFieldConstraints(fd)
+func SFixed32(fd protoreflect.FieldDescriptor, opts GenOptions) int32 {
+	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
 		return gofakeit.Int32()
 	}
@@ -204,8 +204,8 @@ func SFixed32(fd protoreflect.FieldDescriptor) int32 {
 }
 
 // SFixed64 returns a fake sfixed64 value given a field descriptor.
-func SFixed64(fd protoreflect.FieldDescriptor) int64 {
-	constraints := getResolver().ResolveFieldConstraints(fd)
+func SFixed64(fd protoreflect.FieldDescriptor, opts GenOptions) int64 {
+	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
 		return gofakeit.Int64()
 	}

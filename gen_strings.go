@@ -37,8 +37,8 @@ func stringSimple(fd protoreflect.FieldDescriptor) string {
 }
 
 // String returns a fake string value given a field descriptor.
-func String(fd protoreflect.FieldDescriptor) string {
-	constraints := getResolver().ResolveFieldConstraints(fd)
+func String(fd protoreflect.FieldDescriptor, opts GenOptions) string {
+	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
 		return stringSimple(fd)
 	}

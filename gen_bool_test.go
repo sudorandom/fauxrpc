@@ -35,7 +35,7 @@ func TestBool(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := fauxrpc.Bool(tc.fd)
+			result := fauxrpc.Bool(tc.fd, fauxrpc.GenOptions{})
 			assert.Contains(t, tc.expected, result, "unexpected value")
 		})
 	}

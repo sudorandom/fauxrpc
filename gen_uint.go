@@ -9,8 +9,8 @@ import (
 )
 
 // UInt32 returns a fake uint32 value given a field descriptor.
-func UInt32(fd protoreflect.FieldDescriptor) uint32 {
-	constraints := getResolver().ResolveFieldConstraints(fd)
+func UInt32(fd protoreflect.FieldDescriptor, opts GenOptions) uint32 {
+	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
 		return gofakeit.Uint32()
 	}
@@ -48,8 +48,8 @@ func UInt32(fd protoreflect.FieldDescriptor) uint32 {
 }
 
 // UInt64 returns a fake uint64 value given a field descriptor.
-func UInt64(fd protoreflect.FieldDescriptor) uint64 {
-	constraints := getResolver().ResolveFieldConstraints(fd)
+func UInt64(fd protoreflect.FieldDescriptor, opts GenOptions) uint64 {
+	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
 		return gofakeit.Uint64()
 	}
@@ -87,8 +87,8 @@ func UInt64(fd protoreflect.FieldDescriptor) uint64 {
 }
 
 // Fixed32 returns a fake fixed32 value given a field descriptor.
-func Fixed32(fd protoreflect.FieldDescriptor) uint32 {
-	constraints := getResolver().ResolveFieldConstraints(fd)
+func Fixed32(fd protoreflect.FieldDescriptor, opts GenOptions) uint32 {
+	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
 		return gofakeit.Uint32()
 	}
@@ -126,8 +126,8 @@ func Fixed32(fd protoreflect.FieldDescriptor) uint32 {
 }
 
 // Fixed64 returns a fake fixed64 value given a field descriptor.
-func Fixed64(fd protoreflect.FieldDescriptor) uint64 {
-	constraints := getResolver().ResolveFieldConstraints(fd)
+func Fixed64(fd protoreflect.FieldDescriptor, opts GenOptions) uint64 {
+	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
 		return gofakeit.Uint64()
 	}

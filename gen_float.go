@@ -9,8 +9,8 @@ import (
 )
 
 // Float32 returns a fake float32 value given a field descriptor.
-func Float32(fd protoreflect.FieldDescriptor) float32 {
-	constraints := getResolver().ResolveFieldConstraints(fd)
+func Float32(fd protoreflect.FieldDescriptor, opts GenOptions) float32 {
+	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
 		return gofakeit.Float32()
 	}
@@ -48,8 +48,8 @@ func Float32(fd protoreflect.FieldDescriptor) float32 {
 }
 
 // Float64 returns a fake float64 value given a field descriptor.
-func Float64(fd protoreflect.FieldDescriptor) float64 {
-	constraints := getResolver().ResolveFieldConstraints(fd)
+func Float64(fd protoreflect.FieldDescriptor, opts GenOptions) float64 {
+	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
 		return gofakeit.Float64()
 	}

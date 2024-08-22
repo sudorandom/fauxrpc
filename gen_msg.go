@@ -1,9 +1,6 @@
 package fauxrpc
 
 import (
-	"fmt"
-	"log/slog"
-
 	"github.com/brianvoe/gofakeit/v7"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -78,32 +75,15 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) {
 			continue
 		}
 		if field.IsList() {
-			listVal := msg.NewField(field)
-			itemCount := gofakeit.IntRange(0, 4)
-			for i := 0; i < itemCount; i++ {
-				if v := getFieldValue(field, opts.nested()); v != nil {
-					listVal.List().Append(*v)
-				} else {
-					slog.Warn(fmt.Sprintf("Unknown list value %s %v", field.FullName(), field.Kind()))
-				}
+			if val := Repeated(msg, field, opts); val != nil {
+				msg.Set(field, *val)
 			}
-
-			msg.Set(field, listVal)
 			return
 		}
 		if field.IsMap() {
-			mapVal := msg.NewField(field)
-			itemCount := gofakeit.IntRange(0, 4)
-			for i := 0; i < itemCount; i++ {
-				v := getFieldValue(field.MapKey(), opts.nested())
-				w := getFieldValue(field.MapValue(), opts.nested())
-				if v != nil && w != nil {
-					mapVal.Map().Set((*v).MapKey(), *w)
-				} else {
-					slog.Warn(fmt.Sprintf("Unknown map k/v %s %v", field.FullName(), field.Kind()))
-				}
+			if val := Map(msg, field, opts); val != nil {
+				msg.Set(field, *val)
 			}
-			msg.Set(field, mapVal)
 			return
 		}
 		if v := getFieldValue(field, opts.nested()); v != nil {

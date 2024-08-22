@@ -12,8 +12,8 @@ func enumSimple(fd protoreflect.FieldDescriptor) protoreflect.EnumNumber {
 }
 
 // Enum returns a fake enum value given a field descriptor.
-func Enum(fd protoreflect.FieldDescriptor) protoreflect.EnumNumber {
-	constraints := getResolver().ResolveFieldConstraints(fd)
+func Enum(fd protoreflect.FieldDescriptor, opts GenOptions) protoreflect.EnumNumber {
+	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
 		return enumSimple(fd)
 	}

@@ -109,9 +109,9 @@ func GoogleTimestamp(fd protoreflect.FieldDescriptor) *timestamppb.Timestamp {
 func GoogleValue(fd protoreflect.FieldDescriptor, opts GenOptions) *structpb.Value {
 	options := []func() *structpb.Value{
 		func() *structpb.Value { return structpb.NewNullValue() },
-		func() *structpb.Value { return structpb.NewBoolValue(Bool(fd)) },
-		func() *structpb.Value { return structpb.NewNumberValue(Float64(fd)) },
-		func() *structpb.Value { return structpb.NewStringValue(String(fd)) },
+		func() *structpb.Value { return structpb.NewBoolValue(Bool(fd, opts)) },
+		func() *structpb.Value { return structpb.NewNumberValue(Float64(fd, opts)) },
+		func() *structpb.Value { return structpb.NewStringValue(String(fd, opts)) },
 		func() *structpb.Value {
 			list := &structpb.ListValue{}
 			itemCount := gofakeit.IntRange(0, 4)

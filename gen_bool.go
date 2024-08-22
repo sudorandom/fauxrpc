@@ -5,8 +5,8 @@ import (
 )
 
 // Bool returns a fake boolean value given a field descriptor.
-func Bool(fd protoreflect.FieldDescriptor) bool {
-	constraints := getResolver().ResolveFieldConstraints(fd)
+func Bool(fd protoreflect.FieldDescriptor, opts GenOptions) bool {
+	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
 		return true
 	}
