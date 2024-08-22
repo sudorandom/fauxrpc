@@ -15,7 +15,9 @@ message AddStubsRequest {
   repeated stubs.v1.Stub stubs = 1;
 }
 
-message AddStubsResponse {}
+message AddStubsResponse {
+  repeated stubs.v1.Stub stubs = 1;
+}
 
 message RemoveStubsRequest {
   repeated StubRef stub_refs = 1;

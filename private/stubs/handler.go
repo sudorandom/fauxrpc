@@ -32,11 +32,14 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 	ids := make([]string, len(req.Msg.Stubs))
 	names := make([]protoreflect.FullName, len(req.Msg.Stubs))
 	values := make([]protoreflect.ProtoMessage, len(req.Msg.Stubs))
+	stubs := make([]*stubsv1.Stub, len(req.Msg.Stubs))
 	for i, stub := range req.Msg.Stubs {
-		name, err := normalizeTargetName(stub.GetRef().GetTarget())
+		ref := stub.GetRef()
+		name, err := normalizeTargetName(ref.GetTarget())
 		if err != nil {
 			return nil, err
 		}
+
 		desc, err := h.registry.Files().FindDescriptorByName(name)
 		if err != nil {
 			return nil, err
@@ -54,6 +57,8 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 			return nil, fmt.Errorf("not valid for %T", desc)
 		}
 
+		ref.Target = string(md.FullName())
+
 		msg := newMessage(md).Interface()
 		switch t := stub.GetContent().(type) {
 		case *stubsv1.Stub_Json:
@@ -68,13 +73,14 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 		ids[i] = stub.GetRef().GetId()
 		names[i] = name
 		values[i] = msg
+		stubs[i] = stub
 	}
 
 	for i, id := range ids {
 		h.db.AddStub(names[i], id, values[i])
 	}
 
-	return connect.NewResponse(&stubsv1.AddStubsResponse{}), nil
+	return connect.NewResponse(&stubsv1.AddStubsResponse{Stubs: stubs}), nil
 }
 
 // ListStubs implements stubsv1connect.StubsServiceHandler.
