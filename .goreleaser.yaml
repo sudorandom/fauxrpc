@@ -1,2 +1,30 @@
+version: 2
+project_name: fauxrpc
 builds:
   - main: ./cmd/fauxrpc/
+dockers:
+  - image_templates:
+      - "docker.io/sudorandom/fauxrpc:{{ .Tag }}-amd64"
+      - "docker.io/sudorandom/fauxrpc:{{ .Tag }}"
+      - "docker.io/sudorandom/fauxrpc:v{{ .Major }}"
+      - "docker.io/sudorandom/fauxrpc:latest"
+    use: buildx
+    build_flag_templates:
+      - "--pull"
+      - "--platform=linux/amd64"
+  - image_templates:
+      - "docker.io/sudorandom/fauxrpc:{{ .Tag }}-arm64"
+      - "docker.io/sudorandom/fauxrpc:{{ .Tag }}"
+      - "docker.io/sudorandom/fauxrpc:v{{ .Major }}"
+      - "docker.io/sudorandom/fauxrpc:latest"
+    use: buildx
+    build_flag_templates:
+      - "--pull"
+      - "--platform=linux/arm64"
+    goarch: arm64
+checksum:
+  # https://goreleaser.com/customization/checksum/
+  name_template: 'checksums.txt'
+source:
+  # https://goreleaser.com/customization/source/
+  enabled: true
