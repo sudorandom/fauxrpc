@@ -5,27 +5,26 @@ import (
 	"time"
 
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
-	"github.com/brianvoe/gofakeit/v7"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func durationSimple() *durationpb.Duration {
-	duration := time.Duration(gofakeit.Uint64() % uint64(30*time.Hour*24))
+func durationSimple(opts GenOptions) *durationpb.Duration {
+	duration := time.Duration(opts.fake().Uint64() % uint64(30*time.Hour*24))
 	return durationpb.New(duration)
 }
 
 // GoogleDuration generates a random google.protobuf.Duration value.
-func GoogleDuration(fd protoreflect.FieldDescriptor) *durationpb.Duration {
+func GoogleDuration(fd protoreflect.FieldDescriptor, opts GenOptions) *durationpb.Duration {
 	constraints := getResolver().ResolveFieldConstraints(fd)
 	if constraints == nil {
-		return durationSimple()
+		return durationSimple(opts)
 	}
 	rules := constraints.GetDuration()
 	if rules == nil {
-		return durationSimple()
+		return durationSimple(opts)
 	}
 
 	if rules.Const != nil {
@@ -51,25 +50,25 @@ func GoogleDuration(fd protoreflect.FieldDescriptor) *durationpb.Duration {
 	}
 
 	if len(rules.In) > 0 {
-		return rules.In[gofakeit.IntRange(0, len(rules.In)-1)]
+		return rules.In[opts.fake().IntRange(0, len(rules.In)-1)]
 	}
 
-	return durationpb.New(time.Duration(gofakeit.IntRange(int(minVal), int(maxVal))))
+	return durationpb.New(time.Duration(opts.fake().IntRange(int(minVal), int(maxVal))))
 }
 
-func generateTimestampSimple() *timestamppb.Timestamp {
-	return timestamppb.New(gofakeit.Date())
+func generateTimestampSimple(opts GenOptions) *timestamppb.Timestamp {
+	return timestamppb.New(opts.fake().Date())
 }
 
 // GoogleTimestamp generates a random google.protobuf.Timestamp value.
-func GoogleTimestamp(fd protoreflect.FieldDescriptor) *timestamppb.Timestamp {
+func GoogleTimestamp(fd protoreflect.FieldDescriptor, opts GenOptions) *timestamppb.Timestamp {
 	constraints := getResolver().ResolveFieldConstraints(fd)
 	if constraints == nil {
-		return generateTimestampSimple()
+		return generateTimestampSimple(opts)
 	}
 	rules := constraints.GetTimestamp()
 	if rules == nil {
-		return generateTimestampSimple()
+		return generateTimestampSimple(opts)
 	}
 
 	if rules.Const != nil {
@@ -103,7 +102,7 @@ func GoogleTimestamp(fd protoreflect.FieldDescriptor) *timestamppb.Timestamp {
 
 	delta := max - min
 
-	return timestamppb.New(time.Unix(0, (gofakeit.Int64()%delta)+min))
+	return timestamppb.New(time.Unix(0, (opts.fake().Int64()%delta)+min))
 }
 
 func GoogleValue(fd protoreflect.FieldDescriptor, opts GenOptions) *structpb.Value {
@@ -114,7 +113,7 @@ func GoogleValue(fd protoreflect.FieldDescriptor, opts GenOptions) *structpb.Val
 		func() *structpb.Value { return structpb.NewStringValue(String(fd, opts)) },
 		func() *structpb.Value {
 			list := &structpb.ListValue{}
-			itemCount := gofakeit.IntRange(0, 4)
+			itemCount := opts.fake().IntRange(0, 4)
 			for i := 0; i < itemCount; i++ {
 				list.Values = append(list.Values, GoogleValue(fd, opts.nested()))
 			}
@@ -122,13 +121,13 @@ func GoogleValue(fd protoreflect.FieldDescriptor, opts GenOptions) *structpb.Val
 		},
 		func() *structpb.Value {
 			obj := &structpb.Struct{}
-			itemCount := gofakeit.IntRange(0, 4)
+			itemCount := opts.fake().IntRange(0, 4)
 			for i := 0; i < itemCount; i++ {
-				obj.Fields[strings.ToLower(gofakeit.Word())] = GoogleValue(fd, opts.nested())
+				obj.Fields[strings.ToLower(opts.fake().Word())] = GoogleValue(fd, opts.nested())
 			}
 			return structpb.NewStructValue(obj)
 		},
 	}
-	fn := options[gofakeit.IntRange(0, len(options)-1)]
+	fn := options[opts.fake().IntRange(0, len(options)-1)]
 	return fn()
 }

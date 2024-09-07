@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -12,8 +13,10 @@ import (
 	"connectrpc.com/vanguard"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/reflect/protoreflect"
 
+	"github.com/quic-go/quic-go/http3"
 	"github.com/sudorandom/fauxrpc/private/proto/gen/stubs/v1/stubsv1connect"
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/private/server"
@@ -25,6 +28,10 @@ type RunCmd struct {
 	Addr         string   `short:"a" help:"Address to bind to." default:"127.0.0.1:6660"`
 	NoReflection bool     `help:"Disables the server reflection service."`
 	NoDocPage    bool     `help:"Disables the documentation page."`
+	HTTPS        bool     `help:"Enables HTTPS, requires cert and certkey"`
+	Cert         string   `help:"Path to certificate file"`
+	CertKey      string   `help:"Path to certificate key file"`
+	HTTP3        bool     `help:"Enables HTTP/3 support."`
 }
 
 func (c *RunCmd) Run(globals *Globals) error {
@@ -82,8 +89,8 @@ func (c *RunCmd) Run(globals *Globals) error {
 		if err != nil {
 			return err
 		}
-		mux.Handle("GET /fauxrpc.openapi.html", singleFileHandler(openapiHTML))
-		mux.Handle("GET /fauxrpc.openapi.yaml", singleFileHandler(resp.File[0].GetContent()))
+		mux.Handle("GET /fauxrpc/openapi.html", singleFileHandler(openapiHTML))
+		mux.Handle("GET /fauxrpc/openapi.yaml", singleFileHandler(resp.File[0].GetContent()))
 	}
 
 	server := &http.Server{
@@ -94,20 +101,52 @@ func (c *RunCmd) Run(globals *Globals) error {
 	fmt.Printf("FauxRPC (%s)\n", fullVersion())
 	fmt.Printf("Listening on http://%s\n", c.Addr)
 	if !c.NoDocPage {
-		fmt.Printf("OpenAPI documentation: http://%s/fauxrpc.openapi.html\n", c.Addr)
+		fmt.Printf("OpenAPI documentation: http://%s/fauxrpc/openapi.html\n", c.Addr)
 	}
 	fmt.Println()
 	fmt.Println("Example Commands:")
-	if !c.NoReflection {
-		fmt.Printf("$ buf curl --http2-prior-knowledge http://%s --list-methods\n", c.Addr)
+
+	eg, _ := errgroup.WithContext(context.Background())
+	if c.HTTP3 {
+		if !c.NoReflection {
+			fmt.Printf("$ buf curl --http3 https://%s --list-methods\n", c.Addr)
+		}
+		fmt.Printf("$ buf curl --http3 https://%s/[METHOD_NAME]\n", c.Addr)
+		if c.Cert == "" || c.CertKey == "" {
+			return errors.New("--cert and --cert-key are required if --http3 is set")
+		}
+		h3srv := http3.Server{
+			Addr:    c.Addr,
+			Handler: mux,
+		}
+		eg.Go(func() error {
+			return h3srv.ListenAndServeTLS(c.Cert, c.CertKey)
+		})
 	}
-	fmt.Printf("$ buf curl --http2-prior-knowledge http://%s/[METHOD_NAME]\n", c.Addr)
-	return server.ListenAndServe()
+	if c.HTTPS {
+		if !c.NoReflection {
+			fmt.Printf("$ buf curl https://%s --list-methods\n", c.Addr)
+		}
+		fmt.Printf("$ buf curl https://%s/[METHOD_NAME]\n", c.Addr)
+		if c.Cert == "" || c.CertKey == "" {
+			return errors.New("--cert and --cert-key are required if --https is set")
+		}
+		eg.Go(func() error {
+			return server.ListenAndServeTLS(c.Cert, c.CertKey)
+		})
+	} else {
+		if !c.NoReflection {
+			fmt.Printf("$ buf curl --http2-prior-knowledge http://%s --list-methods\n", c.Addr)
+		}
+		fmt.Printf("$ buf curl --http2-prior-knowledge http://%s/[METHOD_NAME]\n", c.Addr)
+		eg.Go(server.ListenAndServe)
+	}
+
+	return eg.Wait()
 }
 
 func singleFileHandler(content string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-
 		fmt.Fprint(w, content)
 	}
 }

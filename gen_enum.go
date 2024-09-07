@@ -1,13 +1,12 @@
 package fauxrpc
 
 import (
-	"github.com/brianvoe/gofakeit/v7"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-func enumSimple(fd protoreflect.FieldDescriptor) protoreflect.EnumNumber {
+func enumSimple(fd protoreflect.FieldDescriptor, opts GenOptions) protoreflect.EnumNumber {
 	values := fd.Enum().Values()
-	idx := gofakeit.IntRange(0, values.Len()-1)
+	idx := opts.fake().IntRange(0, values.Len()-1)
 	return protoreflect.EnumNumber(idx)
 }
 
@@ -15,11 +14,11 @@ func enumSimple(fd protoreflect.FieldDescriptor) protoreflect.EnumNumber {
 func Enum(fd protoreflect.FieldDescriptor, opts GenOptions) protoreflect.EnumNumber {
 	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
-		return enumSimple(fd)
+		return enumSimple(fd, opts)
 	}
 	rules := constraints.GetEnum()
 	if rules == nil {
-		return enumSimple(fd)
+		return enumSimple(fd, opts)
 	}
 
 	if rules.Const != nil {
@@ -27,8 +26,8 @@ func Enum(fd protoreflect.FieldDescriptor, opts GenOptions) protoreflect.EnumNum
 	}
 
 	if len(rules.In) > 0 {
-		return protoreflect.EnumNumber(rules.In[gofakeit.IntRange(0, len(rules.In)-1)])
+		return protoreflect.EnumNumber(rules.In[opts.fake().IntRange(0, len(rules.In)-1)])
 	}
 
-	return enumSimple(fd)
+	return enumSimple(fd, opts)
 }

@@ -4,7 +4,6 @@ import (
 	"math"
 
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
-	"github.com/brianvoe/gofakeit/v7"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -12,11 +11,11 @@ import (
 func UInt32(fd protoreflect.FieldDescriptor, opts GenOptions) uint32 {
 	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
-		return gofakeit.Uint32()
+		return opts.fake().Uint32()
 	}
 	rules := constraints.GetUint32()
 	if rules == nil {
-		return gofakeit.Uint32()
+		return opts.fake().Uint32()
 	}
 
 	if rules.Const != nil {
@@ -41,21 +40,21 @@ func UInt32(fd protoreflect.FieldDescriptor, opts GenOptions) uint32 {
 	}
 
 	if len(rules.In) > 0 {
-		return rules.In[gofakeit.IntRange(0, len(rules.In)-1)]
+		return rules.In[opts.fake().IntRange(0, len(rules.In)-1)]
 	}
 
-	return uint32(gofakeit.IntRange(int(minVal), int(maxVal)))
+	return uint32(opts.fake().IntRange(int(minVal), int(maxVal)))
 }
 
 // UInt64 returns a fake uint64 value given a field descriptor.
 func UInt64(fd protoreflect.FieldDescriptor, opts GenOptions) uint64 {
 	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
-		return gofakeit.Uint64()
+		return opts.fake().Uint64()
 	}
 	rules := constraints.GetUint64()
 	if rules == nil {
-		return gofakeit.Uint64()
+		return opts.fake().Uint64()
 	}
 
 	if rules.Const != nil {
@@ -80,21 +79,21 @@ func UInt64(fd protoreflect.FieldDescriptor, opts GenOptions) uint64 {
 	}
 
 	if len(rules.In) > 0 {
-		return rules.In[gofakeit.IntRange(0, len(rules.In)-1)]
+		return rules.In[opts.fake().IntRange(0, len(rules.In)-1)]
 	}
 
-	return uint64(gofakeit.UintRange(uint(minVal), uint(maxVal)))
+	return uint64(opts.fake().UintRange(uint(minVal), uint(maxVal)))
 }
 
 // Fixed32 returns a fake fixed32 value given a field descriptor.
 func Fixed32(fd protoreflect.FieldDescriptor, opts GenOptions) uint32 {
 	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
-		return gofakeit.Uint32()
+		return opts.fake().Uint32()
 	}
 	rules := constraints.GetFixed32()
 	if rules == nil {
-		return gofakeit.Uint32()
+		return opts.fake().Uint32()
 	}
 
 	if rules.Const != nil {
@@ -119,21 +118,21 @@ func Fixed32(fd protoreflect.FieldDescriptor, opts GenOptions) uint32 {
 	}
 
 	if len(rules.In) > 0 {
-		return rules.In[gofakeit.IntRange(0, len(rules.In)-1)]
+		return rules.In[opts.fake().IntRange(0, len(rules.In)-1)]
 	}
 
-	return uint32(gofakeit.IntRange(int(minVal), int(maxVal)))
+	return uint32(opts.fake().IntRange(int(minVal), int(maxVal)))
 }
 
 // Fixed64 returns a fake fixed64 value given a field descriptor.
 func Fixed64(fd protoreflect.FieldDescriptor, opts GenOptions) uint64 {
 	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
-		return gofakeit.Uint64()
+		return opts.fake().Uint64()
 	}
 	rules := constraints.GetFixed64()
 	if rules == nil {
-		return gofakeit.Uint64()
+		return opts.fake().Uint64()
 	}
 
 	if rules.Const != nil {
@@ -158,8 +157,8 @@ func Fixed64(fd protoreflect.FieldDescriptor, opts GenOptions) uint64 {
 	}
 
 	if len(rules.In) > 0 {
-		return rules.In[gofakeit.IntRange(0, len(rules.In)-1)]
+		return rules.In[opts.fake().IntRange(0, len(rules.In)-1)]
 	}
 
-	return uint64(gofakeit.UintRange(uint(minVal), uint(maxVal)))
+	return uint64(opts.fake().UintRange(uint(minVal), uint(maxVal)))
 }

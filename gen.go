@@ -2,23 +2,10 @@ package fauxrpc
 
 import (
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
-	"github.com/sudorandom/fauxrpc/private/stubs"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 	"google.golang.org/protobuf/types/dynamicpb"
 )
-
-type GenOptions struct {
-	StubDB                stubs.StubDatabase
-	MaxDepth              int
-	extraFieldConstraints *validate.FieldConstraints
-}
-
-func (st GenOptions) nested() GenOptions {
-	st.MaxDepth--
-	st.extraFieldConstraints = nil
-	return st
-}
 
 func (st GenOptions) withExtraFieldConstraints(constraints *validate.FieldConstraints) GenOptions {
 	st.extraFieldConstraints = constraints

@@ -4,7 +4,6 @@ import (
 	"math"
 
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
-	"github.com/brianvoe/gofakeit/v7"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -12,11 +11,11 @@ import (
 func Int32(fd protoreflect.FieldDescriptor, opts GenOptions) int32 {
 	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
-		return gofakeit.Int32()
+		return opts.fake().Int32()
 	}
 	rules := constraints.GetInt32()
 	if rules == nil {
-		return gofakeit.Int32()
+		return opts.fake().Int32()
 	}
 
 	if rules.Const != nil {
@@ -41,21 +40,21 @@ func Int32(fd protoreflect.FieldDescriptor, opts GenOptions) int32 {
 	}
 
 	if len(rules.In) > 0 {
-		return rules.In[gofakeit.IntRange(0, len(rules.In)-1)]
+		return rules.In[opts.fake().IntRange(0, len(rules.In)-1)]
 	}
 
-	return int32(gofakeit.IntRange(int(minVal), int(maxVal)))
+	return int32(opts.fake().IntRange(int(minVal), int(maxVal)))
 }
 
 // Int64 returns a fake int64 value given a field descriptor.
 func Int64(fd protoreflect.FieldDescriptor, opts GenOptions) int64 {
 	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
-		return gofakeit.Int64()
+		return opts.fake().Int64()
 	}
 	rules := constraints.GetInt64()
 	if rules == nil {
-		return gofakeit.Int64()
+		return opts.fake().Int64()
 	}
 
 	if rules.Const != nil {
@@ -80,21 +79,21 @@ func Int64(fd protoreflect.FieldDescriptor, opts GenOptions) int64 {
 	}
 
 	if len(rules.In) > 0 {
-		return rules.In[gofakeit.IntRange(0, len(rules.In)-1)]
+		return rules.In[opts.fake().IntRange(0, len(rules.In)-1)]
 	}
 
-	return int64(gofakeit.IntRange(int(minVal), int(maxVal)))
+	return int64(opts.fake().IntRange(int(minVal), int(maxVal)))
 }
 
 // SInt32 returns a fake sint32 value given a field descriptor.
 func SInt32(fd protoreflect.FieldDescriptor, opts GenOptions) int32 {
 	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
-		return gofakeit.Int32()
+		return opts.fake().Int32()
 	}
 	rules := constraints.GetSint32()
 	if rules == nil {
-		return gofakeit.Int32()
+		return opts.fake().Int32()
 	}
 
 	if rules.Const != nil {
@@ -119,21 +118,21 @@ func SInt32(fd protoreflect.FieldDescriptor, opts GenOptions) int32 {
 	}
 
 	if len(rules.In) > 0 {
-		return rules.In[gofakeit.IntRange(0, len(rules.In)-1)]
+		return rules.In[opts.fake().IntRange(0, len(rules.In)-1)]
 	}
 
-	return int32(gofakeit.IntRange(int(minVal), int(maxVal)))
+	return int32(opts.fake().IntRange(int(minVal), int(maxVal)))
 }
 
 // SInt64 returns a fake sint64 value given a field descriptor.
 func SInt64(fd protoreflect.FieldDescriptor, opts GenOptions) int64 {
 	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
-		return gofakeit.Int64()
+		return opts.fake().Int64()
 	}
 	rules := constraints.GetSint64()
 	if rules == nil {
-		return gofakeit.Int64()
+		return opts.fake().Int64()
 	}
 
 	if rules.Const != nil {
@@ -158,21 +157,21 @@ func SInt64(fd protoreflect.FieldDescriptor, opts GenOptions) int64 {
 	}
 
 	if len(rules.In) > 0 {
-		return rules.In[gofakeit.IntRange(0, len(rules.In)-1)]
+		return rules.In[opts.fake().IntRange(0, len(rules.In)-1)]
 	}
 
-	return int64(gofakeit.IntRange(int(minVal), int(maxVal)))
+	return int64(opts.fake().IntRange(int(minVal), int(maxVal)))
 }
 
 // SFixed32 returns a fake sfixedint32 value given a field descriptor.
 func SFixed32(fd protoreflect.FieldDescriptor, opts GenOptions) int32 {
 	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
-		return gofakeit.Int32()
+		return opts.fake().Int32()
 	}
 	rules := constraints.GetSfixed32()
 	if rules == nil {
-		return gofakeit.Int32()
+		return opts.fake().Int32()
 	}
 
 	if rules.Const != nil {
@@ -197,21 +196,21 @@ func SFixed32(fd protoreflect.FieldDescriptor, opts GenOptions) int32 {
 	}
 
 	if len(rules.In) > 0 {
-		return rules.In[gofakeit.IntRange(0, len(rules.In)-1)]
+		return rules.In[opts.fake().IntRange(0, len(rules.In)-1)]
 	}
 
-	return int32(gofakeit.IntRange(int(minVal), int(maxVal)))
+	return int32(opts.fake().IntRange(int(minVal), int(maxVal)))
 }
 
 // SFixed64 returns a fake sfixed64 value given a field descriptor.
 func SFixed64(fd protoreflect.FieldDescriptor, opts GenOptions) int64 {
 	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
-		return gofakeit.Int64()
+		return opts.fake().Int64()
 	}
 	rules := constraints.GetSfixed64()
 	if rules == nil {
-		return gofakeit.Int64()
+		return opts.fake().Int64()
 	}
 
 	if rules.Const != nil {
@@ -236,8 +235,8 @@ func SFixed64(fd protoreflect.FieldDescriptor, opts GenOptions) int64 {
 	}
 
 	if len(rules.In) > 0 {
-		return rules.In[gofakeit.IntRange(0, len(rules.In)-1)]
+		return rules.In[opts.fake().IntRange(0, len(rules.In)-1)]
 	}
 
-	return int64(gofakeit.IntRange(int(minVal), int(maxVal)))
+	return int64(opts.fake().IntRange(int(minVal), int(maxVal)))
 }

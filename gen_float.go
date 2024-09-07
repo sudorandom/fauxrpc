@@ -4,7 +4,6 @@ import (
 	"math"
 
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
-	"github.com/brianvoe/gofakeit/v7"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -12,11 +11,11 @@ import (
 func Float32(fd protoreflect.FieldDescriptor, opts GenOptions) float32 {
 	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
-		return gofakeit.Float32()
+		return opts.fake().Float32()
 	}
 	rules := constraints.GetFloat()
 	if rules == nil {
-		return gofakeit.Float32()
+		return opts.fake().Float32()
 	}
 
 	if rules.Const != nil {
@@ -41,21 +40,21 @@ func Float32(fd protoreflect.FieldDescriptor, opts GenOptions) float32 {
 	}
 
 	if len(rules.In) > 0 {
-		return rules.In[gofakeit.IntRange(0, len(rules.In)-1)]
+		return rules.In[opts.fake().IntRange(0, len(rules.In)-1)]
 	}
 
-	return gofakeit.Float32Range(minVal, maxVal)
+	return opts.fake().Float32Range(minVal, maxVal)
 }
 
 // Float64 returns a fake float64 value given a field descriptor.
 func Float64(fd protoreflect.FieldDescriptor, opts GenOptions) float64 {
 	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
-		return gofakeit.Float64()
+		return opts.fake().Float64()
 	}
 	rules := constraints.GetDouble()
 	if rules == nil {
-		return gofakeit.Float64()
+		return opts.fake().Float64()
 	}
 
 	if rules.Const != nil {
@@ -80,8 +79,8 @@ func Float64(fd protoreflect.FieldDescriptor, opts GenOptions) float64 {
 	}
 
 	if len(rules.In) > 0 {
-		return rules.In[gofakeit.IntRange(0, len(rules.In)-1)]
+		return rules.In[opts.fake().IntRange(0, len(rules.In)-1)]
 	}
 
-	return gofakeit.Float64Range(minVal, maxVal)
+	return opts.fake().Float64Range(minVal, maxVal)
 }

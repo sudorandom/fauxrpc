@@ -1,7 +1,6 @@
 package fauxrpc
 
 import (
-	"github.com/brianvoe/gofakeit/v7"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -35,7 +34,7 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) {
 	if opts.StubDB != nil {
 		stubs := opts.StubDB.GetStubs(desc.FullName())
 		if len(stubs) > 0 {
-			idx := gofakeit.IntRange(0, len(stubs)-1)
+			idx := opts.fake().IntRange(0, len(stubs)-1)
 			other := stubs[idx]
 			fields := desc.Fields()
 			for i := 0; i < fields.Len(); i++ {
@@ -61,7 +60,7 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) {
 
 		// pick oneOf the fields to create data for
 		options := oneOf.Fields()
-		idx := gofakeit.IntRange(0, options.Len()-1)
+		idx := opts.fake().IntRange(0, options.Len()-1)
 		field := options.Get(idx)
 		if v := getFieldValue(field, opts.nested()); v != nil {
 			msg.Set(field, *v)

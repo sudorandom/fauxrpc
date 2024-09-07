@@ -32,7 +32,7 @@ const openapiHTML = `
   <body>
 
     <elements-api
-      apiDescriptionUrl="/fauxrpc.openapi.yaml"
+      apiDescriptionUrl="/fauxrpc/openapi.yaml"
       router="hash"
       layout="sidebar"
     />

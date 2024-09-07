@@ -4,13 +4,12 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/brianvoe/gofakeit/v7"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 func mapSimple(msg protoreflect.Message, fd protoreflect.FieldDescriptor, opts GenOptions) *protoreflect.Value {
 	mapVal := msg.NewField(fd)
-	itemCount := gofakeit.IntRange(0, 4)
+	itemCount := opts.fake().IntRange(0, 4)
 	for i := 0; i < itemCount; i++ {
 		v := getFieldValue(fd.MapKey(), opts.nested())
 		w := getFieldValue(fd.MapValue(), opts.nested())
@@ -42,7 +41,7 @@ func Map(msg protoreflect.Message, fd protoreflect.FieldDescriptor, opts GenOpti
 	}
 
 	mapVal := msg.NewField(fd)
-	itemCount := gofakeit.IntRange(int(min), int(max))
+	itemCount := opts.fake().IntRange(int(min), int(max))
 	for i := 0; i < itemCount; i++ {
 		v := getFieldValue(fd.MapKey(), opts.nested().withExtraFieldConstraints(constraints.GetMap().Keys))
 		w := getFieldValue(fd.MapValue(), opts.nested().withExtraFieldConstraints(constraints.GetMap().Values))

@@ -35,12 +35,12 @@ func Bytes(fd protoreflect.FieldDescriptor, opts GenOptions) []byte {
 		maxLen = *rules.MaxLen
 	}
 	if rules.Pattern != nil {
-		return []byte(gofakeit.Regex(*rules.Pattern))
+		return []byte(opts.fake().Regex(*rules.Pattern))
 	}
 
 	if len(rules.In) > 0 {
-		return rules.In[gofakeit.IntRange(0, len(rules.In)-1)]
+		return rules.In[opts.fake().IntRange(0, len(rules.In)-1)]
 	}
 
-	return []byte(gofakeit.Sentence(int(maxLen / uint64(4)))[minLen:maxLen])
+	return []byte(opts.fake().Sentence(int(maxLen / uint64(4)))[minLen:maxLen])
 }

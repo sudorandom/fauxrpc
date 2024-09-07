@@ -4,13 +4,12 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/brianvoe/gofakeit/v7"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 func repeatedSimple(msg protoreflect.Message, fd protoreflect.FieldDescriptor, opts GenOptions) *protoreflect.Value {
 	listVal := msg.NewField(fd)
-	itemCount := gofakeit.IntRange(0, 4)
+	itemCount := opts.fake().IntRange(0, 4)
 	for i := 0; i < itemCount; i++ {
 		if v := getFieldValue(fd, opts.nested()); v != nil {
 			listVal.List().Append(*v)
@@ -40,7 +39,7 @@ func Repeated(msg protoreflect.Message, fd protoreflect.FieldDescriptor, opts Ge
 	}
 
 	listVal := msg.NewField(fd)
-	itemCount := gofakeit.IntRange(int(min), int(max))
+	itemCount := opts.fake().IntRange(int(min), int(max))
 	for i := 0; i < itemCount; i++ {
 		if v := getFieldValue(fd, opts.nested().withExtraFieldConstraints(constraints.GetRepeated().Items)); v != nil {
 			listVal.List().Append(*v)

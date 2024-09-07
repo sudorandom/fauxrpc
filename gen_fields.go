@@ -76,12 +76,12 @@ func getFieldValue(fd protoreflect.FieldDescriptor, opts GenOptions) *protorefle
 	case protoreflect.MessageKind:
 		switch string(fd.Message().FullName()) {
 		case "google.protobuf.Duration":
-			if val := GoogleDuration(fd); val != nil {
+			if val := GoogleDuration(fd, opts); val != nil {
 				v := protoreflect.ValueOf(val.ProtoReflect())
 				return &v
 			}
 		case "google.protobuf.Timestamp":
-			if val := GoogleTimestamp(fd); val != nil {
+			if val := GoogleTimestamp(fd, opts); val != nil {
 				v := protoreflect.ValueOf(val.ProtoReflect())
 				return &v
 			}
