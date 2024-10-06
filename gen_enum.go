@@ -24,6 +24,9 @@ func Enum(fd protoreflect.FieldDescriptor, opts GenOptions) protoreflect.EnumNum
 	if rules.Const != nil {
 		return protoreflect.EnumNumber(*rules.Const)
 	}
+	if len(rules.Example) > 0 {
+		return protoreflect.EnumNumber(rules.Example[opts.fake().IntRange(0, len(rules.Example)-1)])
+	}
 
 	if len(rules.In) > 0 {
 		return protoreflect.EnumNumber(rules.In[opts.fake().IntRange(0, len(rules.In)-1)])

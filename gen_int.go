@@ -21,6 +21,10 @@ func Int32(fd protoreflect.FieldDescriptor, opts GenOptions) int32 {
 	if rules.Const != nil {
 		return *rules.Const
 	}
+	if len(rules.Example) > 0 {
+		return rules.Example[opts.fake().IntRange(0, len(rules.Example)-1)]
+	}
+
 	minVal, maxVal := int32(0), int32(math.MaxInt32)
 	if rules.GreaterThan != nil {
 		switch v := rules.GreaterThan.(type) {

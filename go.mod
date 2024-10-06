@@ -1,27 +1,26 @@
 module github.com/sudorandom/fauxrpc
 
-go 1.22.4
+go 1.23.0
 
 require (
-	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.34.2-20240717164558-a6c49f84cc0f.2
-	buf.build/gen/go/bufbuild/registry/protocolbuffers/go v1.34.2-20240821192916-45ba72cdd479.2
-	buf.build/gen/go/connectrpc/eliza/protocolbuffers/go v1.31.0-20230822171018-8b8b971d6fde.1
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.34.2-20240920164238-5a7b106cbb87.2
+	buf.build/gen/go/connectrpc/eliza/protocolbuffers/go v1.34.2-20230913231627-233fca715f49.2
 	buf.build/gen/go/grpc/grpc/connectrpc/go v1.16.2-20240809200651-8507e5a24938.1
 	buf.build/gen/go/grpc/grpc/protocolbuffers/go v1.34.1-20240809200651-8507e5a24938.1
-	connectrpc.com/connect v1.16.2
+	connectrpc.com/connect v1.17.0
 	connectrpc.com/grpcreflect v1.2.0
 	connectrpc.com/validate v0.1.0
 	connectrpc.com/vanguard v0.2.0
 	github.com/alecthomas/kong v0.9.0
 	github.com/brianvoe/gofakeit/v7 v7.0.4
 	github.com/bufbuild/protocompile v0.14.0
-	github.com/bufbuild/protovalidate-go v0.6.4
+	github.com/bufbuild/protovalidate-go v0.7.2
 	github.com/bufbuild/protoyaml-go v0.1.11
 	github.com/golang/protobuf v1.5.4
 	github.com/quic-go/quic-go v0.46.0
 	github.com/stretchr/testify v1.9.0
-	github.com/sudorandom/protoc-gen-connect-openapi v0.9.0
-	golang.org/x/net v0.28.0
+	github.com/sudorandom/protoc-gen-connect-openapi v0.13.0
+	golang.org/x/net v0.30.0
 	golang.org/x/sync v0.8.0
 	google.golang.org/protobuf v1.34.2
 	gopkg.in/yaml.v3 v3.0.1
@@ -42,21 +41,20 @@ require (
 	github.com/lmittmann/tint v1.0.5 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/onsi/ginkgo/v2 v2.9.5 // indirect
-	github.com/pb33f/libopenapi v0.16.14 // indirect
+	github.com/pb33f/libopenapi v0.18.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/quic-go/qpack v0.4.0 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/stoewer/go-strcase v1.3.0 // indirect
-	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/vmware-labs/yaml-jsonpath v0.3.2 // indirect
-	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
+	github.com/wk8/go-ordered-map/v2 v2.1.9-0.20240815153524-6ea36470d1bd // indirect
 	go.uber.org/mock v0.4.0 // indirect
-	golang.org/x/crypto v0.26.0 // indirect
-	golang.org/x/exp v0.0.0-20240808152545-0cdaa3abc0fa // indirect
-	golang.org/x/mod v0.20.0 // indirect
-	golang.org/x/sys v0.23.0 // indirect
-	golang.org/x/text v0.17.0 // indirect
-	golang.org/x/tools v0.24.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20240820151423-278611b39280 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240814211410-ddb44dafa142 // indirect
+	golang.org/x/crypto v0.28.0 // indirect
+	golang.org/x/exp v0.0.0-20241004190924-225e2abe05e6 // indirect
+	golang.org/x/mod v0.21.0 // indirect
+	golang.org/x/sys v0.26.0 // indirect
+	golang.org/x/text v0.19.0 // indirect
+	golang.org/x/tools v0.26.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20240930140551-af27646dc61f // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240930140551-af27646dc61f // indirect
 )

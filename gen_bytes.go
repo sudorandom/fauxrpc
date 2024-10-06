@@ -23,6 +23,9 @@ func Bytes(fd protoreflect.FieldDescriptor, opts GenOptions) []byte {
 	if rules.Const != nil {
 		return rules.Const
 	}
+	if len(rules.Example) > 0 {
+		return rules.Example[opts.fake().IntRange(0, len(rules.Example)-1)]
+	}
 	minLen, maxLen := uint64(0), uint64(20)
 	if rules.Len != nil {
 		minLen = *rules.Len

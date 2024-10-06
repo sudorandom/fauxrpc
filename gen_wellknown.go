@@ -30,6 +30,9 @@ func GoogleDuration(fd protoreflect.FieldDescriptor, opts GenOptions) *durationp
 	if rules.Const != nil {
 		return rules.Const
 	}
+	if len(rules.Example) > 0 {
+		return rules.Example[opts.fake().IntRange(0, len(rules.Example)-1)]
+	}
 
 	minVal, maxVal := time.Duration(0), time.Duration(30*24*time.Hour)
 	if rules.GreaterThan != nil {
@@ -73,6 +76,9 @@ func GoogleTimestamp(fd protoreflect.FieldDescriptor, opts GenOptions) *timestam
 
 	if rules.Const != nil {
 		return rules.Const
+	}
+	if len(rules.Example) > 0 {
+		return rules.Example[opts.fake().IntRange(0, len(rules.Example)-1)]
 	}
 
 	minVal, maxVal := time.Now().Add(20*365*24*time.Hour), time.Now().Add(10*365*24*time.Hour)

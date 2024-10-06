@@ -21,6 +21,10 @@ func UInt32(fd protoreflect.FieldDescriptor, opts GenOptions) uint32 {
 	if rules.Const != nil {
 		return *rules.Const
 	}
+	if len(rules.Example) > 0 {
+		return rules.Example[opts.fake().IntRange(0, len(rules.Example)-1)]
+	}
+
 	minVal, maxVal := uint32(0), uint32(math.MaxInt32)
 	if rules.GreaterThan != nil {
 		switch v := rules.GreaterThan.(type) {
@@ -60,6 +64,10 @@ func UInt64(fd protoreflect.FieldDescriptor, opts GenOptions) uint64 {
 	if rules.Const != nil {
 		return *rules.Const
 	}
+	if len(rules.Example) > 0 {
+		return rules.Example[opts.fake().IntRange(0, len(rules.Example)-1)]
+	}
+
 	minVal, maxVal := uint64(0), uint64(math.MaxInt64)
 	if rules.GreaterThan != nil {
 		switch v := rules.GreaterThan.(type) {
@@ -99,6 +107,10 @@ func Fixed32(fd protoreflect.FieldDescriptor, opts GenOptions) uint32 {
 	if rules.Const != nil {
 		return *rules.Const
 	}
+	if len(rules.Example) > 0 {
+		return rules.Example[opts.fake().IntRange(0, len(rules.Example)-1)]
+	}
+
 	minVal, maxVal := uint32(0), uint32(math.MaxInt32)
 	if rules.GreaterThan != nil {
 		switch v := rules.GreaterThan.(type) {
@@ -138,6 +150,10 @@ func Fixed64(fd protoreflect.FieldDescriptor, opts GenOptions) uint64 {
 	if rules.Const != nil {
 		return *rules.Const
 	}
+	if len(rules.Example) > 0 {
+		return rules.Example[opts.fake().IntRange(0, len(rules.Example)-1)]
+	}
+
 	minVal, maxVal := uint64(0), uint64(math.MaxInt64)
 	if rules.GreaterThan != nil {
 		switch v := rules.GreaterThan.(type) {

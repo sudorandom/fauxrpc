@@ -17,5 +17,8 @@ func Bool(fd protoreflect.FieldDescriptor, opts GenOptions) bool {
 	if rules.Const != nil {
 		return *rules.Const
 	}
+	if len(rules.Example) > 0 {
+		return rules.Example[opts.fake().IntRange(0, len(rules.Example)-1)]
+	}
 	return true
 }

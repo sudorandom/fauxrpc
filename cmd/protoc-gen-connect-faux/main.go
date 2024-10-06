@@ -13,10 +13,12 @@ import (
 )
 
 const (
-	connectPackage = protogen.GoImportPath("connectrpc.com/connect")
-	contextPackage = protogen.GoImportPath("context")
-	errorsPackage  = protogen.GoImportPath("errors")
-	fauxrpcPackage = protogen.GoImportPath("github.com/sudorandom/fauxrpc")
+	connectPackage    = protogen.GoImportPath("connectrpc.com/connect")
+	contextPackage    = protogen.GoImportPath("context")
+	errgroupPackage   = protogen.GoImportPath("golang.org/x/sync/errgroup")
+	errorsPackage     = protogen.GoImportPath("errors")
+	fauxrpcPackage    = protogen.GoImportPath("github.com/sudorandom/fauxrpc")
+	fauxpluginPackage = protogen.GoImportPath("github.com/sudorandom/fauxrpc/fauxplugin")
 
 	generatedPackageSuffix = "connect"
 
@@ -100,15 +102,14 @@ func generateService(g *protogen.GeneratedFile, service *protogen.Service) {
 	g.P()
 	for _, method := range service.Methods {
 		g.P("func (h *", names.FauxHandler, ") ", serverSignature(g, method), "{")
-		if method.Desc.IsStreamingServer() {
-			// TODO: Support the three variants of streaming calls.
-			g.P("return ", connectPackage.Ident("NewError"), "(",
-				connectPackage.Ident("CodeUnimplemented"), ", ", errorsPackage.Ident("New"),
-				`("`, method.Desc.FullName(), ` is not implemented"))`)
+		if method.Desc.IsStreamingServer() && method.Desc.IsStreamingClient() {
+			g.P("return ", fauxpluginPackage.Ident("BidiStreamHandler"), "(ctx, stream, h.opts)")
+		} else if method.Desc.IsStreamingClient() {
+			g.P("return ", fauxpluginPackage.Ident("ClientStreamHandler"), "(ctx, stream, h.opts)")
+		} else if method.Desc.IsStreamingServer() {
+			g.P("return ", fauxpluginPackage.Ident("ServerStreamHandler"), "(ctx, req, stream, h.opts)")
 		} else {
-			g.P("msg := &", g.QualifiedGoIdent(method.Output.GoIdent), "{}")
-			g.P(fauxrpcPackage.Ident("SetDataOnMessage"), "(msg, h.opts)")
-			g.P("return connect.NewResponse(msg), err")
+			g.P("return ", fauxpluginPackage.Ident("UnaryHandler"), "(ctx, req, h.opts)")
 		}
 		g.P("}")
 		g.P()

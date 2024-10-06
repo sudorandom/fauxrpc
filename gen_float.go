@@ -21,6 +21,9 @@ func Float32(fd protoreflect.FieldDescriptor, opts GenOptions) float32 {
 	if rules.Const != nil {
 		return *rules.Const
 	}
+	if len(rules.Example) > 0 {
+		return rules.Example[opts.fake().IntRange(0, len(rules.Example)-1)]
+	}
 	minVal, maxVal := float32(0), float32(math.MaxFloat32)
 	if rules.GreaterThan != nil {
 		switch v := rules.GreaterThan.(type) {
