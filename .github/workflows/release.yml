@@ -42,7 +42,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # - name: Push
-      #   run: |
-      #     docker push --all-tags sudorandom/fauxrpc:latest
-      #     docker push --all-tags sudorandom/fauxrpc:latest
+      - name: Push
+        run: |
+          docker push --all-tags sudorandom/fauxrpc:latest
