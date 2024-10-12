@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package registry.v1;
+
+import "google/protobuf/descriptor.proto";
+
+service RegistryService {
+  rpc AddDescriptors(AddDescriptorsRequest) returns (AddDescriptorsResponse) {}
+  rpc Reset(ResetRequest) returns (ResetResponse) {}
+}
+
+message AddDescriptorsRequest {
+  google.protobuf.FileDescriptorSet descriptors = 1;
+}
+message AddDescriptorsResponse {}
+
+message ResetRequest {}
+message ResetResponse {}

@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
-	stubsv1 "github.com/sudorandom/fauxrpc/private/proto/gen/stubs/v1"
-	stubsv1connect "github.com/sudorandom/fauxrpc/private/proto/gen/stubs/v1/stubsv1connect"
 	"github.com/sudorandom/fauxrpc/private/registry"
+	stubsv1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
+	stubsv1connect "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1/stubsv1connect"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -19,12 +19,15 @@ import (
 var _ stubsv1connect.StubsServiceHandler = (*handler)(nil)
 
 type handler struct {
-	db       StubDatabase
-	registry *registry.ServiceRegistry
+	registry registry.ServiceRegistry
+	stubdb   StubDatabase
 }
 
-func NewHandler(db StubDatabase, registry *registry.ServiceRegistry) *handler {
-	return &handler{db: db, registry: registry}
+func NewHandler(registry registry.ServiceRegistry, stubdb StubDatabase) *handler {
+	return &handler{
+		registry: registry,
+		stubdb:   stubdb,
+	}
 }
 
 // AddStubs implements stubsv1connect.StubsServiceHandler.
@@ -42,7 +45,7 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 
 		desc, err := h.registry.Files().FindDescriptorByName(name)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("unable to find object named %s: %w", name, err)
 		}
 		var md protoreflect.MessageDescriptor
 		switch t := desc.(type) {
@@ -77,7 +80,7 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 	}
 
 	for i, id := range ids {
-		h.db.AddStub(names[i], id, values[i])
+		h.stubdb.AddStub(names[i], id, values[i])
 	}
 
 	return connect.NewResponse(&stubsv1.AddStubsResponse{Stubs: stubs}), nil
@@ -90,7 +93,7 @@ func (h *handler) ListStubs(ctx context.Context, req *connect.Request[stubsv1.Li
 	if err != nil {
 		return nil, err
 	}
-	pbstubs, err := stubsToProto(h.db.ListStubs(targetName, ref.GetId()))
+	pbstubs, err := stubsToProto(h.stubdb.ListStubs(targetName, ref.GetId()))
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +102,7 @@ func (h *handler) ListStubs(ctx context.Context, req *connect.Request[stubsv1.Li
 
 // RemoveAllStubs implements stubsv1connect.StubsServiceHandler.
 func (h *handler) RemoveAllStubs(context.Context, *connect.Request[stubsv1.RemoveAllStubsRequest]) (*connect.Response[stubsv1.RemoveAllStubsResponse], error) {
-	h.db.RemoveAllStubs()
+	h.stubdb.RemoveAllStubs()
 	return connect.NewResponse(&stubsv1.RemoveAllStubsResponse{}), nil
 }
 
@@ -110,7 +113,7 @@ func (h *handler) RemoveStubs(ctx context.Context, msg *connect.Request[stubsv1.
 		if err != nil {
 			return nil, err
 		}
-		h.db.RemoveStub(targetName, ref.GetId())
+		h.stubdb.RemoveStub(targetName, ref.GetId())
 	}
 	return connect.NewResponse(&stubsv1.RemoveStubsResponse{}), nil
 }

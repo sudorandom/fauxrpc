@@ -6,6 +6,8 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
+var _ StubDatabase = (*stubDatabase)(nil)
+
 type stubDB map[protoreflect.FullName]map[string]protoreflect.ProtoMessage
 
 type StubDatabase interface {

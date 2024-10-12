@@ -32,8 +32,9 @@ func (v VersionFlag) BeforeApply(app *kong.Kong, vars kong.Vars) error {
 type CLI struct {
 	Globals
 
-	Run  RunCmd  `cmd:"" help:"Run the FauxRPC server"`
-	Stub StubCmd `cmd:"" help:"Contains stub commands"`
+	Run      RunCmd      `cmd:"" help:"Run the FauxRPC server"`
+	Stub     StubCmd     `cmd:"" help:"Contains stub commands"`
+	Registry RegistryCmd `cmd:"" help:"Contains registry commands"`
 }
 
 func main() {
@@ -67,14 +68,6 @@ func main() {
 		ctx.Fatalf("unknown log level: %s", cli.Globals.LogLevel)
 	}
 	ctx.FatalIfErrorf(ctx.Run(&cli.Globals))
-}
-
-type staticNames struct {
-	names []string
-}
-
-func (n *staticNames) Names() []string {
-	return n.names
 }
 
 func fullVersion() string {

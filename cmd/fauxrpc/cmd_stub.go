@@ -14,8 +14,8 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/brianvoe/gofakeit/v7"
-	stubsv1 "github.com/sudorandom/fauxrpc/private/proto/gen/stubs/v1"
-	"github.com/sudorandom/fauxrpc/private/proto/gen/stubs/v1/stubsv1connect"
+	stubsv1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
+	"github.com/sudorandom/fauxrpc/proto/gen/stubs/v1/stubsv1connect"
 	"golang.org/x/net/http2"
 )
 

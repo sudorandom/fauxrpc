@@ -8,7 +8,7 @@ import (
 	connect "connectrpc.com/connect"
 	context "context"
 	errors "errors"
-	v1 "github.com/sudorandom/fauxrpc/private/proto/gen/stubs/v1"
+	v1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
 	http "net/http"
 	strings "strings"
 )

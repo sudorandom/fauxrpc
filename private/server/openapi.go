@@ -1,19 +1,10 @@
-package main
+package server
 
 import (
-	"cmp"
-	"fmt"
-	"os"
-	"slices"
 	"strings"
 
-	plugin_go "github.com/golang/protobuf/protoc-gen-go/plugin"
 	"github.com/sudorandom/protoc-gen-connect-openapi/converter"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/types/descriptorpb"
-	"google.golang.org/protobuf/types/pluginpb"
 	"gopkg.in/yaml.v3"
 
 	"github.com/sudorandom/fauxrpc/private/registry"
@@ -51,26 +42,7 @@ type openAPIBase struct {
 	Info    openAPIBaseInfo `yaml:"info"`
 }
 
-func convertToOpenAPISpec(registry *registry.ServiceRegistry) (*pluginpb.CodeGeneratorResponse, error) {
-	req := new(plugin_go.CodeGeneratorRequest)
-	files := registry.Files()
-	files.RangeFiles(func(fd protoreflect.FileDescriptor) bool {
-		if fd.Services().Len() > 0 {
-			req.FileToGenerate = append(req.FileToGenerate, string(fd.Path()))
-		}
-		req.ProtoFile = append(req.ProtoFile, protodesc.ToFileDescriptorProto(fd.ParentFile()))
-		return true
-	})
-	slices.Sort(req.FileToGenerate)
-	slices.SortFunc(req.ProtoFile, func(a *descriptorpb.FileDescriptorProto, b *descriptorpb.FileDescriptorProto) int {
-		return cmp.Compare(a.GetPackage(), b.GetPackage())
-	})
-	openapiBaseFile, err := os.CreateTemp("", "base.*.openapi.yaml")
-	if err != nil {
-		return nil, err
-	}
-	defer openapiBaseFile.Close()
-
+func convertToOpenAPISpec(registry registry.ServiceRegistry, version string) ([]byte, error) {
 	descBuilder := strings.Builder{}
 	descBuilder.WriteString("This is a [FauxRPC](https://fauxrpc.com/) server that is currently hosting the following services:\n")
 	registry.ForEachService(func(sd protoreflect.ServiceDescriptor) {
@@ -93,11 +65,9 @@ func convertToOpenAPISpec(registry *registry.ServiceRegistry) (*pluginpb.CodeGen
 	if err != nil {
 		return nil, err
 	}
-	if _, err := openapiBaseFile.Write(b); err != nil {
-		return nil, err
-	}
 
-	req.Parameter = proto.String(fmt.Sprintf("path=all.openapi.yaml,base=%s", openapiBaseFile.Name()))
-
-	return converter.Convert(req)
+	return converter.GenerateSingle(
+		converter.WithBaseOpenAPI(b),
+		converter.WithFiles(registry.Files()),
+	)
 }
