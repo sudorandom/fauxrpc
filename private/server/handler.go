@@ -9,6 +9,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/sudorandom/fauxrpc"
+	"github.com/sudorandom/fauxrpc/private/grpc"
 	"github.com/sudorandom/fauxrpc/private/stubs"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -57,7 +58,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, db stubs.StubDatabase) h
 			w.Header().Set("Grpc-Message", err.Error())
 			return
 		}
-		writeGRPCMessage(w, b)
+		grpc.WriteGRPCMessage(w, b)
 		w.Header().Set("Grpc-Status", "0")
 		w.Header().Set("Grpc-Message", "")
 	})

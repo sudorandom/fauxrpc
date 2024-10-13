@@ -265,6 +265,7 @@ func AddServicesFromBSR(registry ServiceRegistry, module string) error {
 // AddServicesFromGlobal adds the 'well known' types to the registry. This is typically implicitly called.
 func AddServicesFromGlobal(registry ServiceRegistry) error {
 	for _, fd := range []protoreflect.FileDescriptor{
+		descriptorpb.File_google_protobuf_descriptor_proto,
 		anypb.File_google_protobuf_any_proto,
 		apipb.File_google_protobuf_api_proto,
 		durationpb.File_google_protobuf_duration_proto,

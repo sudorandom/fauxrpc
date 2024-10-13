@@ -34,6 +34,7 @@ type CLI struct {
 
 	Run      RunCmd      `cmd:"" help:"Run the FauxRPC server"`
 	Stub     StubCmd     `cmd:"" help:"Contains stub commands"`
+	Generate GenerateCmd `cmd:"generate" help:"Generate fake data"`
 	Registry RegistryCmd `cmd:"" help:"Contains registry commands"`
 }
 
