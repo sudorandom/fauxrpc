@@ -1,6 +1,6 @@
 module github.com/sudorandom/fauxrpc/examples
 
-go 1.23.0
+go 1.23.2
 
 require (
 	buf.build/gen/go/bufbuild/registry/protocolbuffers/go v1.34.2-20240801134127-09fbc17f7c9e.2

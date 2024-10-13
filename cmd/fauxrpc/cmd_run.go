@@ -33,7 +33,10 @@ type RunCmd struct {
 }
 
 func (c *RunCmd) Run(globals *Globals) error {
-	srv := server.NewServer(version, !c.NoDocPage, !c.NoReflection)
+	srv, err := server.NewServer(version, !c.NoDocPage, !c.NoReflection)
+	if err != nil {
+		return err
+	}
 	for _, schema := range c.Schema {
 		if err := srv.AddFileFrompath(schema); err != nil {
 			return err
@@ -62,7 +65,7 @@ func (c *RunCmd) Run(globals *Globals) error {
 		Handler: h2c.NewHandler(mux, &http2.Server{}),
 	}
 
-	fmt.Printf("FauxRPC (%s)\n", fullVersion())
+	fmt.Printf("FauxRPC (%s) - %d services loaded\n", fullVersion(), srv.ServiceCount())
 	fmt.Printf("Listening on http://%s\n", c.Addr)
 	if !c.NoDocPage {
 		fmt.Printf("OpenAPI documentation: http://%s/fauxrpc/openapi.html\n", c.Addr)

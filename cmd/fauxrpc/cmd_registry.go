@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"net"
 	"net/http"
+	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/sudorandom/fauxrpc/private/registry"
@@ -27,9 +28,15 @@ type RegistryAddCmd struct {
 }
 
 func (c *RegistryAddCmd) Run(globals *Globals) error {
-	theRegistry := registry.NewServiceRegistry()
+	theRegistry, err := registry.NewServiceRegistry()
+	if err != nil {
+		return err
+	}
 	for _, schema := range c.Schema {
 		if err := registry.AddServicesFromPath(theRegistry, schema); err != nil {
+			if strings.Contains(err.Error(), "name conflict") {
+				continue
+			}
 			return err
 		}
 	}
@@ -40,12 +47,11 @@ func (c *RegistryAddCmd) Run(globals *Globals) error {
 		return true
 	})
 	client := newRegistryClient(c.Addr)
-	_, err := client.AddDescriptors(context.Background(), connect.NewRequest(&registryv1.AddDescriptorsRequest{
+	if _, err := client.AddDescriptors(context.Background(), connect.NewRequest(&registryv1.AddDescriptorsRequest{
 		Descriptors: &descriptorpb.FileDescriptorSet{
 			File: filespb,
 		},
-	}))
-	if err != nil {
+	})); err != nil {
 		return err
 	}
 

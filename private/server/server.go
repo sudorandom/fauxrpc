@@ -36,10 +36,14 @@ type server struct {
 	useReflection bool
 }
 
-func NewServer(version string, renderDocPage, useReflection bool) *server {
+func NewServer(version string, renderDocPage, useReflection bool) (*server, error) {
+	serviceRegistry, err := registry.NewServiceRegistry()
+	if err != nil {
+		return nil, err
+	}
 	return &server{
 		lock:                    &sync.Mutex{},
-		ServiceRegistry:         registry.NewServiceRegistry(),
+		ServiceRegistry:         serviceRegistry,
 		StubDatabase:            stubs.NewStubDatabase(),
 		version:                 version,
 		renderDocPage:           renderDocPage,
@@ -48,7 +52,7 @@ func NewServer(version string, renderDocPage, useReflection bool) *server {
 		handlerReflectorV1:      NewWrappedHandler(),
 		handlerReflectorV1Alpha: NewWrappedHandler(),
 		handlerTranscoder:       NewWrappedHandler(),
-	}
+	}, nil
 }
 
 func (s *server) Reset() error {

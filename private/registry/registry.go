@@ -7,18 +7,6 @@ import (
 
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
-
-	// Ensure the wellknown types get imported and registered into the global registry
-	_ "google.golang.org/protobuf/types/known/anypb"
-	_ "google.golang.org/protobuf/types/known/apipb"
-	_ "google.golang.org/protobuf/types/known/durationpb"
-	_ "google.golang.org/protobuf/types/known/emptypb"
-	_ "google.golang.org/protobuf/types/known/fieldmaskpb"
-	_ "google.golang.org/protobuf/types/known/sourcecontextpb"
-	_ "google.golang.org/protobuf/types/known/structpb"
-	_ "google.golang.org/protobuf/types/known/timestamppb"
-	_ "google.golang.org/protobuf/types/known/typepb"
-	_ "google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 var _ ServiceRegistry = (*serviceRegistry)(nil)
@@ -37,17 +25,18 @@ type serviceRegistry struct {
 	files    *protoregistry.Files
 }
 
-func NewServiceRegistry() *serviceRegistry {
-	return &serviceRegistry{
+func NewServiceRegistry() (*serviceRegistry, error) {
+	r := &serviceRegistry{
 		services: map[string]protoreflect.ServiceDescriptor{},
-		files:    newFiles(),
+		files:    new(protoregistry.Files),
 	}
+	return r, AddServicesFromGlobal(r)
 }
 
 func (r *serviceRegistry) Reset() error {
 	r.services = map[string]protoreflect.ServiceDescriptor{}
-	r.files = newFiles()
-	return nil
+	r.files = new(protoregistry.Files)
+	return AddServicesFromGlobal(r)
 }
 
 func (r *serviceRegistry) Get(name string) protoreflect.ServiceDescriptor {
@@ -55,13 +44,16 @@ func (r *serviceRegistry) Get(name string) protoreflect.ServiceDescriptor {
 }
 
 func (r *serviceRegistry) AddFile(fd protoreflect.FileDescriptor) error {
-	slog.Debug("add file", "name", fd.FullName(), "path", fd.Path())
+	slog.Debug("AddFile", "name", fd.FullName(), "path", fd.Path())
 	if _, err := r.files.FindFileByPath(fd.Path()); err == nil {
 		return nil
 	} else if !errors.Is(err, protoregistry.NotFound) {
 		return err
 	}
 	if err := r.files.RegisterFile(fd); err != nil {
+		if strings.Contains(err.Error(), "name conflict") {
+			return nil
+		}
 		return err
 	}
 
