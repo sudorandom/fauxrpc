@@ -11,6 +11,7 @@ dockers:
     build_flag_templates:
       - "--pull"
       - "--platform=linux/amd64"
+    goarch: amd64
   - image_templates:
       - "docker.io/sudorandom/fauxrpc:{{ .Tag }}-arm64"
       - "docker.io/sudorandom/fauxrpc:{{ .Tag }}"

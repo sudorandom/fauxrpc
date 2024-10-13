@@ -40,11 +40,9 @@ func (c *RegistryAddCmd) Run(globals *Globals) error {
 			return err
 		}
 	}
-	files := theRegistry.Files()
-	filespb := make([]*descriptorpb.FileDescriptorProto, 0, files.NumFiles())
-	files.RangeFiles(func(fd protoreflect.FileDescriptor) bool {
+	filespb := make([]*descriptorpb.FileDescriptorProto, 0, theRegistry.NumFiles())
+	theRegistry.ForEachFile(func(fd protoreflect.FileDescriptor) {
 		filespb = append(filespb, protodesc.ToFileDescriptorProto(fd))
-		return true
 	})
 	client := newRegistryClient(c.Addr)
 	if _, err := client.AddDescriptors(context.Background(), connect.NewRequest(&registryv1.AddDescriptorsRequest{
