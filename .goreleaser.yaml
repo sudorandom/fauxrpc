@@ -1,6 +1,8 @@
 project_name: fauxrpc
 builds:
   - main: ./cmd/fauxrpc/
+    env:
+    - CGO_ENABLED=0
 dockers:
   - image_templates:
       - "docker.io/sudorandom/fauxrpc:{{ .Tag }}-amd64"
