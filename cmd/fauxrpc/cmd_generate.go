@@ -53,9 +53,12 @@ func (c *GenerateCmd) Run(globals *Globals) error {
 		seed = *c.Seed
 	}
 	fakeSrc := source.NewJSF(seed)
-	msg := fauxrpc.NewMessage(md, fauxrpc.GenOptions{
+	msg, err := fauxrpc.NewMessage(md, fauxrpc.GenOptions{
 		Faker: gofakeit.NewFaker(fakeSrc, true),
 	})
+	if err != nil {
+		return err
+	}
 
 	switch c.Format {
 	case "json":

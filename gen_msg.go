@@ -7,26 +7,29 @@ import (
 const defaultMaxDepth = 20
 
 // NewMessage creates a new message populated with fake data given a protoreflect.MessageDescriptor
-func NewMessage(md protoreflect.MessageDescriptor, opts GenOptions) protoreflect.ProtoMessage {
+func NewMessage(md protoreflect.MessageDescriptor, opts GenOptions) (protoreflect.ProtoMessage, error) {
 	if opts.MaxDepth == 0 {
 		opts.MaxDepth = defaultMaxDepth
 	}
 	msg := newMessage(md).Interface()
-	setDataOnMessage(msg, opts)
-	return msg
+	err := setDataOnMessage(msg, opts)
+	if err != nil {
+		return nil, err
+	}
+	return msg, nil
 }
 
 // SetDataOnMessage generates fake data given a protoreflect.ProtoMessage and sets the field values.
-func SetDataOnMessage(msg protoreflect.ProtoMessage, opts GenOptions) {
+func SetDataOnMessage(msg protoreflect.ProtoMessage, opts GenOptions) error {
 	if opts.MaxDepth == 0 {
 		opts.MaxDepth = defaultMaxDepth
 	}
-	setDataOnMessage(msg, opts)
+	return setDataOnMessage(msg, opts)
 }
 
-func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) {
+func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) error {
 	if opts.MaxDepth <= 0 {
-		return
+		return nil
 	}
 	msg := pm.ProtoReflect()
 	desc := msg.Descriptor()
@@ -35,15 +38,21 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) {
 		stubs := opts.StubDB.GetStubs(desc.FullName())
 		if len(stubs) > 0 {
 			idx := opts.fake().IntRange(0, len(stubs)-1)
-			other := stubs[idx]
+			stub := stubs[idx]
+			if stub.Error != nil {
+				return stub.Error
+			}
+			if stub.Message == nil {
+				return nil
+			}
 			fields := desc.Fields()
 			for i := 0; i < fields.Len(); i++ {
 				field := fields.Get(i)
-				if other.ProtoReflect().Has(field) {
-					msg.Set(field, other.ProtoReflect().Get(field))
+				if stub.Message.ProtoReflect().Has(field) {
+					msg.Set(field, stub.Message.ProtoReflect().Get(field))
 				}
 			}
-			return
+			return nil
 		}
 	}
 
@@ -77,16 +86,17 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) {
 			if val := Repeated(msg, field, opts); val != nil {
 				msg.Set(field, *val)
 			}
-			return
+			return nil
 		}
 		if field.IsMap() {
 			if val := Map(msg, field, opts); val != nil {
 				msg.Set(field, *val)
 			}
-			return
+			return nil
 		}
 		if v := getFieldValue(field, opts.nested()); v != nil {
 			msg.Set(field, *v)
 		}
 	}
+	return nil
 }

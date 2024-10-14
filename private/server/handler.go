@@ -1,18 +1,24 @@
 package server
 
 import (
+	"encoding/base64"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"connectrpc.com/connect"
 	"github.com/sudorandom/fauxrpc"
 	"github.com/sudorandom/fauxrpc/private/grpc"
 	"github.com/sudorandom/fauxrpc/private/stubs"
+	"google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
+
+	stubsv1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
 )
 
 func NewHandler(service protoreflect.ServiceDescriptor, db stubs.StubDatabase) http.Handler {
@@ -49,7 +55,25 @@ func NewHandler(service protoreflect.ServiceDescriptor, db stubs.StubDatabase) h
 
 		slog.Info("MethodCalled", slog.String("service", serviceName), slog.String("method", methodName))
 
-		out := fauxrpc.NewMessage(method.Output(), fauxrpc.GenOptions{MaxDepth: 20, StubDB: db})
+		out, err := fauxrpc.NewMessage(method.Output(), fauxrpc.GenOptions{MaxDepth: 20, StubDB: db})
+		if err != nil {
+			var statusErr *stubs.StatusError
+			if errors.As(err, &statusErr) {
+				status := grpcStatusFromError(statusErr.StubsError)
+				w.Header().Set("Grpc-Status", strconv.FormatUint(uint64(status.Code), 10))
+				w.Header().Set("Grpc-Message", status.Message)
+				var bin []byte
+				if len(status.Details) > 0 {
+					bin, err = proto.Marshal(status)
+					slog.Warn("failed to marshal grpc-status-details-bin", "error", err)
+				}
+				w.Header().Set("Grpc-Status-Details-Bin", base64.RawStdEncoding.EncodeToString(bin))
+				return
+			}
+
+			w.Header().Set("Grpc-Status", "13")
+			w.Header().Set("Grpc-Message", err.Error())
+		}
 
 		b, err := proto.Marshal(out)
 		if err != nil {
@@ -62,4 +86,12 @@ func NewHandler(service protoreflect.ServiceDescriptor, db stubs.StubDatabase) h
 		w.Header().Set("Grpc-Status", "0")
 		w.Header().Set("Grpc-Message", "")
 	})
+}
+
+func grpcStatusFromError(e *stubsv1.Error) *status.Status {
+	return &status.Status{
+		Code:    int32(e.Code),
+		Message: e.GetMessage(),
+		Details: e.Details,
+	}
 }

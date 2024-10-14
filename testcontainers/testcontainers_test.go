@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
+	stubsv1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
 	fauxrpctestcontainers "github.com/sudorandom/fauxrpc/testcontainers"
 
 	"buf.build/gen/go/connectrpc/eliza/connectrpc/go/connectrpc/eliza/v1/elizav1connect"
@@ -43,14 +44,10 @@ func TestContainersTest(t *testing.T) {
 
 	// We can also register stubs, to set up specific scenarios
 	t.Run("using stubs responses", func(t *testing.T) {
-		container.MustAddStub(ctx, "connectrpc.eliza.v1.ElizaService/Say", &elizav1.SayResponse{
-			Sentence: "I am setting this text!",
-		})
+		container.MustAddStub(ctx, "connectrpc.eliza.v1.ElizaService/Say", &elizav1.SayResponse{Sentence: "I am setting this text!"})
 
 		elizaClient := elizav1connect.NewElizaServiceClient(http.DefaultClient, baseURL)
-		resp, err := elizaClient.Say(ctx, connect.NewRequest(&elizav1.SayRequest{
-			Sentence: "testing!",
-		}))
+		resp, err := elizaClient.Say(ctx, connect.NewRequest(&elizav1.SayRequest{Sentence: "testing!"}))
 		if err != nil {
 			t.Fatalf("unable to call eliza.Say: %s", err)
 		}
@@ -78,6 +75,23 @@ func TestContainersTest(t *testing.T) {
 		expected := "I am setting this text!"
 		if resp.Msg.Sentence != expected {
 			t.Fatalf("stubbed sentence does not match! %s != %s", resp.Msg.Sentence, expected)
+		}
+	})
+
+	container.MustResetStubs(ctx)
+
+	// We can also register error stubs
+	t.Run("using stubs responses on type", func(t *testing.T) {
+		container.MustAddStubError(ctx, "connectrpc.eliza.v1.ElizaService/Say", "server down", stubsv1.ErrorCode_ERROR_CODE_UNAVAILABLE)
+
+		elizaClient := elizav1connect.NewElizaServiceClient(http.DefaultClient, baseURL)
+		resp, err := elizaClient.Say(ctx, connect.NewRequest(&elizav1.SayRequest{Sentence: "testing!"}))
+		if err == nil {
+			t.Fatalf("error was expected! but we didn't get one! resp=%v", resp.Msg)
+		}
+		expected := "unavailable: server down"
+		if err.Error() != expected {
+			t.Fatalf("stubbed error message does not match! %s != %s", err.Error(), expected)
 		}
 	})
 }

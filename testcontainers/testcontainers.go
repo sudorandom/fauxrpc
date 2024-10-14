@@ -140,8 +140,8 @@ func (c *FauxRPCContainer) MustAddStub(ctx context.Context, target string, msg p
 //
 // Examples:
 //
-//	err := AddStub(ctx, "connectrpc.eliza.v1.SayResponse", &elizav1.SayResponse{Sentence: "example"}
-//	err := AddStub(ctx, "connectrpc.eliza.v1.ElizaService/Say", &elizav1.SayResponse{Sentence: "example"}
+//	err := AddStub(ctx, "connectrpc.eliza.v1.SayResponse", &elizav1.SayResponse{Sentence: "example"})
+//	err := AddStub(ctx, "connectrpc.eliza.v1.ElizaService/Say", &elizav1.SayResponse{Sentence: "example"})
 func (c *FauxRPCContainer) AddStub(ctx context.Context, target string, msg proto.Message) error {
 	client, err := c.StubsClient(ctx)
 	if err != nil {
@@ -159,6 +159,43 @@ func (c *FauxRPCContainer) AddStub(ctx context.Context, target string, msg proto
 					Target: target,
 				},
 				Content: &stubsv1.Stub_Proto{Proto: msgpb},
+			},
+		},
+	}))
+	return err
+}
+
+// MustAddStubError adds a stub error response to the FauxRPC stub database. A panic happens if anything fails.
+func (c *FauxRPCContainer) MustAddStubError(ctx context.Context, target string, msg string, code stubsv1.ErrorCode) {
+	if err := c.AddStubError(ctx, target, msg, code); err != nil {
+		panic(err)
+	}
+}
+
+// AddStubError adds a stub error response to the FauxRPC stub database. A panic happens if anything fails.
+//
+// Examples:
+//
+//	err := AddStub(ctx, "connectrpc.eliza.v1.SayResponse", "invalid argument", stubsv1.ErrorCode_ERROR_CODE_INVALID_ARGUMENT)
+//	err := AddStub(ctx, "connectrpc.eliza.v1.ElizaService/Say", "not found", stubsv1.ErrorCode_ERROR_CODE_NOT_FOUND)
+func (c *FauxRPCContainer) AddStubError(ctx context.Context, target string, msg string, code stubsv1.ErrorCode) error {
+	client, err := c.StubsClient(ctx)
+	if err != nil {
+		return err
+	}
+	_, err = client.AddStubs(ctx, connect.NewRequest(&stubsv1.AddStubsRequest{
+		Stubs: []*stubsv1.Stub{
+			{
+				Ref: &stubsv1.StubRef{
+					Id:     uuid.New().String(),
+					Target: target,
+				},
+				Content: &stubsv1.Stub_Error{
+					Error: &stubsv1.Error{
+						Code:    code,
+						Message: msg,
+					},
+				},
 			},
 		},
 	}))

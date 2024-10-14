@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net"
@@ -17,6 +18,7 @@ import (
 	stubsv1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
 	"github.com/sudorandom/fauxrpc/proto/gen/stubs/v1/stubsv1connect"
 	"golang.org/x/net/http2"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
 type StubCmd struct {
@@ -28,10 +30,12 @@ type StubCmd struct {
 }
 
 type StubAddCmd struct {
-	Addr   string `short:"a" help:"Address to bind to." default:"http://127.0.0.1:6660"`
-	Target string `arg:"" help:"Protobuf method or type" example:"'connectrpc.eliza.v1/Say', 'connectrpc.eliza.v1.IntroduceResponse'"`
-	ID     string `help:"ID to give this particular mock response, will be a random string if one isn't given" example:"bad-response"`
-	JSON   string `help:"Protobuf method or type" example:"'connectrpc.eliza.v1/Say', 'connectrpc.eliza.v1.IntroduceResponse'" required:""`
+	Addr         string  `short:"a" help:"Address to bind to." default:"http://127.0.0.1:6660"`
+	Target       string  `arg:"" help:"Protobuf method or type" example:"'connectrpc.eliza.v1/Say', 'connectrpc.eliza.v1.IntroduceResponse'"`
+	ID           string  `help:"ID to give this particular mock response, will be a random string if one isn't given" example:"bad-response"`
+	JSON         string  `help:"Protobuf method or type" example:"'connectrpc.eliza.v1/Say', 'connectrpc.eliza.v1.IntroduceResponse'"`
+	ErrorMessage string  `help:"Message to return with the error"`
+	ErrorCode    *uint32 `help:"gRPC Error code to return"`
 }
 
 func (c *StubAddCmd) Run(globals *Globals) error {
@@ -40,14 +44,26 @@ func (c *StubAddCmd) Run(globals *Globals) error {
 	if c.ID == "" {
 		c.ID = gofakeit.AdjectiveDescriptive() + "-" + strings.ReplaceAll(gofakeit.Animal(), " ", "-") + gofakeit.DigitN(3)
 	}
-	stubs = append(stubs, &stubsv1.Stub{
+	stub := &stubsv1.Stub{
 		Ref: &stubsv1.StubRef{
 			Id:     c.ID,
 			Target: c.Target,
 		},
-		Content: &stubsv1.Stub_Json{Json: c.JSON},
-	},
-	)
+	}
+	if c.JSON != "" {
+		stub.Content = &stubsv1.Stub_Json{Json: c.JSON}
+	} else if c.ErrorCode != nil {
+		stub.Content = &stubsv1.Stub_Error{
+			Error: &stubsv1.Error{
+				Code:    stubsv1.ErrorCode(*c.ErrorCode),
+				Message: c.ErrorMessage,
+				Details: []*anypb.Any{},
+			},
+		}
+	} else {
+		return errors.New("one of: --error-code or --json is required.")
+	}
+	stubs = append(stubs, stub)
 	resp, err := client.AddStubs(context.Background(), connect.NewRequest(&stubsv1.AddStubsRequest{Stubs: stubs}))
 	if err != nil {
 		return err
@@ -150,21 +166,27 @@ func outputStubs(stubs []*stubsv1.Stub) {
 		return cmp.Compare(a.GetRef().GetId(), b.GetRef().GetId())
 	})
 	for _, stub := range stubs {
-		var v any
-		if err := json.Unmarshal([]byte(stub.GetJson()), &v); err != nil {
-			slog.Error("error marshalling for output", slog.Any("error", err))
-			continue
+		switch t := stub.GetContent().(type) {
+		case *stubsv1.Stub_Json:
+			var v any
+			if err := json.Unmarshal([]byte(t.Json), &v); err != nil {
+				slog.Error("error marshalling for output", slog.Any("error", err))
+				continue
+			}
+			outputStub := StubForOutput{
+				Ref:     stub.Ref,
+				Content: v,
+			}
+			b, err := json.MarshalIndent(outputStub, "", "  ")
+			if err != nil {
+				slog.Error("error marshalling for output", slog.Any("error", err))
+				continue
+			}
+			fmt.Println(string(b))
+		case *stubsv1.Stub_Error:
+			fmt.Printf("error-code: %d\n", t.Error.GetCode())
+			fmt.Printf("error-message: %s\n", t.Error.GetMessage())
 		}
-		outputStub := StubForOutput{
-			Ref:     stub.Ref,
-			Content: v,
-		}
-		b, err := json.MarshalIndent(outputStub, "", "  ")
-		if err != nil {
-			slog.Error("error marshalling for output", slog.Any("error", err))
-			continue
-		}
-		fmt.Println(string(b))
 	}
 }
 

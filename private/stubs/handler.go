@@ -34,7 +34,7 @@ func NewHandler(registry registry.ServiceRegistry, stubdb StubDatabase) *handler
 func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.AddStubsRequest]) (*connect.Response[stubsv1.AddStubsResponse], error) {
 	ids := make([]string, len(req.Msg.Stubs))
 	names := make([]protoreflect.FullName, len(req.Msg.Stubs))
-	values := make([]protoreflect.ProtoMessage, len(req.Msg.Stubs))
+	values := make([]StubEntry, len(req.Msg.Stubs))
 	stubs := make([]*stubsv1.Stub, len(req.Msg.Stubs))
 	for i, stub := range req.Msg.Stubs {
 		ref := stub.GetRef()
@@ -62,20 +62,26 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 
 		ref.Target = string(md.FullName())
 
-		msg := newMessage(md).Interface()
+		entry := StubEntry{}
 		switch t := stub.GetContent().(type) {
 		case *stubsv1.Stub_Json:
+			msg := newMessage(md).Interface()
 			if err := protojson.Unmarshal([]byte(t.Json), msg); err != nil {
 				return nil, err
 			}
+			entry.Message = msg
 		case *stubsv1.Stub_Proto:
+			msg := newMessage(md).Interface()
 			if err := proto.Unmarshal(t.Proto, msg); err != nil {
 				return nil, err
 			}
+			entry.Message = msg
+		case *stubsv1.Stub_Error:
+			entry.Error = &StatusError{StubsError: t.Error}
 		}
 		ids[i] = stub.GetRef().GetId()
 		names[i] = name
-		values[i] = msg
+		values[i] = entry
 		stubs[i] = stub
 	}
 
@@ -118,21 +124,27 @@ func (h *handler) RemoveStubs(ctx context.Context, msg *connect.Request[stubsv1.
 	return connect.NewResponse(&stubsv1.RemoveStubsResponse{}), nil
 }
 
-func stubsToProto(allStubs map[protoreflect.FullName]map[string]protoreflect.ProtoMessage) ([]*stubsv1.Stub, error) {
+func stubsToProto(allStubs map[protoreflect.FullName]map[string]StubEntry) ([]*stubsv1.Stub, error) {
 	pbStubs := []*stubsv1.Stub{}
 	for target, stubs := range allStubs {
 		for id, stub := range stubs {
-			content, err := protojson.Marshal(stub)
-			if err != nil {
-				return nil, err
-			}
-			pbStubs = append(pbStubs, &stubsv1.Stub{
+			pbStub := &stubsv1.Stub{
 				Ref: &stubsv1.StubRef{
 					Id:     id,
 					Target: string(target),
 				},
-				Content: &stubsv1.Stub_Json{Json: string(content)},
-			})
+			}
+			if stub.Error != nil {
+				pbStub.Content = &stubsv1.Stub_Error{Error: stub.Error.StubsError}
+			}
+			if stub.Message != nil {
+				content, err := protojson.Marshal(stub.Message)
+				if err != nil {
+					return nil, err
+				}
+				pbStub.Content = &stubsv1.Stub_Json{Json: string(content)}
+			}
+			pbStubs = append(pbStubs, pbStub)
 		}
 	}
 	return pbStubs, nil
@@ -155,4 +167,15 @@ func normalizeTargetName(target string) (protoreflect.FullName, error) {
 		return "", fmt.Errorf("target name has %d slashes when at most one is acceptable", strings.Count(target, "/"))
 	}
 	return protoreflect.FullName(target), nil
+}
+
+// Alias stubs error to not conflict with error interface
+type StubsError = *stubsv1.Error
+
+type StatusError struct {
+	StubsError
+}
+
+func (s *StatusError) Error() string {
+	return s.Message
 }
