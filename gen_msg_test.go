@@ -25,7 +25,7 @@ func ExampleSetDataOnMessage() {
 }
 
 func ExampleNewMessage() {
-	msg := fauxrpc.NewMessage(elizav1.File_connectrpc_eliza_v1_eliza_proto.Messages().ByName("SayResponse"), fauxrpc.GenOptions{})
+	msg, _ := fauxrpc.NewMessage(elizav1.File_connectrpc_eliza_v1_eliza_proto.Messages().ByName("SayResponse"), fauxrpc.GenOptions{})
 	b, _ := protojson.MarshalOptions{Indent: "  "}.Marshal(msg)
 	fmt.Println(string(b))
 }
