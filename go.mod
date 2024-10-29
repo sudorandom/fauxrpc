@@ -11,6 +11,7 @@ require (
 	connectrpc.com/grpcreflect v1.2.0
 	connectrpc.com/validate v0.1.0
 	connectrpc.com/vanguard v0.2.0
+	github.com/MadAppGang/httplog v1.3.0
 	github.com/alecthomas/kong v0.9.0
 	github.com/brianvoe/gofakeit/v7 v7.0.4
 	github.com/bufbuild/protocompile v0.14.0
@@ -22,16 +23,19 @@ require (
 	github.com/sudorandom/protoc-gen-connect-openapi v0.13.0
 	golang.org/x/net v0.30.0
 	golang.org/x/sync v0.8.0
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240930140551-af27646dc61f
 	google.golang.org/protobuf v1.35.1
 	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
+	github.com/TylerBrock/colorjson v0.0.0-20200706003622-8a50f05110d2 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.1.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dprotaso/go-yit v0.0.0-20240618133044-5a0af90af097 // indirect
+	github.com/fatih/color v1.13.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
@@ -42,6 +46,8 @@ require (
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/lmittmann/tint v1.0.5 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-isatty v0.0.17 // indirect
 	github.com/onsi/ginkgo/v2 v2.9.5 // indirect
 	github.com/pb33f/libopenapi v0.18.3 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
@@ -58,5 +64,4 @@ require (
 	golang.org/x/text v0.19.0 // indirect
 	golang.org/x/tools v0.26.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20241007155032-5fefd90f89a9 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20240930140551-af27646dc61f // indirect
 )

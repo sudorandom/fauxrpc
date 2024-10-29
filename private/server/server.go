@@ -8,6 +8,7 @@ import (
 
 	"connectrpc.com/grpcreflect"
 	"connectrpc.com/vanguard"
+	"github.com/MadAppGang/httplog"
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/private/stubs"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -34,9 +35,10 @@ type server struct {
 	version       string
 	renderDocPage bool
 	useReflection bool
+	withHTTPLog   bool
 }
 
-func NewServer(version string, renderDocPage, useReflection bool) (*server, error) {
+func NewServer(version string, renderDocPage, useReflection, withHTTPLog bool) (*server, error) {
 	serviceRegistry, err := registry.NewServiceRegistry()
 	if err != nil {
 		return nil, err
@@ -52,6 +54,7 @@ func NewServer(version string, renderDocPage, useReflection bool) (*server, erro
 		handlerReflectorV1:      NewWrappedHandler(),
 		handlerReflectorV1Alpha: NewWrappedHandler(),
 		handlerTranscoder:       NewWrappedHandler(),
+		withHTTPLog:             withHTTPLog,
 	}, nil
 }
 
@@ -100,7 +103,7 @@ func (s *server) rebuildHandlers() error {
 		s.handlerReflectorV1.SetHandler(v1Handler)
 
 		_, v1alphaHandler := grpcreflect.NewHandlerV1Alpha(reflector)
-		s.handlerReflectorV1.SetHandler(v1alphaHandler)
+		s.handlerReflectorV1Alpha.SetHandler(v1alphaHandler)
 	}
 
 	if s.renderDocPage {
@@ -118,17 +121,17 @@ func (s *server) Mux() (*http.ServeMux, error) {
 		return nil, err
 	}
 	mux := http.NewServeMux()
-	mux.Handle("/", s.handlerTranscoder)
+	mux.Handle("/", httplog.Logger(s.handlerTranscoder))
 
 	if s.useReflection {
-		mux.Handle("/grpc.reflection.v1.ServerReflection/", s.handlerReflectorV1)
-		mux.Handle("/grpc.reflection.v1alpha.ServerReflection/", s.handlerReflectorV1Alpha)
+		mux.Handle("/grpc.reflection.v1.ServerReflection/", httplog.Logger(s.handlerReflectorV1))
+		mux.Handle("/grpc.reflection.v1alpha.ServerReflection/", httplog.Logger(s.handlerReflectorV1Alpha))
 	}
 
 	// OpenAPI Stuff
 	if s.renderDocPage {
-		mux.Handle("GET /fauxrpc/openapi.html", singleFileHandler(openapiHTML))
-		mux.Handle("GET /fauxrpc/openapi.yaml", s.handlerOpenAPI)
+		mux.Handle("GET /fauxrpc/openapi.html", httplog.Logger(singleFileHandler(openapiHTML)))
+		mux.Handle("GET /fauxrpc/openapi.yaml", httplog.Logger(s.handlerOpenAPI))
 	}
 	return mux, nil
 }
