@@ -86,13 +86,13 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) error {
 			if val := Repeated(msg, field, opts); val != nil {
 				msg.Set(field, *val)
 			}
-			return nil
+			continue
 		}
 		if field.IsMap() {
 			if val := Map(msg, field, opts); val != nil {
 				msg.Set(field, *val)
 			}
-			return nil
+			continue
 		}
 		if v := getFieldValue(field, opts.nested()); v != nil {
 			msg.Set(field, *v)
