@@ -98,12 +98,12 @@ func getFieldValue(fd protoreflect.FieldDescriptor, opts GenOptions) *protorefle
 		}
 
 		nested := newMessage(fd.Message())
-		setDataOnMessage(nested.Interface(), opts.nested())
+		_ = setDataOnMessage(nested.Interface(), opts.nested())
 		v := protoreflect.ValueOf(nested)
 		return &v
 	case protoreflect.GroupKind:
 		nested := newMessage(fd.Message())
-		setDataOnMessage(nested.Interface(), opts.nested())
+		_ = setDataOnMessage(nested.Interface(), opts.nested())
 		v := protoreflect.ValueOf(nested)
 		return &v
 	}

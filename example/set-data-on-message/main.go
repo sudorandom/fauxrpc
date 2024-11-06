@@ -14,7 +14,9 @@ import (
 func main() {
 	{
 		msg := &elizav1.SayResponse{}
-		fauxrpc.SetDataOnMessage(msg)
+		if err := fauxrpc.SetDataOnMessage(msg, fauxrpc.GenOptions{}); err != nil {
+			log.Fatalf("err: %s", err)
+		}
 		b, err := protojson.MarshalOptions{Indent: "  "}.Marshal(msg)
 		if err != nil {
 			log.Fatalf("err: %s", err)
@@ -24,7 +26,9 @@ func main() {
 
 	{
 		msg := &ownerv1.Owner{}
-		fauxrpc.SetDataOnMessage(msg)
+		if err := fauxrpc.SetDataOnMessage(msg, fauxrpc.GenOptions{}); err != nil {
+			log.Fatalf("err: %s", err)
+		}
 		b, err := protojson.MarshalOptions{Indent: "  "}.Marshal(msg)
 		if err != nil {
 			log.Fatalf("err: %s", err)
@@ -34,7 +38,9 @@ func main() {
 
 	{
 		msg := &runtimeapi.ListMetricDescriptorsResponse{}
-		fauxrpc.SetDataOnMessage(msg)
+		if err := fauxrpc.SetDataOnMessage(msg, fauxrpc.GenOptions{}); err != nil {
+			log.Fatalf("err: %s", err)
+		}
 		b, err := protojson.MarshalOptions{Indent: "  "}.Marshal(msg)
 		if err != nil {
 			log.Fatalf("err: %s", err)

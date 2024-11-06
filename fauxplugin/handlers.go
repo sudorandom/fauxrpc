@@ -10,7 +10,7 @@ import (
 )
 
 func UnaryHandler[T *proto.Message](ctx context.Context, opts fauxrpc.GenOptions, msg *T) (*connect.Response[T], error) {
-	fauxrpc.SetDataOnMessage(**msg, opts)
+	_ = fauxrpc.SetDataOnMessage(**msg, opts)
 	return connect.NewResponse(msg), nil
 }
 
@@ -26,7 +26,7 @@ func BidiStreamHandler[I proto.Message, O proto.Message](ctx context.Context, st
 	})
 	eg.Go(func() error {
 		var msg O
-		fauxrpc.SetDataOnMessage(msg, opts)
+		_ = fauxrpc.SetDataOnMessage(msg, opts)
 		return stream.Send(&msg)
 	})
 	return eg.Wait()
