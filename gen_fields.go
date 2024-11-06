@@ -72,6 +72,9 @@ var kindToGenerator = map[protoreflect.Kind]func(fd protoreflect.FieldDescriptor
 }
 
 func getFieldValue(fd protoreflect.FieldDescriptor, opts GenOptions) *protoreflect.Value {
+	if opts.MaxDepth <= 0 {
+		return nil
+	}
 	switch fd.Kind() {
 	case protoreflect.MessageKind:
 		switch string(fd.Message().FullName()) {
@@ -109,5 +112,5 @@ func getFieldValue(fd protoreflect.FieldDescriptor, opts GenOptions) *protorefle
 	if !ok {
 		return nil
 	}
-	return fn(fd, opts)
+	return fn(fd, opts.nested())
 }

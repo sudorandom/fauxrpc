@@ -1,9 +1,6 @@
 package fauxrpc
 
 import (
-	"fmt"
-	"log/slog"
-
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -13,8 +10,6 @@ func repeatedSimple(msg protoreflect.Message, fd protoreflect.FieldDescriptor, o
 	for i := 0; i < itemCount; i++ {
 		if v := getFieldValue(fd, opts.nested()); v != nil {
 			listVal.List().Append(*v)
-		} else {
-			slog.Warn(fmt.Sprintf("Unknown list value %s %v", fd.FullName(), fd.Kind()))
 		}
 	}
 	return &listVal
@@ -43,8 +38,6 @@ func Repeated(msg protoreflect.Message, fd protoreflect.FieldDescriptor, opts Ge
 	for i := 0; i < itemCount; i++ {
 		if v := getFieldValue(fd, opts.nested().withExtraFieldConstraints(constraints.GetRepeated().Items)); v != nil {
 			listVal.List().Append(*v)
-		} else {
-			slog.Warn(fmt.Sprintf("Unknown list value %s %v", fd.FullName(), fd.Kind()))
 		}
 	}
 	return &listVal

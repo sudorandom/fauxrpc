@@ -15,8 +15,6 @@ func mapSimple(msg protoreflect.Message, fd protoreflect.FieldDescriptor, opts G
 		w := getFieldValue(fd.MapValue(), opts.nested())
 		if v != nil && w != nil {
 			mapVal.Map().Set((*v).MapKey(), *w)
-		} else {
-			slog.Warn(fmt.Sprintf("Unknown map k/v %s %v", fd.FullName(), fd.Kind()))
 		}
 	}
 	return &mapVal
@@ -24,6 +22,9 @@ func mapSimple(msg protoreflect.Message, fd protoreflect.FieldDescriptor, opts G
 
 // Map returns a fake repeated value given a field descriptor.
 func Map(msg protoreflect.Message, fd protoreflect.FieldDescriptor, opts GenOptions) *protoreflect.Value {
+	if opts.MaxDepth <= 0 {
+		return nil
+	}
 	constraints := getResolver().ResolveFieldConstraints(fd)
 	if constraints == nil {
 		return mapSimple(msg, fd, opts)

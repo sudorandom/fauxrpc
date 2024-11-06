@@ -126,7 +126,9 @@ func GoogleValue(fd protoreflect.FieldDescriptor, opts GenOptions) *structpb.Val
 			return structpb.NewListValue(list)
 		},
 		func() *structpb.Value {
-			obj := &structpb.Struct{}
+			obj := &structpb.Struct{
+				Fields: map[string]*structpb.Value{},
+			}
 			itemCount := opts.fake().IntRange(0, 4)
 			for i := 0; i < itemCount; i++ {
 				obj.Fields[strings.ToLower(opts.fake().Word())] = GoogleValue(fd, opts.nested())
