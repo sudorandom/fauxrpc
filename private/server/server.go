@@ -9,6 +9,7 @@ import (
 	"connectrpc.com/grpcreflect"
 	"connectrpc.com/vanguard"
 	"github.com/MadAppGang/httplog"
+	"github.com/bufbuild/protovalidate-go"
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/private/stubs"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -36,9 +37,10 @@ type server struct {
 	renderDocPage bool
 	useReflection bool
 	withHTTPLog   bool
+	withValidate  bool
 }
 
-func NewServer(version string, renderDocPage, useReflection, withHTTPLog bool) (*server, error) {
+func NewServer(version string, renderDocPage, useReflection, withHTTPLog, withValidate bool) (*server, error) {
 	serviceRegistry, err := registry.NewServiceRegistry()
 	if err != nil {
 		return nil, err
@@ -50,6 +52,7 @@ func NewServer(version string, renderDocPage, useReflection, withHTTPLog bool) (
 		version:                 version,
 		renderDocPage:           renderDocPage,
 		useReflection:           useReflection,
+		withValidate:            withValidate,
 		handlerOpenAPI:          NewWrappedHandler(),
 		handlerReflectorV1:      NewWrappedHandler(),
 		handlerReflectorV1Alpha: NewWrappedHandler(),
@@ -83,14 +86,26 @@ func (s *server) AddFileFrompath(path string) error {
 func (s *server) rebuildHandlers() error {
 	serviceNames := []string{}
 	vgservices := []*vanguard.Service{}
+	var srvErr error
+	var validate *protovalidate.Validator
+	if s.withValidate {
+		v, err := protovalidate.New()
+		if err != nil {
+			return err
+		}
+		validate = v
+	}
 	s.ServiceRegistry.ForEachService(func(sd protoreflect.ServiceDescriptor) {
 		vgservice := vanguard.NewServiceWithSchema(
-			sd, NewHandler(sd, s.StubDatabase),
+			sd, NewHandler(sd, s.StubDatabase, validate),
 			vanguard.WithTargetProtocols(vanguard.ProtocolGRPC),
 			vanguard.WithTargetCodecs(vanguard.CodecProto))
 		vgservices = append(vgservices, vgservice)
 		serviceNames = append(serviceNames, string(sd.FullName()))
 	})
+	if srvErr != nil {
+		return srvErr
+	}
 
 	transcoder, err := vanguard.NewTranscoder(vgservices)
 	if err != nil {

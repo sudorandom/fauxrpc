@@ -25,6 +25,7 @@ type RunCmd struct {
 	Addr         string   `short:"a" help:"Address to bind to." default:"127.0.0.1:6660"`
 	NoReflection bool     `help:"Disables the server reflection service."`
 	NoHTTPLog    bool     `help:"Disables the HTTP log."`
+	NoValidate   bool     `help:"Disables protovalidate."`
 	NoDocPage    bool     `help:"Disables the documentation page."`
 	HTTPS        bool     `help:"Enables HTTPS, requires cert and certkey"`
 	Cert         string   `help:"Path to certificate file"`
@@ -34,7 +35,7 @@ type RunCmd struct {
 }
 
 func (c *RunCmd) Run(globals *Globals) error {
-	srv, err := server.NewServer(version, !c.NoDocPage, !c.NoReflection, !c.NoHTTPLog)
+	srv, err := server.NewServer(version, !c.NoDocPage, !c.NoReflection, !c.NoHTTPLog, !c.NoValidate)
 	if err != nil {
 		return err
 	}
