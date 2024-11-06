@@ -26,7 +26,7 @@ import (
 	stubsv1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
 )
 
-const maxMessageSize = 2 * 1024 * 1024 * 1024
+const maxMessageSize = 4 * 1024 * 1024
 
 func NewHandler(service protoreflect.ServiceDescriptor, db stubs.StubDatabase, validate *protovalidate.Validator) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

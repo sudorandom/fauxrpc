@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 jobs:
-  docker:
+  goreleaser:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
