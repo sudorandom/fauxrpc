@@ -41,10 +41,10 @@ func NewServiceRegistry() (*serviceRegistry, error) {
 
 func (r *serviceRegistry) Reset() error {
 	r.lock.Lock()
-	defer r.lock.Unlock()
 	r.services = map[string]protoreflect.ServiceDescriptor{}
 	r.files = new(protoregistry.Files)
 	r.filesOrdered = []protoreflect.FileDescriptor{}
+	r.lock.Unlock()
 	return AddServicesFromGlobal(r)
 }
 
