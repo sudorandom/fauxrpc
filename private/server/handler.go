@@ -113,7 +113,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, db stubs.StubDatabase, v
 			if err != nil {
 				var statusErr *stubs.StatusError
 				if errors.As(err, &statusErr) {
-					return status.New(codes.Code(statusErr.Code), statusErr.Error()).Err()
+					return grpcStatusFromError(statusErr.StubsError).Err()
 				}
 				return status.New(codes.Internal, err.Error()).Err()
 			}
