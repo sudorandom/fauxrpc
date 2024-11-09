@@ -10,11 +10,11 @@ import (
 	"strconv"
 	"strings"
 
-	"connectrpc.com/connect"
 	"github.com/bufbuild/protovalidate-go"
 	"github.com/sudorandom/fauxrpc"
 	"github.com/sudorandom/fauxrpc/private/grpc"
 	"github.com/sudorandom/fauxrpc/private/stubs"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
@@ -30,53 +30,42 @@ const maxMessageSize = 4 * 1024 * 1024
 
 func NewHandler(service protoreflect.ServiceDescriptor, db stubs.StubDatabase, validate *protovalidate.Validator) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Trailer", "Grpc-Status,Grpc-Message")
+		w.Header().Set("Trailer", "Grpc-Status,Grpc-Message,Grpc-Status-Details-Bin")
 		w.Header().Add("Content-Type", "application/grpc")
 
 		parts := strings.Split(r.URL.Path, "/")
 		if len(parts) != 3 {
-			w.Header().Set("Grpc-Status", "5")
-			w.Header().Set("Grpc-Message", "")
+			grpcWriteStatus(w, status.New(codes.NotFound, ""))
 			return
 		}
 
 		serviceName := parts[1]
 		if serviceName != string(service.FullName()) {
-			w.Header().Set("Grpc-Status", "5")
-			w.Header().Set("Grpc-Message", "service not found")
+			grpcWriteStatus(w, status.New(codes.NotFound, "service not found"))
 			return
 		}
 		methodName := parts[2]
 		method := service.Methods().ByName(protoreflect.Name(methodName))
 		if method == nil {
-			w.Header().Set("Grpc-Status", "5")
-			w.Header().Set("Grpc-Message", "method not found")
+			grpcWriteStatus(w, status.New(codes.NotFound, "method not found"))
 			return
 		}
 		defer r.Body.Close()
 
-		if method.IsStreamingClient() || validate == nil {
-			// completely ignore the body. Maybe later we'll need it as input to the response message
-			go func() {
-				_, _ = io.Copy(io.Discard, r.Body)
-			}()
-		} else {
+		readMessage := func() *status.Status {
 			body := make([]byte, maxMessageSize)
 			size, err := grpc.ReadGRPCMessage(r.Body, body)
 			if err != nil {
-				w.Header().Set("Grpc-Status", "5")
-				w.Header().Set("Grpc-Message", fmt.Sprintf("invalid protobuf message received: %s", err))
-				return
+				if errors.Is(err, io.EOF) {
+					return nil
+				}
+				return status.New(codes.NotFound, err.Error())
 			}
 			msg := newMessage(method.Input()).Interface()
 			if err := proto.Unmarshal(body[:size], msg); err != nil {
-				w.Header().Set("Grpc-Status", "5")
-				w.Header().Set("Grpc-Message", err.Error())
-				return
+				return status.New(codes.NotFound, err.Error())
 			}
 			if err := validate.Validate(msg); err != nil {
-				w.Header().Set("Grpc-Status", "3")
-				w.Header().Set("Grpc-Message", err.Error())
 				grpcErr := status.New(codes.InvalidArgument, err.Error())
 				if validationErr := new(protovalidate.ValidationError); errors.As(err, &validationErr) {
 					grpcErr, err = grpcErr.WithDetails(validationErr.ToProto())
@@ -84,50 +73,83 @@ func NewHandler(service protoreflect.ServiceDescriptor, db stubs.StubDatabase, v
 						slog.Error("error serializing validation details", "error", err)
 					}
 				}
-				if details, err := proto.Marshal(grpcErr.Proto()); err != nil {
-					slog.Error("error serializing validation details", "error", err)
-				} else {
-					w.Header().Set("Grpc-Status-Details-Bin", base64.StdEncoding.EncodeToString(details))
-				}
-				return
+				return grpcErr
 			}
+			return nil
 		}
 
 		slog.Info("MethodCalled", slog.String("service", serviceName), slog.String("method", methodName))
 
-		out, err := fauxrpc.NewMessage(method.Output(), fauxrpc.GenOptions{MaxDepth: 20, StubDB: db})
-		if err != nil {
-			var statusErr *stubs.StatusError
-			if errors.As(err, &statusErr) {
-				statusErr := grpcStatusFromError(statusErr.StubsError)
-				w.Header().Set("Grpc-Status", strconv.FormatUint(uint64(statusErr.Code()), 10))
-				w.Header().Set("Grpc-Message", statusErr.Message())
-				var bin []byte
-				if len(statusErr.Details()) > 0 {
-					bin, err = proto.Marshal(statusErr.Proto())
-					if err != nil {
-						slog.Warn("failed to marshal grpc-status-details-bin", "error", err)
+		eg, _ := errgroup.WithContext(r.Context())
+
+		// Handle reading requests
+		if validate == nil {
+			eg.Go(func() error {
+				_, _ = io.Copy(io.Discard, r.Body)
+				return nil
+			})
+		} else {
+			if method.IsStreamingClient() {
+				// completely ignore the body. Maybe later we'll need it as input to the response message
+				eg.Go(func() error {
+					for {
+						if st := readMessage(); st != nil {
+							return st.Err()
+						}
 					}
+				})
+			} else {
+				if st := readMessage(); st != nil {
+					grpcWriteStatus(w, st)
+					return
 				}
-				w.Header().Set("Grpc-Status-Details-Bin", base64.RawStdEncoding.EncodeToString(bin))
-				return
+			}
+		}
+
+		// Handle writing response
+		var msg []byte
+		eg.Go(func() error {
+			out, err := fauxrpc.NewMessage(method.Output(), fauxrpc.GenOptions{MaxDepth: 20, StubDB: db})
+			if err != nil {
+				var statusErr *stubs.StatusError
+				if errors.As(err, &statusErr) {
+					return status.New(codes.Code(statusErr.Code), statusErr.Error()).Err()
+				}
+				return status.New(codes.Internal, err.Error()).Err()
 			}
 
-			w.Header().Set("Grpc-Status", "13")
-			w.Header().Set("Grpc-Message", err.Error())
-		}
+			b, err := proto.Marshal(out)
+			if err != nil {
+				slog.Error(fmt.Sprintf("error marshalling msg: %s", err))
+				return status.New(codes.Internal, err.Error()).Err()
+			}
+			msg = b
+			return nil
+		})
 
-		b, err := proto.Marshal(out)
-		if err != nil {
-			slog.Error(fmt.Sprintf("error marshalling msg: %s", err))
-			w.Header().Set("Grpc-Status", connect.CodeInternal.String())
-			w.Header().Set("Grpc-Message", err.Error())
-			return
+		// Write response
+		if err := eg.Wait(); err != nil {
+			if st, ok := status.FromError(err); ok {
+				grpcWriteStatus(w, st)
+				return
+			} else {
+				grpcWriteStatus(w, status.New(codes.Internal, err.Error()))
+				return
+			}
 		}
-		grpc.WriteGRPCMessage(w, b)
-		w.Header().Set("Grpc-Status", "0")
-		w.Header().Set("Grpc-Message", "")
+		grpc.WriteGRPCMessage(w, msg)
+		grpcWriteStatus(w, status.New(codes.OK, ""))
 	})
+}
+
+func grpcWriteStatus(w http.ResponseWriter, st *status.Status) {
+	w.Header().Set("Grpc-Status", strconv.FormatInt(int64(st.Code()), 10))
+	w.Header().Set("Grpc-Message", st.Message())
+	if details, err := proto.Marshal(st.Proto()); err != nil {
+		slog.Error("error serializing validation details", "error", err)
+	} else {
+		w.Header().Set("Grpc-Status-Details-Bin", base64.StdEncoding.EncodeToString(details))
+	}
 }
 
 func grpcStatusFromError(e *stubsv1.Error) *status.Status {
