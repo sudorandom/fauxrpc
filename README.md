@@ -12,6 +12,7 @@
 * **Prototyping & Demos:** Create prototypes and demos quickly without building the full backend. Fake it till you make it.
 * **Improved Collaboration:** Bridge the gap between frontend and backend teams.
 * **Plays well with others:** Test data from FauxRPC will try to automatically follow any [protovalidate](https://github.com/bufbuild/protovalidate) constraints that are defined.
+* **Request Validation:** Ensure data integrity with automatic request validation using [protovalidate](https://github.com/bufbuild/protovalidate). Catch errors early and prevent invalid data from reaching your application logic.
 
 See the [the documentation website](https://fauxrpc.com) for more!
 
