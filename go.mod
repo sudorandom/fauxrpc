@@ -8,6 +8,7 @@ require (
 	buf.build/gen/go/grpc/grpc/connectrpc/go v1.16.2-20240809200651-8507e5a24938.1
 	buf.build/gen/go/grpc/grpc/protocolbuffers/go v1.34.1-20240809200651-8507e5a24938.1
 	connectrpc.com/connect v1.17.0
+	connectrpc.com/cors v0.1.0
 	connectrpc.com/grpcreflect v1.2.0
 	connectrpc.com/validate v0.1.0
 	connectrpc.com/vanguard v0.2.0
@@ -19,6 +20,7 @@ require (
 	github.com/bufbuild/protoyaml-go v0.1.11
 	github.com/golang/protobuf v1.5.4
 	github.com/quic-go/quic-go v0.46.0
+	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.9.0
 	github.com/sudorandom/protoc-gen-connect-openapi v0.13.0
 	golang.org/x/net v0.30.0

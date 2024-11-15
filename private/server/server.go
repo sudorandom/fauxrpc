@@ -135,6 +135,7 @@ func (s *server) Mux() (*http.ServeMux, error) {
 	if err := s.rebuildHandlers(); err != nil {
 		return nil, err
 	}
+
 	mux := http.NewServeMux()
 	mux.Handle("/", httplog.Logger(s.handlerTranscoder))
 
@@ -148,6 +149,7 @@ func (s *server) Mux() (*http.ServeMux, error) {
 		mux.Handle("GET /fauxrpc/openapi.html", httplog.Logger(singleFileHandler(openapiHTML)))
 		mux.Handle("GET /fauxrpc/openapi.yaml", httplog.Logger(s.handlerOpenAPI))
 	}
+
 	return mux, nil
 }
 

@@ -7,12 +7,14 @@ import (
 	"net/http"
 
 	"connectrpc.com/connect"
+	connectcors "connectrpc.com/cors"
 	"connectrpc.com/validate"
+	"github.com/quic-go/quic-go/http3"
+	"github.com/rs/cors"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/quic-go/quic-go/http3"
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/private/server"
 	"github.com/sudorandom/fauxrpc/private/stubs"
@@ -27,6 +29,7 @@ type RunCmd struct {
 	NoHTTPLog    bool     `help:"Disables the HTTP log."`
 	NoValidate   bool     `help:"Disables protovalidate."`
 	NoDocPage    bool     `help:"Disables the documentation page."`
+	NoCORS       bool     `help:"Disables CORS headers."`
 	HTTPS        bool     `help:"Enables HTTPS, requires cert and certkey"`
 	Cert         string   `help:"Path to certificate file"`
 	CertKey      string   `help:"Path to certificate key file"`
@@ -62,9 +65,20 @@ func (c *RunCmd) Run(globals *Globals) error {
 	mux.Handle(stubsv1connect.NewStubsServiceHandler(stubs.NewHandler(srv, srv), connect.WithInterceptors(validateInterceptor)))
 	mux.Handle(registryv1connect.NewRegistryServiceHandler(registry.NewHandler(srv), connect.WithInterceptors(validateInterceptor)))
 
+	var handler http.Handler = mux
+	if !c.NoCORS {
+		middleware := cors.New(cors.Options{
+			AllowedOrigins: []string{"*"},
+			AllowedMethods: connectcors.AllowedMethods(),
+			AllowedHeaders: connectcors.AllowedHeaders(),
+			ExposedHeaders: connectcors.ExposedHeaders(),
+		})
+		handler = middleware.Handler(handler)
+	}
+
 	server := &http.Server{
 		Addr:    c.Addr,
-		Handler: h2c.NewHandler(mux, &http2.Server{}),
+		Handler: h2c.NewHandler(handler, &http2.Server{}),
 	}
 
 	fmt.Printf("FauxRPC (%s) - %d services loaded\n", fullVersion(), srv.ServiceCount())
