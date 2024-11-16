@@ -6,11 +6,16 @@ import (
 	"io"
 )
 
-func WriteGRPCMessage(w io.Writer, msg []byte) {
+func WriteGRPCMessage(w io.Writer, msg []byte) error {
 	prefix := make([]byte, 5)
 	binary.BigEndian.PutUint32(prefix[1:], uint32(len(msg)))
-	_, _ = w.Write(prefix)
-	_, _ = w.Write(msg)
+	if _, err := w.Write(prefix); err != nil {
+		return err
+	}
+	if _, err := w.Write(msg); err != nil {
+		return err
+	}
+	return nil
 }
 
 func ReadGRPCMessage(body io.Reader, msg []byte) (int, error) {

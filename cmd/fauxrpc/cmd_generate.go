@@ -78,7 +78,9 @@ func (c *GenerateCmd) Run(globals *Globals) error {
 		if err != nil {
 			return err
 		}
-		grpc.WriteGRPCMessage(os.Stdout, protoBytes)
+		if err := grpc.WriteGRPCMessage(os.Stdout, protoBytes); err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("unexpected format: %s", c.Format)
 	}

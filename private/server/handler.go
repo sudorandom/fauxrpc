@@ -137,7 +137,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, db stubs.StubDatabase, v
 				return
 			}
 		}
-		grpc.WriteGRPCMessage(w, msg)
+		_ = grpc.WriteGRPCMessage(w, msg)
 		grpcWriteStatus(w, status.New(codes.OK, ""))
 	})
 }
