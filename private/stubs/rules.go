@@ -3,7 +3,6 @@ package stubs
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/google/cel-go/cel"
 	"google.golang.org/protobuf/proto"
@@ -16,7 +15,12 @@ type Rules struct {
 
 func (r *Rules) Eval(ctx context.Context, md protoreflect.MethodDescriptor, req proto.Message) (bool, error) {
 	for _, r := range r.rules {
-		val, details, err := r.ContextEval(ctx, map[string]any{"req": req})
+		val, _, err := r.ContextEval(ctx, map[string]any{
+			"req":       req,
+			"service":   string(md.Parent().FullName()),
+			"method":    string(md.Name()),
+			"procedure": string(md.FullName()),
+		})
 		if err != nil {
 			return false, err
 		}
@@ -28,7 +32,6 @@ func (r *Rules) Eval(ctx context.Context, md protoreflect.MethodDescriptor, req 
 		default:
 			return false, fmt.Errorf("unexpected return type from CEL expr (%T): %+v", t, val)
 		}
-		log.Println("val", val, "details", details)
 	}
 	return true, nil
 }
@@ -38,7 +41,9 @@ func CompileRules(md protoreflect.MethodDescriptor, strRules []string) (*Rules, 
 	env, err := cel.NewEnv(
 		cel.Types(reqMsg),
 		cel.Variable("req", cel.ObjectType(string(md.Input().FullName()))),
-	)
+		cel.Variable("service", cel.StringType),
+		cel.Variable("method", cel.StringType),
+		cel.Variable("procedure", cel.StringType))
 	if err != nil {
 		return nil, err
 	}
