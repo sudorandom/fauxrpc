@@ -42,8 +42,8 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) error {
 	if opts.StubDB != nil {
 		stubs := opts.StubDB.GetStubs(desc.FullName())
 		for _, stub := range stubs {
-			if stub.Rules != nil {
-				ok, err := stub.Rules.Eval(context.Background(), opts.MethodDescriptor, opts.Input)
+			if stub.ActiveIf != nil {
+				ok, err := stub.ActiveIf.Eval(context.Background(), opts.MethodDescriptor, opts.Input)
 				if err != nil {
 					return err
 				}

@@ -51,7 +51,6 @@ func TestNewMessage(t *testing.T) {
 		msg := dynamicpb.NewMessage(md)
 		require.NoError(t, fauxrpc.SetDataOnMessage(msg, fauxrpc.GenOptions{}))
 		assertFieldIsSet(t, md, msg, "doubleValue")
-		assertFieldIsSet(t, md, msg, "doubleValue")
 		assertFieldIsSet(t, md, msg, "floatValue")
 		assertFieldIsSet(t, md, msg, "int32Value")
 		assertFieldIsSet(t, md, msg, "int64Value")

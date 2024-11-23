@@ -7,9 +7,9 @@ import (
 )
 
 type StubEntry struct {
-	Message protoreflect.ProtoMessage
-	Error   *StatusError
-	Rules   *Rules
+	Message  protoreflect.ProtoMessage
+	Error    *StatusError
+	ActiveIf *ActiveIf
 }
 
 var _ StubDatabase = (*stubDatabase)(nil)

@@ -61,12 +61,12 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 		switch t := desc.(type) {
 		case protoreflect.MethodDescriptor:
 
-			if len(stub.CelRules) > 0 {
-				r, err := NewRules(t, stub.CelRules)
+			if len(stub.ActiveIf) > 0 {
+				r, err := NewActiveIf(t, stub.ActiveIf)
 				if err != nil {
 					return nil, err
 				}
-				entry.Rules = r
+				entry.ActiveIf = r
 			}
 
 			name = t.Output().FullName()
@@ -153,7 +153,9 @@ func stubsToProto(allStubs map[protoreflect.FullName]map[string]StubEntry) ([]*s
 					Target: string(target),
 				},
 			}
-			pbStub.CelRules = stub.Rules.GetStrings()
+			if stub.ActiveIf != nil {
+				pbStub.ActiveIf = stub.ActiveIf.GetString()
+			}
 			if stub.Error != nil {
 				pbStub.Content = &stubsv1.Stub_Error{Error: stub.Error.StubsError}
 			}

@@ -28,13 +28,13 @@ type StubCmd struct {
 }
 
 type StubAddCmd struct {
-	Addr         string   `short:"a" help:"Address to bind to." default:"http://127.0.0.1:6660"`
-	Target       string   `arg:"" help:"Protobuf method or type" example:"'connectrpc.eliza.v1/Say', 'connectrpc.eliza.v1.IntroduceResponse'"`
-	ID           string   `help:"ID to give this particular mock response, will be a random string if one isn't given" example:"bad-response"`
-	JSON         string   `help:"Protobuf method or type" example:"'connectrpc.eliza.v1/Say', 'connectrpc.eliza.v1.IntroduceResponse'"`
-	ErrorMessage string   `help:"Message to return with the error"`
-	ErrorCode    *uint32  `help:"gRPC Error code to return"`
-	Rule         []string `help:"CEL rules that must be true before this mock is used."`
+	Addr         string  `short:"a" help:"Address to bind to." default:"http://127.0.0.1:6660"`
+	Target       string  `arg:"" help:"Protobuf method or type" example:"'connectrpc.eliza.v1/Say', 'connectrpc.eliza.v1.IntroduceResponse'"`
+	ID           string  `help:"ID to give this particular mock response, will be a random string if one isn't given" example:"bad-response"`
+	JSON         string  `help:"Protobuf method or type" example:"'connectrpc.eliza.v1/Say', 'connectrpc.eliza.v1.IntroduceResponse'"`
+	ErrorMessage string  `help:"Message to return with the error"`
+	ErrorCode    *uint32 `help:"gRPC Error code to return"`
+	ActiveIf     string  `help:"CEL expression that must be true before this mock is used."`
 }
 
 func (c *StubAddCmd) Run(globals *Globals) error {
@@ -44,7 +44,7 @@ func (c *StubAddCmd) Run(globals *Globals) error {
 			Id:     c.ID,
 			Target: c.Target,
 		},
-		CelRules: c.Rule,
+		ActiveIf: c.ActiveIf,
 	}
 	if c.JSON != "" {
 		stub.Content = &stubsv1.Stub_Json{Json: c.JSON}
@@ -154,7 +154,7 @@ func (c *StubRemoveAllCmd) Run(globals *Globals) error {
 type StubForOutput struct {
 	Ref          *stubsv1.StubRef `json:"ref,omitempty"`
 	Content      any              `json:"content,omitempty"`
-	CELRules     []string         `json:"cel_rules,omitempty"`
+	ActiveIf     string           `json:"active_if,omitempty"`
 	ErrorCode    int              `json:"error_code,omitempty"`
 	ErrorMessage string           `json:"error_message,omitempty"`
 }
@@ -166,7 +166,7 @@ func outputStubs(stubs []*stubsv1.Stub) {
 	for _, stub := range stubs {
 		outputStub := StubForOutput{
 			Ref:      stub.Ref,
-			CELRules: stub.CelRules,
+			ActiveIf: stub.ActiveIf,
 		}
 
 		switch t := stub.GetContent().(type) {

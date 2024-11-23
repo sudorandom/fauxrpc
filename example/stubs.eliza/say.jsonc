@@ -1,0 +1,16 @@
+{
+    "stubs": [
+        {
+            "id": "say-hello",
+            "target": "connectrpc.eliza.v1.ElizaService/Say",
+            "contents": {"sentence": "sup!"},
+            "active_if": "req.sentence != 'hey'"
+        },
+        {
+            "id": "say-hello-default",
+            "target": "connectrpc.eliza.v1.ElizaService/Say",
+            "contents": {"sentence": "sup!"},
+            "active_if": "req.sentence == 'hey'"
+        }
+    ]
+}

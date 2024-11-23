@@ -177,7 +177,7 @@ func (f StubFile) ToRequest() (*stubsv1.AddStubsRequest, error) {
 			Content: &stubsv1.Stub_Json{
 				Json: string(b),
 			},
-			CelRules: stub.Rules,
+			ActiveIf: stub.ActiveIf,
 		}
 	}
 
@@ -185,10 +185,10 @@ func (f StubFile) ToRequest() (*stubsv1.AddStubsRequest, error) {
 }
 
 type StubFileEntry struct {
-	ID       string   `json:"id"`
-	Target   string   `json:"target"`
-	Contents any      `json:"contents"`
-	Rules    []string `json:"rules"`
+	ID       string `json:"id"`
+	Target   string `json:"target"`
+	Contents any    `json:"contents"`
+	ActiveIf string `json:"active_if"`
 }
 
 func addStubsFromFile(h stubsv1connect.StubsServiceHandler, stubsPath string) error {
