@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
+	"github.com/brianvoe/gofakeit/v7"
 	"github.com/sudorandom/fauxrpc/private/registry"
 	stubsv1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
 	stubsv1connect "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1/stubsv1connect"
@@ -37,6 +38,13 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 	values := make([]StubEntry, len(req.Msg.Stubs))
 	stubs := make([]*stubsv1.Stub, len(req.Msg.Stubs))
 	for i, stub := range req.Msg.Stubs {
+		if stub.Ref == nil {
+			stub.Ref = &stubsv1.StubRef{}
+		}
+		if stub.GetRef().Id == "" {
+			stub.Ref.Id = gofakeit.AdjectiveDescriptive() + "-" + strings.ReplaceAll(gofakeit.Animal(), " ", "-") + gofakeit.DigitN(3)
+		}
+
 		ref := stub.GetRef()
 		name, err := normalizeTargetName(ref.GetTarget())
 		if err != nil {
@@ -54,7 +62,7 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 		case protoreflect.MethodDescriptor:
 
 			if len(stub.CelRules) > 0 {
-				r, err := CompileRules(t, stub.CelRules)
+				r, err := NewRules(t, stub.CelRules)
 				if err != nil {
 					return nil, err
 				}
@@ -89,6 +97,7 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 		case *stubsv1.Stub_Error:
 			entry.Error = &StatusError{StubsError: t.Error}
 		}
+
 		ids[i] = stub.GetRef().GetId()
 		names[i] = name
 		values[i] = entry
@@ -144,6 +153,7 @@ func stubsToProto(allStubs map[protoreflect.FullName]map[string]StubEntry) ([]*s
 					Target: string(target),
 				},
 			}
+			pbStub.CelRules = stub.Rules.GetStrings()
 			if stub.Error != nil {
 				pbStub.Content = &stubsv1.Stub_Error{Error: stub.Error.StubsError}
 			}

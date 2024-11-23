@@ -11,10 +11,8 @@ import (
 	"net"
 	"net/http"
 	"slices"
-	"strings"
 
 	"connectrpc.com/connect"
-	"github.com/brianvoe/gofakeit/v7"
 	stubsv1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
 	"github.com/sudorandom/fauxrpc/proto/gen/stubs/v1/stubsv1connect"
 	"golang.org/x/net/http2"
@@ -41,9 +39,6 @@ type StubAddCmd struct {
 
 func (c *StubAddCmd) Run(globals *Globals) error {
 	client := newStubClient(c.Addr)
-	if c.ID == "" {
-		c.ID = gofakeit.AdjectiveDescriptive() + "-" + strings.ReplaceAll(gofakeit.Animal(), " ", "-") + gofakeit.DigitN(3)
-	}
 	stub := &stubsv1.Stub{
 		Ref: &stubsv1.StubRef{
 			Id:     c.ID,

@@ -20,6 +20,7 @@ type StubDatabase interface {
 	AddStub(protoreflect.FullName, string, StubEntry)
 	RemoveStub(protoreflect.FullName, string)
 	RemoveAllStubs()
+	NumStubs() int
 }
 
 type stubDatabase struct {
@@ -95,4 +96,12 @@ func (db *stubDatabase) RemoveAllStubs() {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 	db.stubs = map[protoreflect.FullName]map[string]StubEntry{}
+}
+
+func (db *stubDatabase) NumStubs() int {
+	var count int
+	for _, procedureStub := range db.stubs {
+		count += len(procedureStub)
+	}
+	return count
 }
