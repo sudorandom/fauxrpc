@@ -12,6 +12,7 @@ message Stub {
     string json = 3;
     Error error = 4;
   }
+  repeated string cel_rules = 5;
 }
 
 message StubRef {

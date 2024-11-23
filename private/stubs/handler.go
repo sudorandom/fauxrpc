@@ -43,6 +43,8 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 			return nil, err
 		}
 
+		entry := StubEntry{}
+
 		desc, err := h.registry.Files().FindDescriptorByName(name)
 		if err != nil {
 			return nil, fmt.Errorf("unable to find object named %s: %w", name, err)
@@ -50,6 +52,15 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 		var md protoreflect.MessageDescriptor
 		switch t := desc.(type) {
 		case protoreflect.MethodDescriptor:
+
+			if len(stub.CelRules) > 0 {
+				r, err := CompileRules(t, stub.CelRules)
+				if err != nil {
+					return nil, err
+				}
+				entry.Rules = r
+			}
+
 			name = t.Output().FullName()
 			md = t.Output()
 		case protoreflect.MessageDescriptor:
@@ -62,7 +73,6 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 
 		ref.Target = string(md.FullName())
 
-		entry := StubEntry{}
 		switch t := stub.GetContent().(type) {
 		case *stubsv1.Stub_Json:
 			msg := newMessage(md).Interface()

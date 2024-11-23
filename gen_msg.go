@@ -1,6 +1,8 @@
 package fauxrpc
 
 import (
+	"context"
+
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -36,9 +38,16 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) error {
 
 	if opts.StubDB != nil {
 		stubs := opts.StubDB.GetStubs(desc.FullName())
-		if len(stubs) > 0 {
-			idx := opts.fake().IntRange(0, len(stubs)-1)
-			stub := stubs[idx]
+		for _, stub := range stubs {
+			if stub.Rules != nil {
+				ok, err := stub.Rules.Eval(context.Background(), opts.MethodDescriptor, opts.Input)
+				if err != nil {
+					return err
+				}
+				if !ok {
+					continue
+				}
+			}
 			if stub.Error != nil {
 				return stub.Error
 			}

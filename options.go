@@ -4,12 +4,16 @@ import (
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/sudorandom/fauxrpc/private/stubs"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type GenOptions struct {
-	StubDB   stubs.StubDatabase
-	MaxDepth int
-	Faker    *gofakeit.Faker
+	StubDB           stubs.StubDatabase
+	MaxDepth         int
+	Faker            *gofakeit.Faker
+	MethodDescriptor protoreflect.MethodDescriptor
+	Input            proto.Message
 
 	extraFieldConstraints *validate.FieldConstraints
 }

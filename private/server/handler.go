@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/brianvoe/gofakeit/v7"
 	"github.com/bufbuild/protovalidate-go"
 	"github.com/sudorandom/fauxrpc"
 	"github.com/sudorandom/fauxrpc/private/grpc"
@@ -52,18 +53,18 @@ func NewHandler(service protoreflect.ServiceDescriptor, db stubs.StubDatabase, v
 		}
 		defer r.Body.Close()
 
-		readMessage := func() *status.Status {
+		readMessage := func() (proto.Message, *status.Status) {
 			body := make([]byte, maxMessageSize)
 			size, err := grpc.ReadGRPCMessage(r.Body, body)
 			if err != nil {
 				if errors.Is(err, io.EOF) {
-					return nil
+					return nil, nil
 				}
-				return status.New(codes.NotFound, err.Error())
+				return nil, status.New(codes.NotFound, err.Error())
 			}
 			msg := newMessage(method.Input()).Interface()
 			if err := proto.Unmarshal(body[:size], msg); err != nil {
-				return status.New(codes.NotFound, err.Error())
+				return nil, status.New(codes.NotFound, err.Error())
 			}
 			if err := validate.Validate(msg); err != nil {
 				grpcErr := status.New(codes.InvalidArgument, err.Error())
@@ -73,43 +74,43 @@ func NewHandler(service protoreflect.ServiceDescriptor, db stubs.StubDatabase, v
 						slog.Error("error serializing validation details", "error", err)
 					}
 				}
-				return grpcErr
+				return nil, grpcErr
 			}
-			return nil
+			return msg, nil
 		}
-
-		slog.Info("MethodCalled", slog.String("service", serviceName), slog.String("method", methodName))
 
 		eg, _ := errgroup.WithContext(r.Context())
 
 		// Handle reading requests
-		if validate == nil {
+		var input proto.Message
+		if method.IsStreamingClient() {
+			// completely ignore the body. Maybe later we'll need it as input to the response message
 			eg.Go(func() error {
-				_, _ = io.Copy(io.Discard, r.Body)
-				return nil
+				for {
+					if _, st := readMessage(); st != nil {
+						return st.Err()
+					}
+				}
 			})
 		} else {
-			if method.IsStreamingClient() {
-				// completely ignore the body. Maybe later we'll need it as input to the response message
-				eg.Go(func() error {
-					for {
-						if st := readMessage(); st != nil {
-							return st.Err()
-						}
-					}
-				})
+			if msg, st := readMessage(); st != nil {
+				grpcWriteStatus(w, st)
+				return
 			} else {
-				if st := readMessage(); st != nil {
-					grpcWriteStatus(w, st)
-					return
-				}
+				input = msg
 			}
 		}
 
 		// Handle writing response
 		var msg []byte
 		eg.Go(func() error {
-			out, err := fauxrpc.NewMessage(method.Output(), fauxrpc.GenOptions{MaxDepth: 20, StubDB: db})
+			out, err := fauxrpc.NewMessage(method.Output(), fauxrpc.GenOptions{
+				StubDB:           db,
+				MaxDepth:         20,
+				Faker:            gofakeit.New(0),
+				MethodDescriptor: method,
+				Input:            input,
+			})
 			if err != nil {
 				var statusErr *stubs.StatusError
 				if errors.As(err, &statusErr) {

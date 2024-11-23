@@ -14,7 +14,7 @@ require (
 	connectrpc.com/vanguard v0.2.0
 	github.com/MadAppGang/httplog v1.3.0
 	github.com/alecthomas/kong v0.9.0
-	github.com/brianvoe/gofakeit/v7 v7.0.4
+	github.com/brianvoe/gofakeit/v7 v7.1.2
 	github.com/bufbuild/protocompile v0.14.0
 	github.com/bufbuild/protovalidate-go v0.7.2
 	github.com/bufbuild/protoyaml-go v0.1.11

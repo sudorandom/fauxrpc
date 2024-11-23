@@ -9,6 +9,7 @@ import (
 type StubEntry struct {
 	Message protoreflect.ProtoMessage
 	Error   *StatusError
+	Rules   *Rules
 }
 
 var _ StubDatabase = (*stubDatabase)(nil)
