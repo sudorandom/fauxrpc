@@ -2,11 +2,14 @@ package fauxrpc
 
 import (
 	"context"
+	"errors"
 
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 const defaultMaxDepth = 5
+
+var ErrNoMatchingStubs = errors.New("no matching stubs")
 
 // NewMessage creates a new message populated with fake data given a protoreflect.MessageDescriptor
 func NewMessage(md protoreflect.MessageDescriptor, opts GenOptions) (protoreflect.ProtoMessage, error) {
@@ -63,6 +66,9 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) error {
 			}
 			return nil
 		}
+	}
+	if opts.OnlyStubs {
+		return ErrNoMatchingStubs
 	}
 
 	oneOfFields := map[protoreflect.FullName]struct{}{}

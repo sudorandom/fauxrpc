@@ -10,6 +10,7 @@ import (
 
 type GenOptions struct {
 	StubDB           stubs.StubDatabase
+	OnlyStubs        bool
 	MaxDepth         int
 	Faker            *gofakeit.Faker
 	MethodDescriptor protoreflect.MethodDescriptor

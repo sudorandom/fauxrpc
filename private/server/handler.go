@@ -29,7 +29,7 @@ import (
 
 const maxMessageSize = 4 * 1024 * 1024
 
-func NewHandler(service protoreflect.ServiceDescriptor, db stubs.StubDatabase, validate *protovalidate.Validator) http.Handler {
+func NewHandler(service protoreflect.ServiceDescriptor, db stubs.StubDatabase, validate *protovalidate.Validator, onlyStubs bool) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Trailer", "Grpc-Status,Grpc-Message,Grpc-Status-Details-Bin")
 		w.Header().Add("Content-Type", "application/grpc")
@@ -106,6 +106,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, db stubs.StubDatabase, v
 		eg.Go(func() error {
 			out, err := fauxrpc.NewMessage(method.Output(), fauxrpc.GenOptions{
 				StubDB:           db,
+				OnlyStubs:        onlyStubs,
 				MaxDepth:         20,
 				Faker:            gofakeit.New(0),
 				MethodDescriptor: method,

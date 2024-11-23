@@ -35,10 +35,18 @@ type RunCmd struct {
 	CertKey      string   `help:"Path to certificate key file"`
 	HTTP3        bool     `help:"Enables HTTP/3 support."`
 	Empty        bool     `help:"Allows the server to run with no services."`
+	OnlyStubs    bool     `help:"Only use pre-defined stubs and don't make up fake data."`
 }
 
 func (c *RunCmd) Run(globals *Globals) error {
-	srv, err := server.NewServer(version, !c.NoDocPage, !c.NoReflection, !c.NoHTTPLog, !c.NoValidate)
+	srv, err := server.NewServer(server.ServerOpts{
+		Version:       version,
+		RenderDocPage: !c.NoDocPage,
+		UseReflection: !c.NoReflection,
+		WithHTTPLog:   !c.NoHTTPLog,
+		WithValidate:  !c.NoValidate,
+		OnlyStubs:     c.OnlyStubs,
+	})
 	if err != nil {
 		return err
 	}
@@ -51,7 +59,6 @@ func (c *RunCmd) Run(globals *Globals) error {
 	if srv.ServiceCount() == 0 && !c.Empty {
 		return errors.New("no services found in the given schemas")
 	}
-	// TODO: Load descriptors from stdin (assume protocol descriptors in binary format)
 
 	mux, err := srv.Mux()
 	if err != nil {

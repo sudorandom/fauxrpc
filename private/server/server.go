@@ -23,6 +23,15 @@ type Server interface {
 	stubs.StubDatabase
 }
 
+type ServerOpts struct {
+	Version       string
+	RenderDocPage bool
+	UseReflection bool
+	WithHTTPLog   bool
+	WithValidate  bool
+	OnlyStubs     bool
+}
+
 type server struct {
 	registry.ServiceRegistry
 	stubs.StubDatabase
@@ -33,14 +42,10 @@ type server struct {
 	handlerReflectorV1Alpha *wrappedHandler
 	handlerTranscoder       *wrappedHandler
 
-	version       string
-	renderDocPage bool
-	useReflection bool
-	withHTTPLog   bool
-	withValidate  bool
+	opts ServerOpts
 }
 
-func NewServer(version string, renderDocPage, useReflection, withHTTPLog, withValidate bool) (*server, error) {
+func NewServer(opts ServerOpts) (*server, error) {
 	serviceRegistry, err := registry.NewServiceRegistry()
 	if err != nil {
 		return nil, err
@@ -49,15 +54,11 @@ func NewServer(version string, renderDocPage, useReflection, withHTTPLog, withVa
 		lock:                    &sync.Mutex{},
 		ServiceRegistry:         serviceRegistry,
 		StubDatabase:            stubs.NewStubDatabase(),
-		version:                 version,
-		renderDocPage:           renderDocPage,
-		useReflection:           useReflection,
-		withValidate:            withValidate,
 		handlerOpenAPI:          NewWrappedHandler(),
 		handlerReflectorV1:      NewWrappedHandler(),
 		handlerReflectorV1Alpha: NewWrappedHandler(),
 		handlerTranscoder:       NewWrappedHandler(),
-		withHTTPLog:             withHTTPLog,
+		opts:                    opts,
 	}, nil
 }
 
@@ -88,7 +89,7 @@ func (s *server) rebuildHandlers() error {
 	vgservices := []*vanguard.Service{}
 	var srvErr error
 	var validate *protovalidate.Validator
-	if s.withValidate {
+	if s.opts.WithValidate {
 		v, err := protovalidate.New()
 		if err != nil {
 			return err
@@ -97,7 +98,7 @@ func (s *server) rebuildHandlers() error {
 	}
 	s.ServiceRegistry.ForEachService(func(sd protoreflect.ServiceDescriptor) {
 		vgservice := vanguard.NewServiceWithSchema(
-			sd, NewHandler(sd, s.StubDatabase, validate),
+			sd, NewHandler(sd, s.StubDatabase, validate, s.opts.OnlyStubs),
 			vanguard.WithTargetProtocols(vanguard.ProtocolGRPC),
 			vanguard.WithTargetCodecs(vanguard.CodecProto))
 		vgservices = append(vgservices, vgservice)
@@ -112,7 +113,7 @@ func (s *server) rebuildHandlers() error {
 		log.Fatalf("err: %s", err)
 	}
 	s.handlerTranscoder.SetHandler(transcoder)
-	if s.useReflection {
+	if s.opts.UseReflection {
 		reflector := grpcreflect.NewReflector(&staticNames{names: serviceNames}, grpcreflect.WithDescriptorResolver(s.ServiceRegistry.Files()))
 		_, v1Handler := grpcreflect.NewHandlerV1(reflector)
 		s.handlerReflectorV1.SetHandler(v1Handler)
@@ -121,8 +122,8 @@ func (s *server) rebuildHandlers() error {
 		s.handlerReflectorV1Alpha.SetHandler(v1alphaHandler)
 	}
 
-	if s.renderDocPage {
-		openapiSpec, err := convertToOpenAPISpec(s.ServiceRegistry, s.version)
+	if s.opts.RenderDocPage {
+		openapiSpec, err := convertToOpenAPISpec(s.ServiceRegistry, s.opts.Version)
 		if err != nil {
 			return err
 		}
@@ -139,13 +140,13 @@ func (s *server) Mux() (*http.ServeMux, error) {
 	mux := http.NewServeMux()
 	mux.Handle("/", httplog.Logger(s.handlerTranscoder))
 
-	if s.useReflection {
+	if s.opts.UseReflection {
 		mux.Handle("/grpc.reflection.v1.ServerReflection/", httplog.Logger(s.handlerReflectorV1))
 		mux.Handle("/grpc.reflection.v1alpha.ServerReflection/", httplog.Logger(s.handlerReflectorV1Alpha))
 	}
 
 	// OpenAPI Stuff
-	if s.renderDocPage {
+	if s.opts.RenderDocPage {
 		mux.Handle("GET /fauxrpc/openapi.html", httplog.Logger(singleFileHandler(openapiHTML)))
 		mux.Handle("GET /fauxrpc/openapi.yaml", httplog.Logger(s.handlerOpenAPI))
 	}
