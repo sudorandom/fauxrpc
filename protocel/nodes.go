@@ -3,9 +3,10 @@ package protocel
 type nodeKind = int32
 
 const (
-	CELFieldKind nodeKind = iota
+	CELKind      nodeKind = iota
 	MessageKind  nodeKind = iota
 	RepeatedKind nodeKind = iota
+	MapKind      nodeKind = iota
 )
 
 type Node interface {
@@ -19,7 +20,7 @@ func CEL(expr string) nodeCEL {
 }
 
 func (nodeCEL) Kind() nodeKind {
-	return CELFieldKind
+	return CELKind
 }
 
 type nodeMessage map[string]Node
@@ -32,12 +33,22 @@ func (nodeMessage) Kind() nodeKind {
 	return MessageKind
 }
 
-type repeated []Node
+type nodeRepeated []Node
 
-func Repeated(nodes []Node) repeated {
-	return repeated(nodes)
+func Repeated(nodes []Node) nodeRepeated {
+	return nodeRepeated(nodes)
 }
 
-func (repeated) Kind() nodeKind {
+func (nodeRepeated) Kind() nodeKind {
 	return RepeatedKind
+}
+
+type nodeMap map[Node]Node
+
+func Map(nodes map[Node]Node) nodeMap {
+	return nodeMap(nodes)
+}
+
+func (nodeMap) Kind() nodeKind {
+	return MapKind
 }

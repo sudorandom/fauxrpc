@@ -25,6 +25,8 @@ type dynamicMessage struct {
 	nested            map[protoreflect.FieldDescriptor]*dynamicMessage
 	repeatedMsg       map[protoreflect.FieldDescriptor][]*dynamicMessage
 	repeatedScalar    map[protoreflect.FieldDescriptor][]cel.Program
+	mapsMsg           map[protoreflect.FieldDescriptor]map[cel.Program]*dynamicMessage
+	mapsScalar        map[protoreflect.FieldDescriptor]map[cel.Program]cel.Program
 }
 
 func NewDynamicMessage(md protoreflect.MessageDescriptor, fields map[string]Node) (*dynamicMessage, error) {
@@ -32,13 +34,15 @@ func NewDynamicMessage(md protoreflect.MessageDescriptor, fields map[string]Node
 	nested := map[protoreflect.FieldDescriptor]*dynamicMessage{}
 	repeatedMsg := map[protoreflect.FieldDescriptor][]*dynamicMessage{}
 	repeatedScalar := map[protoreflect.FieldDescriptor][]cel.Program{}
+	mapsMsg := map[protoreflect.FieldDescriptor]map[cel.Program]*dynamicMessage{}
+	mapsScalar := map[protoreflect.FieldDescriptor]map[cel.Program]cel.Program{}
 	for key, node := range fields {
 		field := getFieldFromName(md.Fields(), key)
 		if field == nil {
 			return nil, fmt.Errorf("field %s not found on %s", key, md.FullName())
 		}
 		switch node.Kind() {
-		case CELFieldKind:
+		case CELKind:
 			celnode := node.(nodeCEL)
 			program, err := compileExpr(md, field, string(celnode))
 			if err != nil {
@@ -61,7 +65,7 @@ func NewDynamicMessage(md protoreflect.MessageDescriptor, fields map[string]Node
 				return nil, fmt.Errorf("field %s is expected to be a list but was not", key)
 			}
 			if field.Kind() == protoreflect.MessageKind {
-				repeated := node.(repeated)
+				repeated := node.(nodeRepeated)
 				for _, node := range repeated {
 					messageNode := node.(nodeMessage)
 					nestedNode, err := NewDynamicMessage(field.Message(), messageNode)
@@ -71,7 +75,7 @@ func NewDynamicMessage(md protoreflect.MessageDescriptor, fields map[string]Node
 					repeatedMsg[field] = append(repeatedMsg[field], nestedNode)
 				}
 			} else {
-				repeated := node.(repeated)
+				repeated := node.(nodeRepeated)
 				for _, node := range repeated {
 					celnode := node.(nodeCEL)
 					program, err := compileExpr(md, field, string(celnode))
@@ -81,6 +85,45 @@ func NewDynamicMessage(md protoreflect.MessageDescriptor, fields map[string]Node
 					repeatedScalar[field] = append(repeatedScalar[field], program)
 				}
 			}
+		case MapKind:
+			if !field.IsMap() {
+				return nil, fmt.Errorf("field %s is expected to be a map but was not", key)
+			}
+
+			nMap := node.(nodeMap)
+			for k, v := range nMap {
+				if k.Kind() != CELKind {
+					return nil, fmt.Errorf("key %s field for maps is expected to be a CEL expression but was %v", key, k.Kind())
+				}
+				keyProgram, err := compileExpr(md, field.MapKey(), string(k.(nodeCEL)))
+				if err != nil {
+					return nil, err
+				}
+
+				switch v.Kind() {
+				case CELKind:
+					valProgram, err := compileExpr(md, field.MapValue(), string(v.(nodeCEL)))
+					if err != nil {
+						return nil, err
+					}
+					if _, ok := mapsScalar[field]; !ok {
+						mapsScalar[field] = map[cel.Program]cel.Program{}
+					}
+					mapsScalar[field][keyProgram] = valProgram
+				case MessageKind:
+					valNode, err := NewDynamicMessage(field.MapValue().Message(), v.(nodeMessage))
+					if err != nil {
+						return nil, fmt.Errorf("%s: %w", key, err)
+					}
+					if _, ok := mapsMsg[field]; !ok {
+						mapsMsg[field] = map[cel.Program]*dynamicMessage{}
+					}
+					mapsMsg[field][keyProgram] = valNode
+				}
+			}
+
+		default:
+			return nil, fmt.Errorf("%s: unknown node kind: %v", key, node.Kind())
 		}
 	}
 
@@ -90,6 +133,8 @@ func NewDynamicMessage(md protoreflect.MessageDescriptor, fields map[string]Node
 		nested:            nested,
 		repeatedMsg:       repeatedMsg,
 		repeatedScalar:    repeatedScalar,
+		mapsMsg:           mapsMsg,
+		mapsScalar:        mapsScalar,
 	}, nil
 }
 
@@ -104,8 +149,10 @@ func (d *dynamicMessage) NewMessage(opts fauxrpc.GenOptions) (protoreflect.Proto
 
 // SetDataOnMessage implements DynamicMessage.
 func (d *dynamicMessage) SetDataOnMessage(msg protoreflect.ProtoMessage, opts fauxrpc.GenOptions) error {
+	// TODO: this input should come from GenOptions (or some other context object instead
+	input := map[string]any{}
 	for field, program := range d.fields {
-		val, _, err := program.Eval(map[string]any{})
+		val, _, err := program.Eval(input)
 		if err != nil {
 			return err
 		}
@@ -129,10 +176,10 @@ func (d *dynamicMessage) SetDataOnMessage(msg protoreflect.ProtoMessage, opts fa
 		}
 		msg.ProtoReflect().Set(field, protoreflect.ValueOf(list))
 	}
-	for field, sclarMsgs := range d.repeatedScalar {
+	for field, scalarMsgs := range d.repeatedScalar {
 		list := msg.ProtoReflect().NewField(field).List()
-		for _, program := range sclarMsgs {
-			val, _, err := program.Eval(map[string]any{})
+		for _, program := range scalarMsgs {
+			val, _, err := program.Eval(input)
 			if err != nil {
 				return err
 			}
@@ -140,6 +187,38 @@ func (d *dynamicMessage) SetDataOnMessage(msg protoreflect.ProtoMessage, opts fa
 			list.Append(protoreflect.ValueOf(val.Value()))
 		}
 		msg.ProtoReflect().Set(field, protoreflect.ValueOfList(list))
+	}
+	for field, dynMsgMap := range d.mapsMsg {
+		m := msg.ProtoReflect().NewField(field).Map()
+		for kProg, dynMsg := range dynMsgMap {
+			key, _, err := kProg.Eval(input)
+			if err != nil {
+				return err
+			}
+			nestedMsg := registry.NewMessage(field.MapValue().Message()).Interface()
+			if err := dynMsg.SetDataOnMessage(nestedMsg, opts); err != nil {
+				return err
+			}
+
+			m.Set(protoreflect.ValueOf(key.Value()).MapKey(), protoreflect.ValueOf(nestedMsg.ProtoReflect()))
+		}
+		msg.ProtoReflect().Set(field, protoreflect.ValueOfMap(m))
+	}
+	for field, mapScalar := range d.mapsScalar {
+		m := msg.ProtoReflect().NewField(field).Map()
+		for kProg, vProg := range mapScalar {
+			key, _, err := kProg.Eval(input)
+			if err != nil {
+				return err
+			}
+			val, _, err := vProg.Eval(input)
+			if err != nil {
+				return err
+			}
+
+			m.Set(protoreflect.ValueOf(key.Value()).MapKey(), protoreflect.ValueOf(val.Value()))
+		}
+		msg.ProtoReflect().Set(field, protoreflect.ValueOfMap(m))
 	}
 	return nil
 }

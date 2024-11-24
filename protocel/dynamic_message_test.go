@@ -12,7 +12,7 @@ import (
 )
 
 func TestDynamicStructNewMessage(t *testing.T) {
-	t.Run("all types", func(t *testing.T) {
+	t.Run("scalars", func(t *testing.T) {
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
 		ds, err := protocel.NewDynamicMessage(md, map[string]protocel.Node{
 			"double_value":   protocel.CEL(`1000.0+10.12`),
@@ -85,7 +85,7 @@ func TestDynamicStructNewMessage(t *testing.T) {
 		assert.Equal(t, []byte{0xc3, 0xbf}, msg.ProtoReflect().Get(md.Fields().ByTextName("opt_bytes_value")).Interface())
 	})
 
-	t.Run("gen functions", func(t *testing.T) {
+	t.Run("scalars gen", func(t *testing.T) {
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
 		ds, err := protocel.NewDynamicMessage(md, map[string]protocel.Node{
 			"double_value":   protocel.CEL(`gen_float64()`),
@@ -197,7 +197,7 @@ func TestDynamicStructNewMessage(t *testing.T) {
 
 		assertFieldIsSet(t, md, msg.ProtoReflect(), "msgList")
 		list := msg.ProtoReflect().Get(md.Fields().ByTextName("msg_list")).List()
-		assert.Equal(t, 1, list.Len())
+		require.Equal(t, 1, list.Len())
 		nested := list.Get(0).Message()
 		assert.Equal(t, "Hello World!", nested.Get(md.Fields().ByTextName("string_value")).Interface())
 	})
@@ -222,14 +222,61 @@ func TestDynamicStructNewMessage(t *testing.T) {
 		assertFieldIsSet(t, md, msg.ProtoReflect(), "msgList")
 
 		stringList := msg.ProtoReflect().Get(md.Fields().ByTextName("string_list")).List()
-		assert.Equal(t, 2, stringList.Len())
+		require.Equal(t, 2, stringList.Len())
 		assert.Equal(t, "Hello", stringList.Get(0).Interface())
 		assert.Equal(t, "World!", stringList.Get(1).Interface())
 
 		int32List := msg.ProtoReflect().Get(md.Fields().ByTextName("int32_list")).List()
-		assert.Equal(t, 2, int32List.Len())
+		require.Equal(t, 2, int32List.Len())
 		assert.Equal(t, int32(3), int32List.Get(0).Interface())
 		assert.Equal(t, int32(7), int32List.Get(1).Interface())
+	})
+
+	t.Run("maps", func(t *testing.T) {
+		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
+		ds, err := protocel.NewDynamicMessage(md, map[string]protocel.Node{
+			"string_to_string_map": protocel.Map(map[protocel.Node]protocel.Node{
+				protocel.CEL(`"Hello!"`): protocel.CEL(`"world!"`),
+			}),
+			"int32_to_string_map": protocel.Map(map[protocel.Node]protocel.Node{
+				protocel.CEL(`1234`): protocel.CEL(`"Hello world!"`),
+			}),
+		})
+		require.NoError(t, err)
+
+		msg, err := ds.NewMessage(fauxrpc.GenOptions{})
+		require.NoError(t, err)
+
+		assertFieldIsSet(t, md, msg.ProtoReflect(), "stringToStringMap")
+		assertFieldIsSet(t, md, msg.ProtoReflect(), "int32ToStringMap")
+
+		stringToStringMap := msg.ProtoReflect().Get(md.Fields().ByTextName("string_to_string_map")).Map()
+		require.Equal(t, 1, stringToStringMap.Len())
+		assert.Equal(t, "world!", stringToStringMap.Get(protoreflect.MapKey(protoreflect.ValueOfString("Hello!"))).Interface())
+
+		int32ToStringMap := msg.ProtoReflect().Get(md.Fields().ByTextName("int32_to_string_map")).Map()
+		require.Equal(t, 1, int32ToStringMap.Len())
+		assert.Equal(t, "Hello world!", int32ToStringMap.Get(protoreflect.ValueOfInt32(int32(1234)).MapKey()).Interface())
+	})
+
+	t.Run("maps msg", func(t *testing.T) {
+		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
+		ds, err := protocel.NewDynamicMessage(md, map[string]protocel.Node{
+			"msg_map": protocel.Map(map[protocel.Node]protocel.Node{
+				protocel.CEL(`"Hello!"`): protocel.Message(map[string]protocel.Node{
+					"string_value": protocel.CEL(`"value"`),
+				}),
+			}),
+		})
+		require.NoError(t, err)
+
+		msg, err := ds.NewMessage(fauxrpc.GenOptions{})
+		require.NoError(t, err)
+
+		m := msg.ProtoReflect().Get(md.Fields().ByTextName("msg_map")).Map()
+		require.Equal(t, 1, m.Len())
+		nested := m.Get(protoreflect.ValueOfString("Hello!").MapKey()).Message()
+		assert.Equal(t, "value", nested.Get(md.Fields().ByTextName("string_value")).Interface())
 	})
 }
 
