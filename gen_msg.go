@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/sudorandom/fauxrpc/private/registry"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -16,7 +17,7 @@ func NewMessage(md protoreflect.MessageDescriptor, opts GenOptions) (protoreflec
 	if opts.MaxDepth == 0 {
 		opts.MaxDepth = defaultMaxDepth
 	}
-	msg := newMessage(md).Interface()
+	msg := registry.NewMessage(md).Interface()
 	err := setDataOnMessage(msg, opts)
 	if err != nil {
 		return nil, err

@@ -32,6 +32,7 @@ func ExampleNewMessage() {
 	b, _ := protojson.MarshalOptions{Indent: "  "}.Marshal(msg)
 	fmt.Println(string(b))
 }
+
 func requireFieldByName(t *testing.T, md protoreflect.MessageDescriptor, msg protoreflect.Message, fieldName string) protoreflect.Value {
 	fd := md.Fields().ByJSONName(fieldName)
 	require.NotNil(t, fd, "field %s does not exist", fieldName)

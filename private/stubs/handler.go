@@ -13,8 +13,6 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/reflect/protoregistry"
-	"google.golang.org/protobuf/types/dynamicpb"
 )
 
 var _ stubsv1connect.StubsServiceHandler = (*handler)(nil)
@@ -83,13 +81,13 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 
 		switch t := stub.GetContent().(type) {
 		case *stubsv1.Stub_Json:
-			msg := newMessage(md).Interface()
+			msg := registry.NewMessage(md).Interface()
 			if err := protojson.Unmarshal([]byte(t.Json), msg); err != nil {
 				return nil, err
 			}
 			entry.Message = msg
 		case *stubsv1.Stub_Proto:
-			msg := newMessage(md).Interface()
+			msg := registry.NewMessage(md).Interface()
 			if err := proto.Unmarshal(t.Proto, msg); err != nil {
 				return nil, err
 			}
@@ -170,14 +168,6 @@ func stubsToProto(allStubs map[protoreflect.FullName]map[string]StubEntry) ([]*s
 		}
 	}
 	return pbStubs, nil
-}
-
-func newMessage(md protoreflect.MessageDescriptor) protoreflect.Message {
-	mt, err := protoregistry.GlobalTypes.FindMessageByName(md.FullName())
-	if err != nil {
-		return dynamicpb.NewMessageType(md).New()
-	}
-	return mt.New()
 }
 
 func normalizeTargetName(target string) (protoreflect.FullName, error) {

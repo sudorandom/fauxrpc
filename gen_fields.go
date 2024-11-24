@@ -1,6 +1,7 @@
 package fauxrpc
 
 import (
+	"github.com/sudorandom/fauxrpc/private/registry"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -97,12 +98,12 @@ func getFieldValue(fd protoreflect.FieldDescriptor, opts GenOptions) *protorefle
 			}
 		}
 
-		nested := newMessage(fd.Message())
+		nested := registry.NewMessage(fd.Message())
 		_ = setDataOnMessage(nested.Interface(), opts.nested())
 		v := protoreflect.ValueOf(nested)
 		return &v
 	case protoreflect.GroupKind:
-		nested := newMessage(fd.Message())
+		nested := registry.NewMessage(fd.Message())
 		_ = setDataOnMessage(nested.Interface(), opts.nested())
 		v := protoreflect.ValueOf(nested)
 		return &v

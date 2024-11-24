@@ -14,15 +14,14 @@ import (
 	"github.com/bufbuild/protovalidate-go"
 	"github.com/sudorandom/fauxrpc"
 	"github.com/sudorandom/fauxrpc/private/grpc"
+	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/private/stubs"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/reflect/protoregistry"
 	"google.golang.org/protobuf/runtime/protoiface"
-	"google.golang.org/protobuf/types/dynamicpb"
 
 	stubsv1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
 )
@@ -62,7 +61,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, db stubs.StubDatabase, v
 				}
 				return nil, status.New(codes.NotFound, err.Error())
 			}
-			msg := newMessage(method.Input()).Interface()
+			msg := registry.NewMessage(method.Input()).Interface()
 			if err := proto.Unmarshal(body[:size], msg); err != nil {
 				return nil, status.New(codes.NotFound, err.Error())
 			}
@@ -169,12 +168,4 @@ func grpcStatusFromError(e *stubsv1.Error) *status.Status {
 		}
 	}
 	return status
-}
-
-func newMessage(md protoreflect.MessageDescriptor) protoreflect.Message {
-	mt, err := protoregistry.GlobalTypes.FindMessageByName(md.FullName())
-	if err != nil {
-		return dynamicpb.NewMessageType(md).New()
-	}
-	return mt.New()
 }
