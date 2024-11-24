@@ -152,11 +152,11 @@ func (d *dynamicMessage) SetDataOnMessage(msg protoreflect.ProtoMessage, opts fa
 	// TODO: this input should come from GenOptions (or some other context object instead
 	input := map[string]any{}
 	for field, program := range d.fields {
-		val, _, err := program.Eval(input)
+		val, err := evalCEL(field, program, input)
 		if err != nil {
 			return err
 		}
-		msg.ProtoReflect().Set(field, protoreflect.ValueOf(val.Value()))
+		msg.ProtoReflect().Set(field, protoreflect.ValueOf(val))
 	}
 	for field, dynmsg := range d.nested {
 		nestedMsg := registry.NewMessage(field.Message()).Interface()
@@ -179,12 +179,12 @@ func (d *dynamicMessage) SetDataOnMessage(msg protoreflect.ProtoMessage, opts fa
 	for field, scalarMsgs := range d.repeatedScalar {
 		list := msg.ProtoReflect().NewField(field).List()
 		for _, program := range scalarMsgs {
-			val, _, err := program.Eval(input)
+			val, err := evalCEL(field, program, input)
 			if err != nil {
 				return err
 			}
 
-			list.Append(protoreflect.ValueOf(val.Value()))
+			list.Append(protoreflect.ValueOf(val))
 		}
 		msg.ProtoReflect().Set(field, protoreflect.ValueOfList(list))
 	}
@@ -274,7 +274,6 @@ func getFieldFromName(fds protoreflect.FieldDescriptors, key string) protoreflec
 }
 
 func compileExpr(md protoreflect.MessageDescriptor, fd protoreflect.FieldDescriptor, expr string) (cel.Program, error) {
-
 	env, err := cel.NewEnv(
 		cel.Variable("req", cel.ObjectType(string(md.FullName()))),
 		cel.Variable("service", cel.StringType),
@@ -409,4 +408,27 @@ func compileExpr(md protoreflect.MessageDescriptor, fd protoreflect.FieldDescrip
 		return nil, err
 	}
 	return program, nil
+}
+
+func evalCEL(field protoreflect.FieldDescriptor, program cel.Program, input map[string]any) (any, error) {
+	val, _, err := program.Eval(input)
+	if err != nil {
+		return nil, err
+	}
+	anyVal := val.Value()
+	switch field.Kind() {
+	case protoreflect.EnumKind:
+		switch t := anyVal.(type) {
+		case int64:
+			anyVal = protoreflect.EnumNumber(t)
+		case uint64:
+			anyVal = protoreflect.EnumNumber(t)
+		case string:
+			anyVal = field.Enum().Values().ByName(protoreflect.Name(t))
+			if anyVal == nil {
+				return nil, fmt.Errorf("unknown enum value: '%s'", t)
+			}
+		}
+	}
+	return anyVal, nil
 }

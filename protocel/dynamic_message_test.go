@@ -278,6 +278,34 @@ func TestDynamicStructNewMessage(t *testing.T) {
 		nested := m.Get(protoreflect.ValueOfString("Hello!").MapKey()).Message()
 		assert.Equal(t, "value", nested.Get(md.Fields().ByTextName("string_value")).Interface())
 	})
+
+	t.Run("enum", func(t *testing.T) {
+		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
+		ds, err := protocel.NewDynamicMessage(md, map[string]protocel.Node{
+			"enum_value": protocel.CEL(`1`),
+		})
+		require.NoError(t, err)
+
+		msg, err := ds.NewMessage(fauxrpc.GenOptions{})
+		require.NoError(t, err)
+
+		assert.Equal(t, protoreflect.EnumNumber(1), msg.ProtoReflect().Get(md.Fields().ByTextName("enum_value")).Enum())
+	})
+
+	t.Run("enum list", func(t *testing.T) {
+		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
+		ds, err := protocel.NewDynamicMessage(md, map[string]protocel.Node{
+			"enum_list": protocel.Repeated([]protocel.Node{protocel.CEL(`1`)}),
+		})
+		require.NoError(t, err)
+
+		msg, err := ds.NewMessage(fauxrpc.GenOptions{})
+		require.NoError(t, err)
+
+		l := msg.ProtoReflect().Get(md.Fields().ByTextName("enum_list")).List()
+		require.Equal(t, 1, l.Len())
+		assert.Equal(t, protoreflect.EnumNumber(1), l.Get(0).Interface())
+	})
 }
 
 func assertFieldIsSet(t *testing.T, md protoreflect.MessageDescriptor, msg protoreflect.Message, fieldName string) {
