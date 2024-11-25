@@ -3,6 +3,7 @@ package fauxrpc
 import (
 	"context"
 	"errors"
+	"math/rand/v2"
 
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -41,31 +42,38 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) error {
 	desc := msg.Descriptor()
 
 	if opts.StubDB != nil {
-		stubs := opts.StubDB.GetStubs(desc.FullName())
-		for _, stub := range stubs {
-			if stub.ActiveIf != nil {
-				ok, err := stub.ActiveIf.Eval(context.Background(), opts.MethodDescriptor, opts.Input)
-				if err != nil {
-					return err
+		groups := opts.StubDB.GetStubsPrioritized(desc.FullName())
+		for _, group := range groups {
+			rand.Shuffle(len(group), func(i, j int) {
+				group[i], group[j] = group[j], group[i]
+			})
+
+			for _, stub := range group {
+				if stub.ActiveIf != nil {
+					ok, err := stub.ActiveIf.Eval(context.Background(), opts.MethodDescriptor, opts.Input)
+					if err != nil {
+						return err
+					}
+					if !ok {
+						continue
+					}
 				}
-				if !ok {
-					continue
+				if stub.Error != nil {
+					return stub.Error
 				}
-			}
-			if stub.Error != nil {
-				return stub.Error
-			}
-			if stub.Message == nil {
+				if stub.Message == nil {
+					return nil
+
+				}
+				fields := desc.Fields()
+				for i := 0; i < fields.Len(); i++ {
+					field := fields.Get(i)
+					if stub.Message.ProtoReflect().Has(field) {
+						msg.Set(field, stub.Message.ProtoReflect().Get(field))
+					}
+				}
 				return nil
 			}
-			fields := desc.Fields()
-			for i := 0; i < fields.Len(); i++ {
-				field := fields.Get(i)
-				if stub.Message.ProtoReflect().Has(field) {
-					msg.Set(field, stub.Message.ProtoReflect().Get(field))
-				}
-			}
-			return nil
 		}
 	}
 	if opts.OnlyStubs {

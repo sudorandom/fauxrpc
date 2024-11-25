@@ -31,9 +31,7 @@ func NewHandler(registry registry.ServiceRegistry, stubdb StubDatabase) *handler
 
 // AddStubs implements stubsv1connect.StubsServiceHandler.
 func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.AddStubsRequest]) (*connect.Response[stubsv1.AddStubsResponse], error) {
-	ids := make([]string, len(req.Msg.Stubs))
-	names := make([]protoreflect.FullName, len(req.Msg.Stubs))
-	values := make([]StubEntry, len(req.Msg.Stubs))
+	entries := make([]StubEntry, len(req.Msg.Stubs))
 	stubs := make([]*stubsv1.Stub, len(req.Msg.Stubs))
 	for i, stub := range req.Msg.Stubs {
 		if stub.Ref == nil {
@@ -49,7 +47,9 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 			return nil, err
 		}
 
-		entry := StubEntry{}
+		entry := StubEntry{
+			Priority: int(stub.GetPriority()),
+		}
 
 		desc, err := h.registry.Files().FindDescriptorByName(name)
 		if err != nil {
@@ -58,7 +58,6 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 		var md protoreflect.MessageDescriptor
 		switch t := desc.(type) {
 		case protoreflect.MethodDescriptor:
-
 			if len(stub.ActiveIf) > 0 {
 				r, err := NewActiveIf(t, stub.ActiveIf)
 				if err != nil {
@@ -78,6 +77,7 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 		}
 
 		ref.Target = string(md.FullName())
+		entry.Key = StubKey{ID: stub.GetRef().GetId(), Name: name}
 
 		switch t := stub.GetContent().(type) {
 		case *stubsv1.Stub_Json:
@@ -96,14 +96,12 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 			entry.Error = &StatusError{StubsError: t.Error}
 		}
 
-		ids[i] = stub.GetRef().GetId()
-		names[i] = name
-		values[i] = entry
+		entries[i] = entry
 		stubs[i] = stub
 	}
 
-	for i, id := range ids {
-		h.stubdb.AddStub(names[i], id, values[i])
+	for _, entry := range entries {
+		h.stubdb.AddStub(entry)
 	}
 
 	return connect.NewResponse(&stubsv1.AddStubsResponse{Stubs: stubs}), nil
@@ -116,11 +114,23 @@ func (h *handler) ListStubs(ctx context.Context, req *connect.Request[stubsv1.Li
 	if err != nil {
 		return nil, err
 	}
-	pbstubs, err := stubsToProto(h.stubdb.ListStubs(targetName, ref.GetId()))
+	filtered := []StubEntry{}
+	for _, stub := range h.stubdb.GetStubs() {
+		if ref.GetTarget() != "" && targetName != stub.Key.Name {
+			continue
+		}
+		if ref.GetId() != "" && ref.GetId() != stub.Key.ID {
+			continue
+		}
+		filtered = append(filtered, stub)
+	}
+
+	pbstubs, err := stubsToProto(filtered)
 	if err != nil {
 		return nil, err
 	}
 	return connect.NewResponse(&stubsv1.ListStubsResponse{Stubs: pbstubs}), nil
+
 }
 
 // RemoveAllStubs implements stubsv1connect.StubsServiceHandler.
@@ -136,36 +146,37 @@ func (h *handler) RemoveStubs(ctx context.Context, msg *connect.Request[stubsv1.
 		if err != nil {
 			return nil, err
 		}
-		h.stubdb.RemoveStub(targetName, ref.GetId())
+		h.stubdb.RemoveStub(StubKey{
+			Name: targetName,
+			ID:   ref.GetId(),
+		})
 	}
 	return connect.NewResponse(&stubsv1.RemoveStubsResponse{}), nil
 }
 
-func stubsToProto(allStubs map[protoreflect.FullName]map[string]StubEntry) ([]*stubsv1.Stub, error) {
+func stubsToProto(stubs []StubEntry) ([]*stubsv1.Stub, error) {
 	pbStubs := []*stubsv1.Stub{}
-	for target, stubs := range allStubs {
-		for id, stub := range stubs {
-			pbStub := &stubsv1.Stub{
-				Ref: &stubsv1.StubRef{
-					Id:     id,
-					Target: string(target),
-				},
-			}
-			if stub.ActiveIf != nil {
-				pbStub.ActiveIf = stub.ActiveIf.GetString()
-			}
-			if stub.Error != nil {
-				pbStub.Content = &stubsv1.Stub_Error{Error: stub.Error.StubsError}
-			}
-			if stub.Message != nil {
-				content, err := protojson.Marshal(stub.Message)
-				if err != nil {
-					return nil, err
-				}
-				pbStub.Content = &stubsv1.Stub_Json{Json: string(content)}
-			}
-			pbStubs = append(pbStubs, pbStub)
+	for _, stub := range stubs {
+		pbStub := &stubsv1.Stub{
+			Ref: &stubsv1.StubRef{
+				Id:     stub.Key.ID,
+				Target: string(stub.Key.Name),
+			},
 		}
+		if stub.ActiveIf != nil {
+			pbStub.ActiveIf = stub.ActiveIf.GetString()
+		}
+		if stub.Error != nil {
+			pbStub.Content = &stubsv1.Stub_Error{Error: stub.Error.StubsError}
+		}
+		if stub.Message != nil {
+			content, err := protojson.Marshal(stub.Message)
+			if err != nil {
+				return nil, err
+			}
+			pbStub.Content = &stubsv1.Stub_Json{Json: string(content)}
+		}
+		pbStubs = append(pbStubs, pbStub)
 	}
 	return pbStubs, nil
 }

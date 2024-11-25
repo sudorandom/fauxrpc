@@ -14,8 +14,9 @@ message Stub {
   }
   // CEL rule to decide if this stub should be used for a given request.
   string active_if = 5;
-  // A map of attributes to CEL rules to dynamically.
-  map<string, string> dynamic_content = 6;
+  // Similar to the json attribute but instead of values there are CEL expressions which evaluate to
+  // the value that will be used.
+  string cel_content_json = 6;
   int32 priority = 7 [(buf.validate.field).int32 = {
     gte: 0
     lte: 100

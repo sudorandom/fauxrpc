@@ -35,6 +35,7 @@ type StubAddCmd struct {
 	ErrorMessage string  `help:"Message to return with the error"`
 	ErrorCode    *uint32 `help:"gRPC Error code to return"`
 	ActiveIf     string  `help:"CEL expression that must be true before this mock is used."`
+	Priority     int32   `help:"Priority from 0-100 (higher is more preferred)" default:"0"`
 }
 
 func (c *StubAddCmd) Run(globals *Globals) error {
@@ -45,6 +46,7 @@ func (c *StubAddCmd) Run(globals *Globals) error {
 			Target: c.Target,
 		},
 		ActiveIf: c.ActiveIf,
+		Priority: c.Priority,
 	}
 	if c.JSON != "" {
 		stub.Content = &stubsv1.Stub_Json{Json: c.JSON}
@@ -157,6 +159,7 @@ type StubForOutput struct {
 	ActiveIf     string           `json:"active_if,omitempty"`
 	ErrorCode    int              `json:"error_code,omitempty"`
 	ErrorMessage string           `json:"error_message,omitempty"`
+	Priority     int32            `json:"priority,omitempty"`
 }
 
 func outputStubs(stubs []*stubsv1.Stub) {
@@ -167,6 +170,7 @@ func outputStubs(stubs []*stubsv1.Stub) {
 		outputStub := StubForOutput{
 			Ref:      stub.Ref,
 			ActiveIf: stub.ActiveIf,
+			Priority: stub.Priority,
 		}
 
 		switch t := stub.GetContent().(type) {
