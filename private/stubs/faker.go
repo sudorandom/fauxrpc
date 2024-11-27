@@ -53,7 +53,9 @@ func (f *stubFaker) SetDataOnMessage(pm protoreflect.ProtoMessage, opts fauxrpc.
 
 			}
 			if stub.CELMessage != nil {
-				stub.CELMessage.SetDataOnMessage(opts.Context, msg.Interface())
+				if err := stub.CELMessage.SetDataOnMessage(opts.Context, msg.Interface()); err != nil {
+					return err
+				}
 			}
 			fields := desc.Fields()
 			for i := 0; i < fields.Len(); i++ {
