@@ -1,6 +1,7 @@
 package protocel
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/google/cel-go/cel"
@@ -12,29 +13,29 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-type DynamicMessage interface {
-	NewMessage(opts fauxrpc.GenOptions) (proto.Message, error)
-	SetDataOnMessage(msg protoreflect.ProtoMessage, opts fauxrpc.GenOptions) error
+type CELMessage interface {
+	NewMessage(ctx context.Context) (proto.Message, error)
+	SetDataOnMessage(ctx context.Context, msg protoreflect.ProtoMessage) error
 }
 
-var _ DynamicMessage = (*dynamicMessage)(nil)
+var _ CELMessage = (*celMessage)(nil)
 
-type dynamicMessage struct {
+type celMessage struct {
 	messageDescriptor protoreflect.MessageDescriptor
 	fields            map[protoreflect.FieldDescriptor]cel.Program
-	nested            map[protoreflect.FieldDescriptor]*dynamicMessage
-	repeatedMsg       map[protoreflect.FieldDescriptor][]*dynamicMessage
+	nested            map[protoreflect.FieldDescriptor]*celMessage
+	repeatedMsg       map[protoreflect.FieldDescriptor][]*celMessage
 	repeatedScalar    map[protoreflect.FieldDescriptor][]cel.Program
-	mapsMsg           map[protoreflect.FieldDescriptor]map[cel.Program]*dynamicMessage
+	mapsMsg           map[protoreflect.FieldDescriptor]map[cel.Program]*celMessage
 	mapsScalar        map[protoreflect.FieldDescriptor]map[cel.Program]cel.Program
 }
 
-func NewDynamicMessage(md protoreflect.MessageDescriptor, fields map[string]Node) (*dynamicMessage, error) {
+func NewCELMessage(md protoreflect.MessageDescriptor, fields map[string]Node) (*celMessage, error) {
 	celFields := map[protoreflect.FieldDescriptor]cel.Program{}
-	nested := map[protoreflect.FieldDescriptor]*dynamicMessage{}
-	repeatedMsg := map[protoreflect.FieldDescriptor][]*dynamicMessage{}
+	nested := map[protoreflect.FieldDescriptor]*celMessage{}
+	repeatedMsg := map[protoreflect.FieldDescriptor][]*celMessage{}
 	repeatedScalar := map[protoreflect.FieldDescriptor][]cel.Program{}
-	mapsMsg := map[protoreflect.FieldDescriptor]map[cel.Program]*dynamicMessage{}
+	mapsMsg := map[protoreflect.FieldDescriptor]map[cel.Program]*celMessage{}
 	mapsScalar := map[protoreflect.FieldDescriptor]map[cel.Program]cel.Program{}
 	for key, node := range fields {
 		field := getFieldFromName(md.Fields(), key)
@@ -55,7 +56,7 @@ func NewDynamicMessage(md protoreflect.MessageDescriptor, fields map[string]Node
 				return nil, fmt.Errorf("field %s is expected to be a message but was %s", key, field.Kind())
 			}
 			messageNode := node.(nodeMessage)
-			nestedNode, err := NewDynamicMessage(field.Message(), messageNode)
+			nestedNode, err := NewCELMessage(field.Message(), messageNode)
 			if err != nil {
 				return nil, fmt.Errorf("%s: %w", key, err)
 			}
@@ -68,7 +69,7 @@ func NewDynamicMessage(md protoreflect.MessageDescriptor, fields map[string]Node
 				repeated := node.(nodeRepeated)
 				for _, node := range repeated {
 					messageNode := node.(nodeMessage)
-					nestedNode, err := NewDynamicMessage(field.Message(), messageNode)
+					nestedNode, err := NewCELMessage(field.Message(), messageNode)
 					if err != nil {
 						return nil, fmt.Errorf("%s: %w", key, err)
 					}
@@ -111,12 +112,12 @@ func NewDynamicMessage(md protoreflect.MessageDescriptor, fields map[string]Node
 					}
 					mapsScalar[field][keyProgram] = valProgram
 				case MessageKind:
-					valNode, err := NewDynamicMessage(field.MapValue().Message(), v.(nodeMessage))
+					valNode, err := NewCELMessage(field.MapValue().Message(), v.(nodeMessage))
 					if err != nil {
 						return nil, fmt.Errorf("%s: %w", key, err)
 					}
 					if _, ok := mapsMsg[field]; !ok {
-						mapsMsg[field] = map[cel.Program]*dynamicMessage{}
+						mapsMsg[field] = map[cel.Program]*celMessage{}
 					}
 					mapsMsg[field][keyProgram] = valNode
 				}
@@ -127,7 +128,7 @@ func NewDynamicMessage(md protoreflect.MessageDescriptor, fields map[string]Node
 		}
 	}
 
-	return &dynamicMessage{
+	return &celMessage{
 		messageDescriptor: md,
 		fields:            celFields,
 		nested:            nested,
@@ -138,19 +139,18 @@ func NewDynamicMessage(md protoreflect.MessageDescriptor, fields map[string]Node
 	}, nil
 }
 
-// NewMessage implements DynamicMessage.
-func (d *dynamicMessage) NewMessage(opts fauxrpc.GenOptions) (protoreflect.ProtoMessage, error) {
+// NewMessage implements CELMessage.
+func (d *celMessage) NewMessage(ctx context.Context) (protoreflect.ProtoMessage, error) {
 	msg := registry.NewMessage(d.messageDescriptor).Interface()
-	if err := d.SetDataOnMessage(msg, opts); err != nil {
+	if err := d.SetDataOnMessage(ctx, msg); err != nil {
 		return nil, err
 	}
 	return msg, nil
 }
 
-// SetDataOnMessage implements DynamicMessage.
-func (d *dynamicMessage) SetDataOnMessage(msg protoreflect.ProtoMessage, opts fauxrpc.GenOptions) error {
-	// TODO: this input should come from GenOptions (or some other context object instead
-	input := map[string]any{}
+// SetDataOnMessage implements CELMessage.
+func (d *celMessage) SetDataOnMessage(ctx context.Context, msg protoreflect.ProtoMessage) error {
+	input := GetCELContext(ctx).ToInput()
 	for field, program := range d.fields {
 		val, err := evalCEL(field, program, input)
 		if err != nil {
@@ -160,7 +160,7 @@ func (d *dynamicMessage) SetDataOnMessage(msg protoreflect.ProtoMessage, opts fa
 	}
 	for field, dynmsg := range d.nested {
 		nestedMsg := registry.NewMessage(field.Message()).Interface()
-		if err := dynmsg.SetDataOnMessage(nestedMsg, opts); err != nil {
+		if err := dynmsg.SetDataOnMessage(ctx, nestedMsg); err != nil {
 			return err
 		}
 		msg.ProtoReflect().Set(field, protoreflect.ValueOfMessage(nestedMsg.ProtoReflect()))
@@ -169,7 +169,7 @@ func (d *dynamicMessage) SetDataOnMessage(msg protoreflect.ProtoMessage, opts fa
 		list := msg.ProtoReflect().NewField(field).List()
 		for _, dynmsg := range dynmsgs {
 			nestedMsg := registry.NewMessage(field.Message()).Interface()
-			if err := dynmsg.SetDataOnMessage(nestedMsg, opts); err != nil {
+			if err := dynmsg.SetDataOnMessage(ctx, nestedMsg); err != nil {
 				return err
 			}
 			list.Append(protoreflect.ValueOfMessage(nestedMsg.ProtoReflect()))
@@ -196,7 +196,7 @@ func (d *dynamicMessage) SetDataOnMessage(msg protoreflect.ProtoMessage, opts fa
 				return err
 			}
 			nestedMsg := registry.NewMessage(field.MapValue().Message()).Interface()
-			if err := dynMsg.SetDataOnMessage(nestedMsg, opts); err != nil {
+			if err := dynMsg.SetDataOnMessage(ctx, nestedMsg); err != nil {
 				return err
 			}
 

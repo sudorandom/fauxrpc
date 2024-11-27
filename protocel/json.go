@@ -8,7 +8,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-func UnmarshalDynamicMessageJSON(md protoreflect.MessageDescriptor, data []byte) (*dynamicMessage, error) {
+func UnmarshalDynamicMessageJSON(md protoreflect.MessageDescriptor, data []byte) (*celMessage, error) {
 	m := map[string]any{}
 	if err := json.Unmarshal(data, &m); err != nil {
 		return nil, err
@@ -19,7 +19,7 @@ func UnmarshalDynamicMessageJSON(md protoreflect.MessageDescriptor, data []byte)
 		return nil, err
 	}
 
-	return NewDynamicMessage(md, fields)
+	return NewCELMessage(md, fields)
 }
 
 func jsonToMessage(md protoreflect.MessageDescriptor, m map[string]any) (nodeMessage, error) {

@@ -10,6 +10,7 @@ import (
 	"github.com/sudorandom/fauxrpc/private/registry"
 	stubsv1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
 	stubsv1connect "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1/stubsv1connect"
+	"github.com/sudorandom/fauxrpc/protocel"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -94,6 +95,14 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 			entry.Message = msg
 		case *stubsv1.Stub_Error:
 			entry.Error = &StatusError{StubsError: t.Error}
+		}
+
+		if stub.CelContentJson != "" {
+			celmsg, err := protocel.UnmarshalDynamicMessageJSON(md, []byte(stub.CelContentJson))
+			if err != nil {
+				return nil, err
+			}
+			entry.CELMessage = celmsg
 		}
 
 		entries[i] = entry

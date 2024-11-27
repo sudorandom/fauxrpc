@@ -1,20 +1,17 @@
 package fauxrpc
 
 import (
+	"context"
+
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	"github.com/brianvoe/gofakeit/v7"
-	"github.com/sudorandom/fauxrpc/private/stubs"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type GenOptions struct {
-	StubDB           stubs.StubDatabase
-	OnlyStubs        bool
-	MaxDepth         int
-	Faker            *gofakeit.Faker
-	MethodDescriptor protoreflect.MethodDescriptor
-	Input            proto.Message
+	Other    ProtoFaker
+	MaxDepth int
+	Faker    *gofakeit.Faker
+	Context  context.Context
 
 	extraFieldConstraints *validate.FieldConstraints
 }

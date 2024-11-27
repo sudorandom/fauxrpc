@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/cel-go/cel"
 	"github.com/sudorandom/fauxrpc/private/registry"
-	"google.golang.org/protobuf/proto"
+	"github.com/sudorandom/fauxrpc/protocel"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -44,13 +44,9 @@ func NewActiveIf(md protoreflect.MethodDescriptor, expr string) (*ActiveIf, erro
 	}, nil
 }
 
-func (r *ActiveIf) Eval(ctx context.Context, md protoreflect.MethodDescriptor, req proto.Message) (bool, error) {
-	val, _, err := r.program.ContextEval(ctx, map[string]any{
-		"req":       req,
-		"service":   string(md.Parent().FullName()),
-		"method":    string(md.Name()),
-		"procedure": string(md.FullName()),
-	})
+func (r *ActiveIf) Eval(ctx context.Context, celCtx *protocel.CELContext) (bool, error) {
+	input := celCtx.ToInput()
+	val, _, err := r.program.ContextEval(ctx, input)
 	if err != nil {
 		return false, err
 	}

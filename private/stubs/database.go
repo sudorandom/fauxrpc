@@ -4,6 +4,7 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/sudorandom/fauxrpc/protocel"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -11,12 +12,14 @@ type StubKey struct {
 	Name protoreflect.FullName
 	ID   string
 }
+
 type StubEntry struct {
-	Key      StubKey
-	Message  protoreflect.ProtoMessage
-	Error    *StatusError
-	ActiveIf *ActiveIf
-	Priority int
+	Key        StubKey
+	Message    protoreflect.ProtoMessage
+	CELMessage protocel.CELMessage
+	Error      *StatusError
+	ActiveIf   *ActiveIf
+	Priority   int
 }
 
 type PriorityStubEntries struct {

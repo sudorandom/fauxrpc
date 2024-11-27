@@ -162,22 +162,28 @@ func (f StubFile) ToRequest() (*stubsv1.AddStubsRequest, error) {
 		if stub.Target == "" {
 			return nil, fmt.Errorf(`"target" is required for each stub; missing for stub %d`, i)
 		}
-		if stub.Contents == nil {
-			return nil, fmt.Errorf(`"contents" is required for each stub; missing for stub %d`, i)
+		var contentsJSON string
+		if stub.Content == nil {
+			b, err := json.Marshal(stub.Content)
+			if err != nil {
+				return nil, err
+			}
+			contentsJSON = string(b)
 		}
-		b, err := json.Marshal(stub.Contents)
-		if err != nil {
-			return nil, err
+		var celContentsJSON string
+		if stub.CelContent == nil {
+			b, err := json.Marshal(stub.CelContent)
+			if err != nil {
+				return nil, err
+			}
+			celContentsJSON = string(b)
 		}
 		stubs[i] = &stubsv1.Stub{
-			Ref: &stubsv1.StubRef{
-				Id:     stub.ID,
-				Target: stub.Target,
-			},
-			Content: &stubsv1.Stub_Json{
-				Json: string(b),
-			},
-			ActiveIf: stub.ActiveIf,
+			Ref:            &stubsv1.StubRef{Id: stub.ID, Target: stub.Target},
+			Content:        &stubsv1.Stub_Json{Json: contentsJSON},
+			CelContentJson: celContentsJSON,
+			ActiveIf:       stub.ActiveIf,
+			Priority:       stub.Priority,
 		}
 	}
 
@@ -185,10 +191,14 @@ func (f StubFile) ToRequest() (*stubsv1.AddStubsRequest, error) {
 }
 
 type StubFileEntry struct {
-	ID       string `json:"id"`
-	Target   string `json:"target"`
-	Contents any    `json:"contents"`
-	ActiveIf string `json:"active_if"`
+	ID           string `json:"id"`
+	Target       string `json:"target"`
+	Content      any    `json:"content,omitempty"`
+	CelContent   any    `json:"cel_content,omitempty"`
+	ActiveIf     string `json:"active_if,omitempty"`
+	ErrorCode    int    `json:"error_code,omitempty"`
+	ErrorMessage string `json:"error_message,omitempty"`
+	Priority     int32  `json:"priority,omitempty"`
 }
 
 func addStubsFromFile(h stubsv1connect.StubsServiceHandler, stubsPath string) error {

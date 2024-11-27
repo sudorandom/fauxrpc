@@ -36,6 +36,7 @@ type StubAddCmd struct {
 	ErrorCode    *uint32 `help:"gRPC Error code to return"`
 	ActiveIf     string  `help:"CEL expression that must be true before this mock is used."`
 	Priority     int32   `help:"Priority from 0-100 (higher is more preferred)" default:"0"`
+	CELJSON      string  `name:"cel-json" help:"JSON body with CEL expressions as values"`
 }
 
 func (c *StubAddCmd) Run(globals *Globals) error {
@@ -45,8 +46,9 @@ func (c *StubAddCmd) Run(globals *Globals) error {
 			Id:     c.ID,
 			Target: c.Target,
 		},
-		ActiveIf: c.ActiveIf,
-		Priority: c.Priority,
+		ActiveIf:       c.ActiveIf,
+		Priority:       c.Priority,
+		CelContentJson: c.CELJSON,
 	}
 	if c.JSON != "" {
 		stub.Content = &stubsv1.Stub_Json{Json: c.JSON}
@@ -156,6 +158,7 @@ func (c *StubRemoveAllCmd) Run(globals *Globals) error {
 type StubForOutput struct {
 	Ref          *stubsv1.StubRef `json:"ref,omitempty"`
 	Content      any              `json:"content,omitempty"`
+	CelContent   any              `json:"cel_content,omitempty"`
 	ActiveIf     string           `json:"active_if,omitempty"`
 	ErrorCode    int              `json:"error_code,omitempty"`
 	ErrorMessage string           `json:"error_message,omitempty"`
@@ -171,6 +174,15 @@ func outputStubs(stubs []*stubsv1.Stub) {
 			Ref:      stub.Ref,
 			ActiveIf: stub.ActiveIf,
 			Priority: stub.Priority,
+		}
+
+		if stub.CelContentJson != "" {
+			var celContent any
+			if err := json.Unmarshal([]byte(stub.CelContentJson), &celContent); err != nil {
+				slog.Error("error marshalling for output", slog.Any("error", err))
+				continue
+			}
+			outputStub.CelContent = celContent
 		}
 
 		switch t := stub.GetContent().(type) {

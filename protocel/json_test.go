@@ -1,11 +1,11 @@
 package protocel_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/sudorandom/fauxrpc"
 	testv1 "github.com/sudorandom/fauxrpc/proto/gen/test/v1"
 	"github.com/sudorandom/fauxrpc/protocel"
 	"google.golang.org/protobuf/proto"
@@ -18,7 +18,7 @@ func TestUnmarshalDynamicMessageJSON(t *testing.T) {
 		dmsg, err := protocel.UnmarshalDynamicMessageJSON(md, []byte(`{}`))
 		require.NoError(t, err)
 		assert.NotNil(t, dmsg)
-		msg, err := dmsg.NewMessage(fauxrpc.GenOptions{})
+		msg, err := dmsg.NewMessage(context.Background())
 		require.NoError(t, err)
 		assert.True(t, proto.Equal(&testv1.AllTypes{}, msg))
 	})
@@ -60,7 +60,7 @@ func TestUnmarshalDynamicMessageJSON(t *testing.T) {
 }`))
 		require.NoError(t, err)
 		assert.NotNil(t, dmsg)
-		msg, err := dmsg.NewMessage(fauxrpc.GenOptions{})
+		msg, err := dmsg.NewMessage(context.Background())
 		require.NoError(t, err)
 
 		pmsg := msg.ProtoReflect()
@@ -110,7 +110,7 @@ func TestUnmarshalDynamicMessageJSON(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, dmsg)
 
-		msg, err := dmsg.NewMessage(fauxrpc.GenOptions{})
+		msg, err := dmsg.NewMessage(context.Background())
 		require.NoError(t, err)
 
 		assertFieldIsSet(t, md, msg.ProtoReflect(), "msgValue")
@@ -129,7 +129,7 @@ func TestUnmarshalDynamicMessageJSON(t *testing.T) {
 		}`))
 		require.NoError(t, err)
 
-		msg, err := dmsg.NewMessage(fauxrpc.GenOptions{})
+		msg, err := dmsg.NewMessage(context.Background())
 		require.NoError(t, err)
 
 		assertFieldIsSet(t, md, msg.ProtoReflect(), "msgList")
@@ -147,7 +147,7 @@ func TestUnmarshalDynamicMessageJSON(t *testing.T) {
 		}`))
 		require.NoError(t, err)
 
-		msg, err := dmsg.NewMessage(fauxrpc.GenOptions{})
+		msg, err := dmsg.NewMessage(context.Background())
 		require.NoError(t, err)
 
 		assertFieldIsSet(t, md, msg.ProtoReflect(), "msgList")
@@ -171,7 +171,7 @@ func TestUnmarshalDynamicMessageJSON(t *testing.T) {
 		}`))
 		require.NoError(t, err)
 
-		msg, err := dmsg.NewMessage(fauxrpc.GenOptions{})
+		msg, err := dmsg.NewMessage(context.Background())
 		require.NoError(t, err)
 
 		assertFieldIsSet(t, md, msg.ProtoReflect(), "stringToStringMap")
@@ -193,7 +193,7 @@ func TestUnmarshalDynamicMessageJSON(t *testing.T) {
 		}`))
 		require.NoError(t, err)
 
-		msg, err := dmsg.NewMessage(fauxrpc.GenOptions{})
+		msg, err := dmsg.NewMessage(context.Background())
 		require.NoError(t, err)
 
 		m := msg.ProtoReflect().Get(md.Fields().ByTextName("msg_map")).Map()
@@ -207,7 +207,7 @@ func TestUnmarshalDynamicMessageJSON(t *testing.T) {
 		dmsg, err := protocel.UnmarshalDynamicMessageJSON(md, []byte(`{"enum_value": "1"}`))
 		require.NoError(t, err)
 
-		msg, err := dmsg.NewMessage(fauxrpc.GenOptions{})
+		msg, err := dmsg.NewMessage(context.Background())
 		require.NoError(t, err)
 
 		assert.Equal(t, protoreflect.EnumNumber(1), msg.ProtoReflect().Get(md.Fields().ByTextName("enum_value")).Enum())
@@ -218,7 +218,7 @@ func TestUnmarshalDynamicMessageJSON(t *testing.T) {
 		dmsg, err := protocel.UnmarshalDynamicMessageJSON(md, []byte(`{"enum_list": ["1"]}`))
 		require.NoError(t, err)
 
-		msg, err := dmsg.NewMessage(fauxrpc.GenOptions{})
+		msg, err := dmsg.NewMessage(context.Background())
 		require.NoError(t, err)
 
 		l := msg.ProtoReflect().Get(md.Fields().ByTextName("enum_list")).List()

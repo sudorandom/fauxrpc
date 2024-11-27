@@ -16,6 +16,7 @@ import (
 	"github.com/sudorandom/fauxrpc/private/grpc"
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/private/stubs"
+	"github.com/sudorandom/fauxrpc/protocel"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -78,7 +79,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, db stubs.StubDatabase, v
 			return msg, nil
 		}
 
-		eg, _ := errgroup.WithContext(r.Context())
+		eg, ctx := errgroup.WithContext(r.Context())
 
 		// Handle reading requests
 		var input proto.Message
@@ -104,12 +105,13 @@ func NewHandler(service protoreflect.ServiceDescriptor, db stubs.StubDatabase, v
 		var msg []byte
 		eg.Go(func() error {
 			out, err := fauxrpc.NewMessage(method.Output(), fauxrpc.GenOptions{
-				StubDB:           db,
-				OnlyStubs:        onlyStubs,
-				MaxDepth:         20,
-				Faker:            gofakeit.New(0),
-				MethodDescriptor: method,
-				Input:            input,
+				Other:    stubs.NewStubFaker(db, onlyStubs),
+				MaxDepth: 20,
+				Faker:    gofakeit.New(0),
+				Context: protocel.WithCELContext(ctx, protocel.CELContext{
+					MethodDescriptor: method,
+					Input:            input,
+				}),
 			})
 			if err != nil {
 				var statusErr *stubs.StatusError

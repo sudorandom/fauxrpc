@@ -1,11 +1,11 @@
 package protocel_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/sudorandom/fauxrpc"
 	testv1 "github.com/sudorandom/fauxrpc/proto/gen/test/v1"
 	"github.com/sudorandom/fauxrpc/protocel"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -14,7 +14,7 @@ import (
 func TestDynamicStructNewMessage(t *testing.T) {
 	t.Run("scalars", func(t *testing.T) {
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
-		ds, err := protocel.NewDynamicMessage(md, map[string]protocel.Node{
+		ds, err := protocel.NewCELMessage(md, map[string]protocel.Node{
 			"double_value":   protocel.CEL(`1000.0+10.12`),
 			"float_value":    protocel.CEL(`2000.0+10.12`),
 			"int32_value":    protocel.CEL(`1+2`),
@@ -49,7 +49,7 @@ func TestDynamicStructNewMessage(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		msg, err := ds.NewMessage(fauxrpc.GenOptions{})
+		msg, err := ds.NewMessage(context.Background())
 		require.NoError(t, err)
 
 		assert.Equal(t, 1010.12, msg.ProtoReflect().Get(md.Fields().ByTextName("double_value")).Interface())
@@ -87,7 +87,7 @@ func TestDynamicStructNewMessage(t *testing.T) {
 
 	t.Run("scalars gen", func(t *testing.T) {
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
-		ds, err := protocel.NewDynamicMessage(md, map[string]protocel.Node{
+		ds, err := protocel.NewCELMessage(md, map[string]protocel.Node{
 			"double_value":   protocel.CEL(`gen_float64()`),
 			"float_value":    protocel.CEL(`gen_float32()`),
 			"int32_value":    protocel.CEL(`gen_int32()`),
@@ -122,7 +122,7 @@ func TestDynamicStructNewMessage(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		msg, err := ds.NewMessage(fauxrpc.GenOptions{})
+		msg, err := ds.NewMessage(context.Background())
 		require.NoError(t, err)
 
 		pmsg := msg.ProtoReflect()
@@ -161,7 +161,7 @@ func TestDynamicStructNewMessage(t *testing.T) {
 
 	t.Run("nested messages", func(t *testing.T) {
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
-		ds, err := protocel.NewDynamicMessage(md, map[string]protocel.Node{
+		ds, err := protocel.NewCELMessage(md, map[string]protocel.Node{
 			"msg_value": protocel.Message(map[string]protocel.Node{
 				"string_value": protocel.CEL(`"Hello World!"`),
 			}),
@@ -171,7 +171,7 @@ func TestDynamicStructNewMessage(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		msg, err := ds.NewMessage(fauxrpc.GenOptions{})
+		msg, err := ds.NewMessage(context.Background())
 		require.NoError(t, err)
 
 		assertFieldIsSet(t, md, msg.ProtoReflect(), "msgValue")
@@ -183,7 +183,7 @@ func TestDynamicStructNewMessage(t *testing.T) {
 
 	t.Run("repeated messages", func(t *testing.T) {
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
-		ds, err := protocel.NewDynamicMessage(md, map[string]protocel.Node{
+		ds, err := protocel.NewCELMessage(md, map[string]protocel.Node{
 			"msg_list": protocel.Repeated([]protocel.Node{
 				protocel.Message(map[string]protocel.Node{
 					"string_value": protocel.CEL(`"Hello World!"`),
@@ -192,7 +192,7 @@ func TestDynamicStructNewMessage(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		msg, err := ds.NewMessage(fauxrpc.GenOptions{})
+		msg, err := ds.NewMessage(context.Background())
 		require.NoError(t, err)
 
 		assertFieldIsSet(t, md, msg.ProtoReflect(), "msgList")
@@ -204,7 +204,7 @@ func TestDynamicStructNewMessage(t *testing.T) {
 
 	t.Run("repeated scalars", func(t *testing.T) {
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
-		ds, err := protocel.NewDynamicMessage(md, map[string]protocel.Node{
+		ds, err := protocel.NewCELMessage(md, map[string]protocel.Node{
 			"string_list": protocel.Repeated([]protocel.Node{
 				protocel.CEL(`"Hello"`),
 				protocel.CEL(`"World!"`),
@@ -216,7 +216,7 @@ func TestDynamicStructNewMessage(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		msg, err := ds.NewMessage(fauxrpc.GenOptions{})
+		msg, err := ds.NewMessage(context.Background())
 		require.NoError(t, err)
 
 		assertFieldIsSet(t, md, msg.ProtoReflect(), "msgList")
@@ -234,7 +234,7 @@ func TestDynamicStructNewMessage(t *testing.T) {
 
 	t.Run("maps", func(t *testing.T) {
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
-		ds, err := protocel.NewDynamicMessage(md, map[string]protocel.Node{
+		ds, err := protocel.NewCELMessage(md, map[string]protocel.Node{
 			"string_to_string_map": protocel.Map(map[protocel.Node]protocel.Node{
 				protocel.CEL(`"Hello!"`): protocel.CEL(`"world!"`),
 			}),
@@ -244,7 +244,7 @@ func TestDynamicStructNewMessage(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		msg, err := ds.NewMessage(fauxrpc.GenOptions{})
+		msg, err := ds.NewMessage(context.Background())
 		require.NoError(t, err)
 
 		assertFieldIsSet(t, md, msg.ProtoReflect(), "stringToStringMap")
@@ -261,7 +261,7 @@ func TestDynamicStructNewMessage(t *testing.T) {
 
 	t.Run("maps msg", func(t *testing.T) {
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
-		ds, err := protocel.NewDynamicMessage(md, map[string]protocel.Node{
+		ds, err := protocel.NewCELMessage(md, map[string]protocel.Node{
 			"msg_map": protocel.Map(map[protocel.Node]protocel.Node{
 				protocel.CEL(`"Hello!"`): protocel.Message(map[string]protocel.Node{
 					"string_value": protocel.CEL(`"value"`),
@@ -270,7 +270,7 @@ func TestDynamicStructNewMessage(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		msg, err := ds.NewMessage(fauxrpc.GenOptions{})
+		msg, err := ds.NewMessage(context.Background())
 		require.NoError(t, err)
 
 		m := msg.ProtoReflect().Get(md.Fields().ByTextName("msg_map")).Map()
@@ -281,12 +281,12 @@ func TestDynamicStructNewMessage(t *testing.T) {
 
 	t.Run("enum", func(t *testing.T) {
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
-		ds, err := protocel.NewDynamicMessage(md, map[string]protocel.Node{
+		ds, err := protocel.NewCELMessage(md, map[string]protocel.Node{
 			"enum_value": protocel.CEL(`1`),
 		})
 		require.NoError(t, err)
 
-		msg, err := ds.NewMessage(fauxrpc.GenOptions{})
+		msg, err := ds.NewMessage(context.Background())
 		require.NoError(t, err)
 
 		assert.Equal(t, protoreflect.EnumNumber(1), msg.ProtoReflect().Get(md.Fields().ByTextName("enum_value")).Enum())
@@ -294,12 +294,12 @@ func TestDynamicStructNewMessage(t *testing.T) {
 
 	t.Run("enum list", func(t *testing.T) {
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
-		ds, err := protocel.NewDynamicMessage(md, map[string]protocel.Node{
+		ds, err := protocel.NewCELMessage(md, map[string]protocel.Node{
 			"enum_list": protocel.Repeated([]protocel.Node{protocel.CEL(`1`)}),
 		})
 		require.NoError(t, err)
 
-		msg, err := ds.NewMessage(fauxrpc.GenOptions{})
+		msg, err := ds.NewMessage(context.Background())
 		require.NoError(t, err)
 
 		l := msg.ProtoReflect().Get(md.Fields().ByTextName("enum_list")).List()
