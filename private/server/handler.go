@@ -29,7 +29,7 @@ import (
 
 const maxMessageSize = 4 * 1024 * 1024
 
-func NewHandler(service protoreflect.ServiceDescriptor, db stubs.StubDatabase, validate *protovalidate.Validator, onlyStubs bool) http.Handler {
+func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker, validate *protovalidate.Validator) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Trailer", "Grpc-Status,Grpc-Message,Grpc-Status-Details-Bin")
 		w.Header().Add("Content-Type", "application/grpc")
@@ -104,16 +104,15 @@ func NewHandler(service protoreflect.ServiceDescriptor, db stubs.StubDatabase, v
 		// Handle writing response
 		var msg []byte
 		eg.Go(func() error {
-			out, err := fauxrpc.NewMessage(method.Output(), fauxrpc.GenOptions{
-				Other:    stubs.NewStubFaker(db, onlyStubs),
+			out := registry.NewMessage(method.Output()).Interface()
+			if err := faker.SetDataOnMessage(out, fauxrpc.GenOptions{
 				MaxDepth: 20,
 				Faker:    gofakeit.New(0),
-				Context: protocel.WithCELContext(ctx, protocel.CELContext{
+				Context: protocel.WithCELContext(ctx, &protocel.CELContext{
 					MethodDescriptor: method,
-					Input:            input,
+					Req:              input,
 				}),
-			})
-			if err != nil {
+			}); err != nil {
 				var statusErr *stubs.StatusError
 				if errors.As(err, &statusErr) {
 					return grpcStatusFromError(statusErr.StubsError).Err()

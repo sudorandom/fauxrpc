@@ -10,12 +10,15 @@ import (
 	"github.com/sudorandom/fauxrpc/protocel"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/reflect/protoregistry"
 )
 
 func TestUnmarshalDynamicMessageJSON(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
-		dmsg, err := protocel.UnmarshalDynamicMessageJSON(md, []byte(`{}`))
+		dmsg, err := protocel.UnmarshalDynamicMessageJSON(files, md, []byte(`{}`))
 		require.NoError(t, err)
 		assert.NotNil(t, dmsg)
 		msg, err := dmsg.NewMessage(context.Background())
@@ -24,39 +27,41 @@ func TestUnmarshalDynamicMessageJSON(t *testing.T) {
 	})
 
 	t.Run("top-level-fields", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
-		dmsg, err := protocel.UnmarshalDynamicMessageJSON(md, []byte(`{
-	"double_value": "gen_float64()",
-	"float_value": "gen_float32()",
-	"int32_value": "gen_int32()",
-	"int64_value": "gen_int64()",
-	"uint32_value": "gen_uint32()",
-	"uint64_value": "gen_uint64()",
-	"sint32_value": "gen_sint32()",
-	"sint64_value": "gen_sint64()",
-	"fixed32_value": "gen_fixed32()",
-	"fixed64_value": "gen_fixed64()",
-	"sfixed32_value": "gen_sfixed32()",
-	"sfixed64_value": "gen_sfixed64()",
-	"bool_value": "gen_bool()",
-	"string_value": "gen_string()",
-	"bytes_value": "gen_bytes()",
+		dmsg, err := protocel.UnmarshalDynamicMessageJSON(files, md, []byte(`{
+	"double_value": "gen_float64(field)",
+	"float_value": "gen_float32(field)",
+	"int32_value": "gen_int32(field)",
+	"int64_value": "gen_int64(field)",
+	"uint32_value": "gen_uint32(field)",
+	"uint64_value": "gen_uint64(field)",
+	"sint32_value": "gen_sint32(field)",
+	"sint64_value": "gen_sint64(field)",
+	"fixed32_value": "gen_fixed32(field)",
+	"fixed64_value": "gen_fixed64(field)",
+	"sfixed32_value": "gen_sfixed32(field)",
+	"sfixed64_value": "gen_sfixed64(field)",
+	"bool_value": "gen_bool(field)",
+	"string_value": "gen_string(field)",
+	"bytes_value": "gen_bytes(field)",
 
-	"opt_double_value": "gen_float64()",
-	"opt_float_value": "gen_float32()",
-	"opt_int32_value": "gen_int32()",
-	"opt_int64_value": "gen_int64()",
-	"opt_uint32_value": "gen_uint32()",
-	"opt_uint64_value": "gen_uint64()",
-	"opt_sint32_value": "gen_sint32()",
-	"opt_sint64_value": "gen_sint64()",
-	"opt_fixed32_value": "gen_fixed32()",
-	"opt_fixed64_value": "gen_fixed64()",
-	"opt_sfixed32_value": "gen_sfixed32()",
-	"opt_sfixed64_value": "gen_sfixed64()",
-	"opt_bool_value": "gen_bool()",
-	"opt_string_value": "gen_string()",
-	"opt_bytes_value": "gen_bytes()"
+	"opt_double_value": "gen_float64(field)",
+	"opt_float_value": "gen_float32(field)",
+	"opt_int32_value": "gen_int32(field)",
+	"opt_int64_value": "gen_int64(field)",
+	"opt_uint32_value": "gen_uint32(field)",
+	"opt_uint64_value": "gen_uint64(field)",
+	"opt_sint32_value": "gen_sint32(field)",
+	"opt_sint64_value": "gen_sint64(field)",
+	"opt_fixed32_value": "gen_fixed32(field)",
+	"opt_fixed64_value": "gen_fixed64(field)",
+	"opt_sfixed32_value": "gen_sfixed32(field)",
+	"opt_sfixed64_value": "gen_sfixed64(field)",
+	"opt_bool_value": "gen_bool(field)",
+	"opt_string_value": "gen_string(field)",
+	"opt_bytes_value": "gen_bytes(field)"
 }`))
 		require.NoError(t, err)
 		assert.NotNil(t, dmsg)
@@ -98,8 +103,10 @@ func TestUnmarshalDynamicMessageJSON(t *testing.T) {
 	})
 
 	t.Run("nested messages", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
-		dmsg, err := protocel.UnmarshalDynamicMessageJSON(md, []byte(`{
+		dmsg, err := protocel.UnmarshalDynamicMessageJSON(files, md, []byte(`{
 	"msg_value": {
 		"string_value": "'Hello World!'"
 	},
@@ -121,8 +128,10 @@ func TestUnmarshalDynamicMessageJSON(t *testing.T) {
 	})
 
 	t.Run("repeated messages", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
-		dmsg, err := protocel.UnmarshalDynamicMessageJSON(md, []byte(`{
+		dmsg, err := protocel.UnmarshalDynamicMessageJSON(files, md, []byte(`{
 			"msg_list": [{
 				"string_value": "'Hello World!'"
 			}]
@@ -140,8 +149,10 @@ func TestUnmarshalDynamicMessageJSON(t *testing.T) {
 	})
 
 	t.Run("repeated scalars", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
-		dmsg, err := protocel.UnmarshalDynamicMessageJSON(md, []byte(`{
+		dmsg, err := protocel.UnmarshalDynamicMessageJSON(files, md, []byte(`{
 			"string_list": ["'Hello'", "'World!'"],
 			"int32_list": ["1+2", "3+4"]
 		}`))
@@ -164,8 +175,10 @@ func TestUnmarshalDynamicMessageJSON(t *testing.T) {
 	})
 
 	t.Run("maps", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
-		dmsg, err := protocel.UnmarshalDynamicMessageJSON(md, []byte(`{
+		dmsg, err := protocel.UnmarshalDynamicMessageJSON(files, md, []byte(`{
 			"string_to_string_map": {"'Hello!'": "'world!'"},
 			"int32_to_string_map": {"1234": "'Hello world!'"}
 		}`))
@@ -187,8 +200,10 @@ func TestUnmarshalDynamicMessageJSON(t *testing.T) {
 	})
 
 	t.Run("maps msg", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
-		dmsg, err := protocel.UnmarshalDynamicMessageJSON(md, []byte(`{
+		dmsg, err := protocel.UnmarshalDynamicMessageJSON(files, md, []byte(`{
 			"msg_map": {"'Hello!'": {"string_value": "'value'"}}
 		}`))
 		require.NoError(t, err)
@@ -203,8 +218,10 @@ func TestUnmarshalDynamicMessageJSON(t *testing.T) {
 	})
 
 	t.Run("enum", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
-		dmsg, err := protocel.UnmarshalDynamicMessageJSON(md, []byte(`{"enum_value": "1"}`))
+		dmsg, err := protocel.UnmarshalDynamicMessageJSON(files, md, []byte(`{"enum_value": "1"}`))
 		require.NoError(t, err)
 
 		msg, err := dmsg.NewMessage(context.Background())
@@ -214,8 +231,10 @@ func TestUnmarshalDynamicMessageJSON(t *testing.T) {
 	})
 
 	t.Run("enum list", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
-		dmsg, err := protocel.UnmarshalDynamicMessageJSON(md, []byte(`{"enum_list": ["1"]}`))
+		dmsg, err := protocel.UnmarshalDynamicMessageJSON(files, md, []byte(`{"enum_list": ["1"]}`))
 		require.NoError(t, err)
 
 		msg, err := dmsg.NewMessage(context.Background())

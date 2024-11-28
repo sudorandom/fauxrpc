@@ -4,17 +4,21 @@ import (
 	"context"
 	"testing"
 
+	elizav1 "buf.build/gen/go/connectrpc/eliza/protocolbuffers/go/connectrpc/eliza/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	testv1 "github.com/sudorandom/fauxrpc/proto/gen/test/v1"
 	"github.com/sudorandom/fauxrpc/protocel"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/reflect/protoregistry"
 )
 
 func TestDynamicStructNewMessage(t *testing.T) {
 	t.Run("scalars", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
-		ds, err := protocel.NewCELMessage(md, map[string]protocel.Node{
+		ds, err := protocel.NewCELMessage(files, md, map[string]protocel.Node{
 			"double_value":   protocel.CEL(`1000.0+10.12`),
 			"float_value":    protocel.CEL(`2000.0+10.12`),
 			"int32_value":    protocel.CEL(`1+2`),
@@ -86,39 +90,41 @@ func TestDynamicStructNewMessage(t *testing.T) {
 	})
 
 	t.Run("scalars gen", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
-		ds, err := protocel.NewCELMessage(md, map[string]protocel.Node{
-			"double_value":   protocel.CEL(`gen_float64()`),
-			"float_value":    protocel.CEL(`gen_float32()`),
-			"int32_value":    protocel.CEL(`gen_int32()`),
-			"int64_value":    protocel.CEL(`gen_int64()`),
-			"uint32_value":   protocel.CEL(`gen_uint32()`),
-			"uint64_value":   protocel.CEL(`gen_uint64()`),
-			"sint32_value":   protocel.CEL(`gen_sint32()`),
-			"sint64_value":   protocel.CEL(`gen_sint64()`),
-			"fixed32_value":  protocel.CEL(`gen_fixed32()`),
-			"fixed64_value":  protocel.CEL(`gen_fixed64()`),
-			"sfixed32_value": protocel.CEL(`gen_sfixed32()`),
-			"sfixed64_value": protocel.CEL(`gen_sfixed64()`),
-			"bool_value":     protocel.CEL(`gen_bool()`),
-			"string_value":   protocel.CEL(`gen_string()`),
-			"bytes_value":    protocel.CEL(`gen_bytes()`),
+		ds, err := protocel.NewCELMessage(files, md, map[string]protocel.Node{
+			"double_value":   protocel.CEL(`gen_float64(field)`),
+			"float_value":    protocel.CEL(`gen_float32(field)`),
+			"int32_value":    protocel.CEL(`gen_int32(field)`),
+			"int64_value":    protocel.CEL(`gen_int64(field)`),
+			"uint32_value":   protocel.CEL(`gen_uint32(field)`),
+			"uint64_value":   protocel.CEL(`gen_uint64(field)`),
+			"sint32_value":   protocel.CEL(`gen_sint32(field)`),
+			"sint64_value":   protocel.CEL(`gen_sint64(field)`),
+			"fixed32_value":  protocel.CEL(`gen_fixed32(field)`),
+			"fixed64_value":  protocel.CEL(`gen_fixed64(field)`),
+			"sfixed32_value": protocel.CEL(`gen_sfixed32(field)`),
+			"sfixed64_value": protocel.CEL(`gen_sfixed64(field)`),
+			"bool_value":     protocel.CEL(`gen_bool(field)`),
+			"string_value":   protocel.CEL(`gen_string(field)`),
+			"bytes_value":    protocel.CEL(`gen_bytes(field)`),
 
-			"opt_double_value":   protocel.CEL(`gen_float64()`),
-			"opt_float_value":    protocel.CEL(`gen_float32()`),
-			"opt_int32_value":    protocel.CEL(`gen_int32()`),
-			"opt_int64_value":    protocel.CEL(`gen_int64()`),
-			"opt_uint32_value":   protocel.CEL(`gen_uint32()`),
-			"opt_uint64_value":   protocel.CEL(`gen_uint64()`),
-			"opt_sint32_value":   protocel.CEL(`gen_sint32()`),
-			"opt_sint64_value":   protocel.CEL(`gen_sint64()`),
-			"opt_fixed32_value":  protocel.CEL(`gen_fixed32()`),
-			"opt_fixed64_value":  protocel.CEL(`gen_fixed64()`),
-			"opt_sfixed32_value": protocel.CEL(`gen_sfixed32()`),
-			"opt_sfixed64_value": protocel.CEL(`gen_sfixed64()`),
-			"opt_bool_value":     protocel.CEL(`gen_bool()`),
-			"opt_string_value":   protocel.CEL(`gen_string()`),
-			"opt_bytes_value":    protocel.CEL(`gen_bytes()`),
+			"opt_double_value":   protocel.CEL(`gen_float64(field)`),
+			"opt_float_value":    protocel.CEL(`gen_float32(field)`),
+			"opt_int32_value":    protocel.CEL(`gen_int32(field)`),
+			"opt_int64_value":    protocel.CEL(`gen_int64(field)`),
+			"opt_uint32_value":   protocel.CEL(`gen_uint32(field)`),
+			"opt_uint64_value":   protocel.CEL(`gen_uint64(field)`),
+			"opt_sint32_value":   protocel.CEL(`gen_sint32(field)`),
+			"opt_sint64_value":   protocel.CEL(`gen_sint64(field)`),
+			"opt_fixed32_value":  protocel.CEL(`gen_fixed32(field)`),
+			"opt_fixed64_value":  protocel.CEL(`gen_fixed64(field)`),
+			"opt_sfixed32_value": protocel.CEL(`gen_sfixed32(field)`),
+			"opt_sfixed64_value": protocel.CEL(`gen_sfixed64(field)`),
+			"opt_bool_value":     protocel.CEL(`gen_bool(field)`),
+			"opt_string_value":   protocel.CEL(`gen_string(field)`),
+			"opt_bytes_value":    protocel.CEL(`gen_bytes(field)`),
 		})
 		require.NoError(t, err)
 
@@ -160,8 +166,10 @@ func TestDynamicStructNewMessage(t *testing.T) {
 	})
 
 	t.Run("nested messages", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
-		ds, err := protocel.NewCELMessage(md, map[string]protocel.Node{
+		ds, err := protocel.NewCELMessage(files, md, map[string]protocel.Node{
 			"msg_value": protocel.Message(map[string]protocel.Node{
 				"string_value": protocel.CEL(`"Hello World!"`),
 			}),
@@ -182,8 +190,10 @@ func TestDynamicStructNewMessage(t *testing.T) {
 	})
 
 	t.Run("repeated messages", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
-		ds, err := protocel.NewCELMessage(md, map[string]protocel.Node{
+		ds, err := protocel.NewCELMessage(files, md, map[string]protocel.Node{
 			"msg_list": protocel.Repeated([]protocel.Node{
 				protocel.Message(map[string]protocel.Node{
 					"string_value": protocel.CEL(`"Hello World!"`),
@@ -203,8 +213,10 @@ func TestDynamicStructNewMessage(t *testing.T) {
 	})
 
 	t.Run("repeated scalars", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
-		ds, err := protocel.NewCELMessage(md, map[string]protocel.Node{
+		ds, err := protocel.NewCELMessage(files, md, map[string]protocel.Node{
 			"string_list": protocel.Repeated([]protocel.Node{
 				protocel.CEL(`"Hello"`),
 				protocel.CEL(`"World!"`),
@@ -233,8 +245,10 @@ func TestDynamicStructNewMessage(t *testing.T) {
 	})
 
 	t.Run("maps", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
-		ds, err := protocel.NewCELMessage(md, map[string]protocel.Node{
+		ds, err := protocel.NewCELMessage(files, md, map[string]protocel.Node{
 			"string_to_string_map": protocel.Map(map[protocel.Node]protocel.Node{
 				protocel.CEL(`"Hello!"`): protocel.CEL(`"world!"`),
 			}),
@@ -260,8 +274,10 @@ func TestDynamicStructNewMessage(t *testing.T) {
 	})
 
 	t.Run("maps msg", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
-		ds, err := protocel.NewCELMessage(md, map[string]protocel.Node{
+		ds, err := protocel.NewCELMessage(files, md, map[string]protocel.Node{
 			"msg_map": protocel.Map(map[protocel.Node]protocel.Node{
 				protocel.CEL(`"Hello!"`): protocel.Message(map[string]protocel.Node{
 					"string_value": protocel.CEL(`"value"`),
@@ -280,8 +296,10 @@ func TestDynamicStructNewMessage(t *testing.T) {
 	})
 
 	t.Run("enum", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
-		ds, err := protocel.NewCELMessage(md, map[string]protocel.Node{
+		ds, err := protocel.NewCELMessage(files, md, map[string]protocel.Node{
 			"enum_value": protocel.CEL(`1`),
 		})
 		require.NoError(t, err)
@@ -293,8 +311,10 @@ func TestDynamicStructNewMessage(t *testing.T) {
 	})
 
 	t.Run("enum list", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
-		ds, err := protocel.NewCELMessage(md, map[string]protocel.Node{
+		ds, err := protocel.NewCELMessage(files, md, map[string]protocel.Node{
 			"enum_list": protocel.Repeated([]protocel.Node{protocel.CEL(`1`)}),
 		})
 		require.NoError(t, err)
@@ -305,6 +325,27 @@ func TestDynamicStructNewMessage(t *testing.T) {
 		l := msg.ProtoReflect().Get(md.Fields().ByTextName("enum_list")).List()
 		require.Equal(t, 1, l.Len())
 		assert.Equal(t, protoreflect.EnumNumber(1), l.Get(0).Interface())
+	})
+
+	t.Run("with req", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(elizav1.File_connectrpc_eliza_v1_eliza_proto))
+		md := elizav1.File_connectrpc_eliza_v1_eliza_proto.Messages().ByName("ConverseRequest")
+		ds, err := protocel.NewCELMessage(files, md, map[string]protocel.Node{
+			"sentence": protocel.CEL(`req.sentence`),
+		})
+		require.NoError(t, err)
+
+		msg, err := ds.NewMessage(protocel.WithCELContext(
+			context.Background(),
+			&protocel.CELContext{
+				Req: &elizav1.ConverseRequest{
+					Sentence: "hello!",
+				},
+			}))
+		require.NoError(t, err)
+
+		assert.Equal(t, "hello!", msg.ProtoReflect().Get(md.Fields().ByTextName("sentence")).Interface())
 	})
 }
 

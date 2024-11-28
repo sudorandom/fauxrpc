@@ -28,12 +28,11 @@ func (f *stubFaker) SetDataOnMessage(pm protoreflect.ProtoMessage, opts fauxrpc.
 	msg := pm.ProtoReflect()
 	desc := msg.Descriptor()
 	groups := f.db.GetStubsPrioritized(desc.FullName())
+	celCtx := protocel.GetCELContext(opts.GetContext())
 	for _, group := range groups {
 		rand.Shuffle(len(group), func(i, j int) {
 			group[i], group[j] = group[j], group[i]
 		})
-
-		celCtx := protocel.GetCELContext(opts.Context)
 
 		for _, stub := range group {
 			if stub.ActiveIf != nil {
@@ -48,20 +47,18 @@ func (f *stubFaker) SetDataOnMessage(pm protoreflect.ProtoMessage, opts fauxrpc.
 			if stub.Error != nil {
 				return stub.Error
 			}
-			if stub.Message == nil {
-				return nil
-
-			}
-			if stub.CELMessage != nil {
-				if err := stub.CELMessage.SetDataOnMessage(opts.Context, msg.Interface()); err != nil {
-					return err
+			if stub.Message != nil {
+				fields := desc.Fields()
+				for i := 0; i < fields.Len(); i++ {
+					field := fields.Get(i)
+					if stub.Message.ProtoReflect().Has(field) {
+						msg.Set(field, stub.Message.ProtoReflect().Get(field))
+					}
 				}
 			}
-			fields := desc.Fields()
-			for i := 0; i < fields.Len(); i++ {
-				field := fields.Get(i)
-				if stub.Message.ProtoReflect().Has(field) {
-					msg.Set(field, stub.Message.ProtoReflect().Get(field))
+			if stub.CELMessage != nil {
+				if err := stub.CELMessage.SetDataOnMessage(opts.GetContext(), msg.Interface()); err != nil {
+					return err
 				}
 			}
 			return nil

@@ -1,8 +1,6 @@
 package fauxrpc
 
 import (
-	"errors"
-
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -14,6 +12,7 @@ func NewMessage(md protoreflect.MessageDescriptor, opts GenOptions) (protoreflec
 	if opts.MaxDepth == 0 {
 		opts.MaxDepth = defaultMaxDepth
 	}
+	opts.GetContext()
 	msg := registry.NewMessage(md).Interface()
 	err := setDataOnMessage(msg, opts)
 	if err != nil {
@@ -36,16 +35,6 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) error {
 	}
 	msg := pm.ProtoReflect()
 	desc := msg.Descriptor()
-
-	if opts.Other != nil {
-		if err := opts.Other.SetDataOnMessage(pm, opts); err != nil {
-			if !errors.Is(err, ErrNotFaked) {
-				return err
-			}
-		} else {
-			return nil
-		}
-	}
 
 	oneOfFields := map[protoreflect.FullName]struct{}{}
 	oneOfs := desc.Oneofs()

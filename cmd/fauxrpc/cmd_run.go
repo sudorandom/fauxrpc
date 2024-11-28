@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -147,7 +148,7 @@ func (c *RunCmd) Run(globals *Globals) error {
 		eg.Go(server.ListenAndServe)
 	}
 
-	fmt.Println("Server started.")
+	slog.Info("Server started.")
 
 	return eg.Wait()
 }
@@ -163,7 +164,7 @@ func (f StubFile) ToRequest() (*stubsv1.AddStubsRequest, error) {
 			return nil, fmt.Errorf(`"target" is required for each stub; missing for stub %d`, i)
 		}
 		var contentsJSON string
-		if stub.Content == nil {
+		if stub.Content != nil {
 			b, err := json.Marshal(stub.Content)
 			if err != nil {
 				return nil, err
@@ -171,7 +172,7 @@ func (f StubFile) ToRequest() (*stubsv1.AddStubsRequest, error) {
 			contentsJSON = string(b)
 		}
 		var celContentsJSON string
-		if stub.CelContent == nil {
+		if stub.CelContent != nil {
 			b, err := json.Marshal(stub.CelContent)
 			if err != nil {
 				return nil, err
@@ -203,6 +204,7 @@ type StubFileEntry struct {
 
 func addStubsFromFile(h stubsv1connect.StubsServiceHandler, stubsPath string) error {
 	addStubFile := func(stubPath string) error {
+		slog.Debug("addStubsFromFile", "path", stubPath)
 		contents, err := os.ReadFile(stubPath)
 		if err != nil {
 			return fmt.Errorf("%s: %w", stubPath, err)
@@ -211,13 +213,13 @@ func addStubsFromFile(h stubsv1connect.StubsServiceHandler, stubsPath string) er
 		if filepath.Ext(stubPath) == ".jsonc" {
 			standardContents, err := standardizeJSON(contents)
 			if err != nil {
-				return fmt.Errorf("%s: %w", stubPath, err)
+				return fmt.Errorf("standardize.json: %s: %w", stubPath, err)
 			}
 			contents = standardContents
 		}
 		stubFile := StubFile{}
 		if err := json.Unmarshal(contents, &stubFile); err != nil {
-			return fmt.Errorf("%s: %w", stubPath, err)
+			return fmt.Errorf("json.Unmarshal: %s: %w", stubPath, err)
 		}
 
 		req, err := stubFile.ToRequest()

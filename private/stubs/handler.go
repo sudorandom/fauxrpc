@@ -82,11 +82,13 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 
 		switch t := stub.GetContent().(type) {
 		case *stubsv1.Stub_Json:
-			msg := registry.NewMessage(md).Interface()
-			if err := protojson.Unmarshal([]byte(t.Json), msg); err != nil {
-				return nil, err
+			if t.Json != "" {
+				msg := registry.NewMessage(md).Interface()
+				if err := protojson.Unmarshal([]byte(t.Json), msg); err != nil {
+					return nil, err
+				}
+				entry.Message = msg
 			}
-			entry.Message = msg
 		case *stubsv1.Stub_Proto:
 			msg := registry.NewMessage(md).Interface()
 			if err := proto.Unmarshal(t.Proto, msg); err != nil {
@@ -98,7 +100,7 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 		}
 
 		if stub.CelContentJson != "" {
-			celmsg, err := protocel.UnmarshalDynamicMessageJSON(md, []byte(stub.CelContentJson))
+			celmsg, err := protocel.UnmarshalDynamicMessageJSON(h.registry.Files(), md, []byte(stub.CelContentJson))
 			if err != nil {
 				return nil, err
 			}

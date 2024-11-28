@@ -9,27 +9,31 @@ import (
 
 type CELContext struct {
 	MethodDescriptor protoreflect.MethodDescriptor
-	Input            proto.Message
+	Req              proto.Message
 }
 
 func (c *CELContext) ToInput() map[string]any {
 	if c == nil {
 		return map[string]any{}
 	}
-	return map[string]any{
-		"req":       c.Input,
-		"service":   string(c.MethodDescriptor.Parent().FullName()),
-		"method":    string(c.MethodDescriptor.Name()),
-		"procedure": string(c.MethodDescriptor.FullName()),
+	m := map[string]any{
+		"req": c.Req,
 	}
+	if c.MethodDescriptor != nil {
+		m["service"] = string(c.MethodDescriptor.Parent().FullName())
+		m["method"] = string(c.MethodDescriptor.Name())
+		m["procedure"] = string(c.MethodDescriptor.FullName())
+	}
+	return m
 }
 
 type celCtxKeyType string
 
 const celCtxKey celCtxKeyType = "celCtx"
 
-func WithCELContext(ctx context.Context, celCtx CELContext) context.Context {
-	return context.WithValue(ctx, celCtx, &celCtx)
+func WithCELContext(ctx context.Context, celCtx *CELContext) context.Context {
+	ctx = context.WithValue(ctx, celCtxKey, celCtx)
+	return ctx
 }
 
 func GetCELContext(ctx context.Context) *CELContext {

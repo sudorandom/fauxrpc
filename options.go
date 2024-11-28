@@ -8,12 +8,18 @@ import (
 )
 
 type GenOptions struct {
-	Other    ProtoFaker
 	MaxDepth int
 	Faker    *gofakeit.Faker
 	Context  context.Context
 
 	extraFieldConstraints *validate.FieldConstraints
+}
+
+func (st GenOptions) GetContext() context.Context {
+	if st.Context == nil {
+		return context.Background()
+	}
+	return st.Context
 }
 
 func (st GenOptions) fake() *gofakeit.Faker {

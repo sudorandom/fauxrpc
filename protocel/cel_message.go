@@ -11,6 +11,7 @@ import (
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/reflect/protoregistry"
 )
 
 type CELMessage interface {
@@ -30,7 +31,11 @@ type celMessage struct {
 	mapsScalar        map[protoreflect.FieldDescriptor]map[cel.Program]cel.Program
 }
 
-func NewCELMessage(md protoreflect.MessageDescriptor, fields map[string]Node) (*celMessage, error) {
+func NewCELMessage(files *protoregistry.Files, md protoreflect.MessageDescriptor, fields map[string]Node) (*celMessage, error) {
+	env, err := newEnv(files)
+	if err != nil {
+		return nil, err
+	}
 	celFields := map[protoreflect.FieldDescriptor]cel.Program{}
 	nested := map[protoreflect.FieldDescriptor]*celMessage{}
 	repeatedMsg := map[protoreflect.FieldDescriptor][]*celMessage{}
@@ -45,7 +50,7 @@ func NewCELMessage(md protoreflect.MessageDescriptor, fields map[string]Node) (*
 		switch node.Kind() {
 		case CELKind:
 			celnode := node.(nodeCEL)
-			program, err := compileExpr(md, field, string(celnode))
+			program, err := compileExpr(env, field, string(celnode))
 			if err != nil {
 				return nil, err
 			}
@@ -56,7 +61,7 @@ func NewCELMessage(md protoreflect.MessageDescriptor, fields map[string]Node) (*
 				return nil, fmt.Errorf("field %s is expected to be a message but was %s", key, field.Kind())
 			}
 			messageNode := node.(nodeMessage)
-			nestedNode, err := NewCELMessage(field.Message(), messageNode)
+			nestedNode, err := NewCELMessage(files, field.Message(), messageNode)
 			if err != nil {
 				return nil, fmt.Errorf("%s: %w", key, err)
 			}
@@ -69,7 +74,7 @@ func NewCELMessage(md protoreflect.MessageDescriptor, fields map[string]Node) (*
 				repeated := node.(nodeRepeated)
 				for _, node := range repeated {
 					messageNode := node.(nodeMessage)
-					nestedNode, err := NewCELMessage(field.Message(), messageNode)
+					nestedNode, err := NewCELMessage(files, field.Message(), messageNode)
 					if err != nil {
 						return nil, fmt.Errorf("%s: %w", key, err)
 					}
@@ -79,7 +84,7 @@ func NewCELMessage(md protoreflect.MessageDescriptor, fields map[string]Node) (*
 				repeated := node.(nodeRepeated)
 				for _, node := range repeated {
 					celnode := node.(nodeCEL)
-					program, err := compileExpr(md, field, string(celnode))
+					program, err := compileExpr(env, field, string(celnode))
 					if err != nil {
 						return nil, err
 					}
@@ -96,14 +101,14 @@ func NewCELMessage(md protoreflect.MessageDescriptor, fields map[string]Node) (*
 				if k.Kind() != CELKind {
 					return nil, fmt.Errorf("key %s field for maps is expected to be a CEL expression but was %v", key, k.Kind())
 				}
-				keyProgram, err := compileExpr(md, field.MapKey(), string(k.(nodeCEL)))
+				keyProgram, err := compileExpr(env, field.MapKey(), string(k.(nodeCEL)))
 				if err != nil {
 					return nil, err
 				}
 
 				switch v.Kind() {
 				case CELKind:
-					valProgram, err := compileExpr(md, field.MapValue(), string(v.(nodeCEL)))
+					valProgram, err := compileExpr(env, field.MapValue(), string(v.(nodeCEL)))
 					if err != nil {
 						return nil, err
 					}
@@ -112,7 +117,7 @@ func NewCELMessage(md protoreflect.MessageDescriptor, fields map[string]Node) (*
 					}
 					mapsScalar[field][keyProgram] = valProgram
 				case MessageKind:
-					valNode, err := NewCELMessage(field.MapValue().Message(), v.(nodeMessage))
+					valNode, err := NewCELMessage(files, field.MapValue().Message(), v.(nodeMessage))
 					if err != nil {
 						return nil, fmt.Errorf("%s: %w", key, err)
 					}
@@ -158,18 +163,18 @@ func (d *celMessage) SetDataOnMessage(ctx context.Context, msg protoreflect.Prot
 		}
 		msg.ProtoReflect().Set(field, protoreflect.ValueOf(val))
 	}
-	for field, dynmsg := range d.nested {
+	for field, celmsg := range d.nested {
 		nestedMsg := registry.NewMessage(field.Message()).Interface()
-		if err := dynmsg.SetDataOnMessage(ctx, nestedMsg); err != nil {
+		if err := celmsg.SetDataOnMessage(ctx, nestedMsg); err != nil {
 			return err
 		}
 		msg.ProtoReflect().Set(field, protoreflect.ValueOfMessage(nestedMsg.ProtoReflect()))
 	}
-	for field, dynmsgs := range d.repeatedMsg {
+	for field, celmsgs := range d.repeatedMsg {
 		list := msg.ProtoReflect().NewField(field).List()
-		for _, dynmsg := range dynmsgs {
+		for _, celmsg := range celmsgs {
 			nestedMsg := registry.NewMessage(field.Message()).Interface()
-			if err := dynmsg.SetDataOnMessage(ctx, nestedMsg); err != nil {
+			if err := celmsg.SetDataOnMessage(ctx, nestedMsg); err != nil {
 				return err
 			}
 			list.Append(protoreflect.ValueOfMessage(nestedMsg.ProtoReflect()))
@@ -247,6 +252,10 @@ func fieldToCELTypes(md protoreflect.FieldDescriptor) []*types.Type {
 }
 
 func checkCelType(md protoreflect.FieldDescriptor, t *types.Type) error {
+	// dyn types are checked at runtime
+	if t == types.DynType {
+		return nil
+	}
 	validTypes := fieldToCELTypes(md)
 	if validTypes == nil {
 		return fmt.Errorf("unhandled kind: %v", md.Kind())
@@ -273,129 +282,7 @@ func getFieldFromName(fds protoreflect.FieldDescriptors, key string) protoreflec
 	return nil
 }
 
-func compileExpr(md protoreflect.MessageDescriptor, fd protoreflect.FieldDescriptor, expr string) (cel.Program, error) {
-	env, err := cel.NewEnv(
-		cel.Variable("req", cel.ObjectType(string(md.FullName()))),
-		cel.Variable("service", cel.StringType),
-		cel.Variable("method", cel.StringType),
-		cel.Variable("procedure", cel.StringType),
-		cel.Function("gen_bool",
-			cel.Overload("gen_bool_noargs", []*cel.Type{}, types.BoolType,
-				cel.FunctionBinding(func(values ...ref.Val) ref.Val {
-					return types.Bool(fauxrpc.Bool(fd, fauxrpc.GenOptions{}))
-				}),
-			),
-		),
-		cel.Function("gen_bytes",
-			cel.Overload("gen_bytes_noargs", []*cel.Type{}, types.BytesType,
-				cel.FunctionBinding(func(values ...ref.Val) ref.Val {
-					return types.Bytes(fauxrpc.Bytes(fd, fauxrpc.GenOptions{}))
-				}),
-			),
-		),
-		cel.Function("gen_enum",
-			cel.Overload("gen_enum_noargs", []*cel.Type{}, types.IntType,
-				cel.FunctionBinding(func(values ...ref.Val) ref.Val {
-					return types.Int(fauxrpc.Enum(fd, fauxrpc.GenOptions{}))
-				}),
-			),
-		),
-		cel.Function("gen_fixed32",
-			cel.Overload("gen_fixed32_noargs", []*cel.Type{}, types.UintType,
-				cel.FunctionBinding(func(values ...ref.Val) ref.Val {
-					return types.Uint(fauxrpc.Fixed32(fd, fauxrpc.GenOptions{}))
-				}),
-			),
-		),
-		cel.Function("gen_fixed64",
-			cel.Overload("gen_fixed64_noargs", []*cel.Type{}, types.UintType,
-				cel.FunctionBinding(func(values ...ref.Val) ref.Val {
-					return types.Uint(fauxrpc.Fixed64(fd, fauxrpc.GenOptions{}))
-				}),
-			),
-		),
-		cel.Function("gen_float32",
-			cel.Overload("gen_float32_noargs", []*cel.Type{}, types.DoubleType,
-				cel.FunctionBinding(func(values ...ref.Val) ref.Val {
-					return types.Double(fauxrpc.Float32(fd, fauxrpc.GenOptions{}))
-				}),
-			),
-		),
-		cel.Function("gen_float64",
-			cel.Overload("gen_float64_noargs", []*cel.Type{}, types.DoubleType,
-				cel.FunctionBinding(func(values ...ref.Val) ref.Val {
-					return types.Double(fauxrpc.Float64(fd, fauxrpc.GenOptions{}))
-				}),
-			),
-		),
-		cel.Function("gen_int32",
-			cel.Overload("gen_int32_noargs", []*cel.Type{}, types.IntType,
-				cel.FunctionBinding(func(values ...ref.Val) ref.Val {
-					return types.Int(fauxrpc.Int32(fd, fauxrpc.GenOptions{}))
-				}),
-			),
-		),
-		cel.Function("gen_int64",
-			cel.Overload("gen_int64_noargs", []*cel.Type{}, types.IntType,
-				cel.FunctionBinding(func(values ...ref.Val) ref.Val {
-					return types.Int(fauxrpc.Int64(fd, fauxrpc.GenOptions{}))
-				}),
-			),
-		),
-		cel.Function("gen_sfixed32",
-			cel.Overload("gen_sfixed32_noargs", []*cel.Type{}, types.IntType,
-				cel.FunctionBinding(func(values ...ref.Val) ref.Val {
-					return types.Int(fauxrpc.SFixed32(fd, fauxrpc.GenOptions{}))
-				}),
-			),
-		),
-		cel.Function("gen_sfixed64",
-			cel.Overload("gen_sfixed64_noargs", []*cel.Type{}, types.IntType,
-				cel.FunctionBinding(func(values ...ref.Val) ref.Val {
-					return types.Int(fauxrpc.SFixed64(fd, fauxrpc.GenOptions{}))
-				}),
-			),
-		),
-		cel.Function("gen_sint32",
-			cel.Overload("gen_sint32_noargs", []*cel.Type{}, types.IntType,
-				cel.FunctionBinding(func(values ...ref.Val) ref.Val {
-					return types.Int(fauxrpc.SInt32(fd, fauxrpc.GenOptions{}))
-				}),
-			),
-		),
-		cel.Function("gen_sint64",
-			cel.Overload("gen_sint64_noargs", []*cel.Type{}, types.IntType,
-				cel.FunctionBinding(func(values ...ref.Val) ref.Val {
-					return types.Int(fauxrpc.SInt64(fd, fauxrpc.GenOptions{}))
-				}),
-			),
-		),
-		cel.Function("gen_string",
-			cel.Overload("gen_string_noargs", []*cel.Type{}, types.StringType,
-				cel.FunctionBinding(func(values ...ref.Val) ref.Val {
-					return types.String(fauxrpc.String(fd, fauxrpc.GenOptions{}))
-				}),
-			),
-		),
-		cel.Function("gen_uint32",
-			cel.Overload("gen_uint32_noargs", []*cel.Type{}, types.UintType,
-				cel.FunctionBinding(func(values ...ref.Val) ref.Val {
-					return types.Uint(fauxrpc.UInt32(fd, fauxrpc.GenOptions{}))
-				}),
-			),
-		),
-		cel.Function("gen_uint64",
-			cel.Overload("gen_uint64_noargs", []*cel.Type{}, types.UintType,
-				cel.FunctionBinding(func(values ...ref.Val) ref.Val {
-					return types.Uint(fauxrpc.UInt64(fd, fauxrpc.GenOptions{}))
-				}),
-			),
-		),
-	)
-	if err != nil {
-		return nil, err
-	}
-
+func compileExpr(env *cel.Env, fd protoreflect.FieldDescriptor, expr string) (cel.Program, error) {
 	ast, issues := env.Compile(expr)
 	if issues != nil {
 		return nil, issues.Err()
@@ -411,6 +298,7 @@ func compileExpr(md protoreflect.MessageDescriptor, fd protoreflect.FieldDescrip
 }
 
 func evalCEL(field protoreflect.FieldDescriptor, program cel.Program, input map[string]any) (any, error) {
+	input["field"] = string(field.FullName())
 	val, _, err := program.Eval(input)
 	if err != nil {
 		return nil, err
@@ -431,4 +319,271 @@ func evalCEL(field protoreflect.FieldDescriptor, program cel.Program, input map[
 		}
 	}
 	return anyVal, nil
+}
+
+func newEnv(files *protoregistry.Files) (*cel.Env, error) {
+	return cel.NewEnv(
+		cel.TypeDescs(files),
+		cel.Variable("req", cel.DynType),
+		cel.Variable("field", cel.StringType),
+		cel.Variable("service", cel.StringType),
+		cel.Variable("method", cel.StringType),
+		cel.Variable("procedure", cel.StringType),
+		cel.Function("gen_bool",
+			cel.Overload("gen_bool_one_arg", []*cel.Type{cel.StringType}, types.BoolType,
+				cel.UnaryBinding(func(fieldName ref.Val) ref.Val {
+					nameStr := fieldName.Value().(string)
+					desc, err := files.FindDescriptorByName(protoreflect.FullName(nameStr))
+					if err != nil {
+						return types.NewErr(fmt.Sprintf("no descriptor found named '%s'", nameStr))
+					}
+					fd, ok := desc.(protoreflect.FieldDescriptor)
+					if !ok {
+						return types.NewErr(fmt.Sprintf("expected a field descriptor, got: '%T'", desc))
+					}
+					return types.Bool(fauxrpc.Bool(fd, fauxrpc.GenOptions{}))
+				}),
+			),
+		),
+		cel.Function("gen_bytes",
+			cel.Overload("gen_bytes_one_arg", []*cel.Type{cel.StringType}, types.BytesType,
+				cel.UnaryBinding(func(fieldName ref.Val) ref.Val {
+					nameStr := fieldName.Value().(string)
+					desc, err := files.FindDescriptorByName(protoreflect.FullName(nameStr))
+					if err != nil {
+						return types.NewErr(fmt.Sprintf("no descriptor found named '%s'", nameStr))
+					}
+					fd, ok := desc.(protoreflect.FieldDescriptor)
+					if !ok {
+						return types.NewErr(fmt.Sprintf("expected a field descriptor, got: '%T'", desc))
+					}
+					return types.Bytes(fauxrpc.Bytes(fd, fauxrpc.GenOptions{}))
+				}),
+			),
+		),
+		cel.Function("gen_enum",
+			cel.Overload("gen_enum_one_arg", []*cel.Type{cel.StringType}, types.IntType,
+				cel.UnaryBinding(func(fieldName ref.Val) ref.Val {
+					nameStr := fieldName.Value().(string)
+					desc, err := files.FindDescriptorByName(protoreflect.FullName(nameStr))
+					if err != nil {
+						return types.NewErr(fmt.Sprintf("no descriptor found named '%s'", nameStr))
+					}
+					fd, ok := desc.(protoreflect.FieldDescriptor)
+					if !ok {
+						return types.NewErr(fmt.Sprintf("expected a field descriptor, got: '%T'", desc))
+					}
+					return types.Int(fauxrpc.Enum(fd, fauxrpc.GenOptions{}))
+				}),
+			),
+		),
+		cel.Function("gen_fixed32",
+			cel.Overload("gen_fixed32_one_arg", []*cel.Type{cel.StringType}, types.UintType,
+				cel.UnaryBinding(func(fieldName ref.Val) ref.Val {
+					nameStr := fieldName.Value().(string)
+					desc, err := files.FindDescriptorByName(protoreflect.FullName(nameStr))
+					if err != nil {
+						return types.NewErr(fmt.Sprintf("no descriptor found named '%s'", nameStr))
+					}
+					fd, ok := desc.(protoreflect.FieldDescriptor)
+					if !ok {
+						return types.NewErr(fmt.Sprintf("expected a field descriptor, got: '%T'", desc))
+					}
+					return types.Uint(fauxrpc.Fixed32(fd, fauxrpc.GenOptions{}))
+				}),
+			),
+		),
+		cel.Function("gen_fixed64",
+			cel.Overload("gen_fixed64_one_arg", []*cel.Type{cel.StringType}, types.UintType,
+				cel.UnaryBinding(func(fieldName ref.Val) ref.Val {
+					nameStr := fieldName.Value().(string)
+					desc, err := files.FindDescriptorByName(protoreflect.FullName(nameStr))
+					if err != nil {
+						return types.NewErr(fmt.Sprintf("no descriptor found named '%s'", nameStr))
+					}
+					fd, ok := desc.(protoreflect.FieldDescriptor)
+					if !ok {
+						return types.NewErr(fmt.Sprintf("expected a field descriptor, got: '%T'", desc))
+					}
+					return types.Uint(fauxrpc.Fixed64(fd, fauxrpc.GenOptions{}))
+				}),
+			),
+		),
+		cel.Function("gen_float32",
+			cel.Overload("gen_float32_one_arg", []*cel.Type{cel.StringType}, types.DoubleType,
+				cel.UnaryBinding(func(fieldName ref.Val) ref.Val {
+					nameStr := fieldName.Value().(string)
+					desc, err := files.FindDescriptorByName(protoreflect.FullName(nameStr))
+					if err != nil {
+						return types.NewErr(fmt.Sprintf("no descriptor found named '%s'", nameStr))
+					}
+					fd, ok := desc.(protoreflect.FieldDescriptor)
+					if !ok {
+						return types.NewErr(fmt.Sprintf("expected a field descriptor, got: '%T'", desc))
+					}
+					return types.Double(fauxrpc.Float32(fd, fauxrpc.GenOptions{}))
+				}),
+			),
+		),
+		cel.Function("gen_float64",
+			cel.Overload("gen_float64_one_arg", []*cel.Type{cel.StringType}, types.DoubleType,
+				cel.UnaryBinding(func(fieldName ref.Val) ref.Val {
+					nameStr := fieldName.Value().(string)
+					desc, err := files.FindDescriptorByName(protoreflect.FullName(nameStr))
+					if err != nil {
+						return types.NewErr(fmt.Sprintf("no descriptor found named '%s'", nameStr))
+					}
+					fd, ok := desc.(protoreflect.FieldDescriptor)
+					if !ok {
+						return types.NewErr(fmt.Sprintf("expected a field descriptor, got: '%T'", desc))
+					}
+					return types.Double(fauxrpc.Float64(fd, fauxrpc.GenOptions{}))
+				}),
+			),
+		),
+		cel.Function("gen_int32",
+			cel.Overload("gen_int32_one_arg", []*cel.Type{cel.StringType}, types.IntType,
+				cel.UnaryBinding(func(fieldName ref.Val) ref.Val {
+					nameStr := fieldName.Value().(string)
+					desc, err := files.FindDescriptorByName(protoreflect.FullName(nameStr))
+					if err != nil {
+						return types.NewErr(fmt.Sprintf("no descriptor found named '%s'", nameStr))
+					}
+					fd, ok := desc.(protoreflect.FieldDescriptor)
+					if !ok {
+						return types.NewErr(fmt.Sprintf("expected a field descriptor, got: '%T'", desc))
+					}
+					return types.Int(fauxrpc.Int32(fd, fauxrpc.GenOptions{}))
+				}),
+			),
+		),
+		cel.Function("gen_int64",
+			cel.Overload("gen_int64_one_arg", []*cel.Type{cel.StringType}, types.IntType,
+				cel.UnaryBinding(func(fieldName ref.Val) ref.Val {
+					nameStr := fieldName.Value().(string)
+					desc, err := files.FindDescriptorByName(protoreflect.FullName(nameStr))
+					if err != nil {
+						return types.NewErr(fmt.Sprintf("no descriptor found named '%s'", nameStr))
+					}
+					fd, ok := desc.(protoreflect.FieldDescriptor)
+					if !ok {
+						return types.NewErr(fmt.Sprintf("expected a field descriptor, got: '%T'", desc))
+					}
+					return types.Int(fauxrpc.Int64(fd, fauxrpc.GenOptions{}))
+				}),
+			),
+		),
+		cel.Function("gen_sfixed32",
+			cel.Overload("gen_sfixed32_one_arg", []*cel.Type{cel.StringType}, types.IntType,
+				cel.UnaryBinding(func(fieldName ref.Val) ref.Val {
+					nameStr := fieldName.Value().(string)
+					desc, err := files.FindDescriptorByName(protoreflect.FullName(nameStr))
+					if err != nil {
+						return types.NewErr(fmt.Sprintf("no descriptor found named '%s'", nameStr))
+					}
+					fd, ok := desc.(protoreflect.FieldDescriptor)
+					if !ok {
+						return types.NewErr(fmt.Sprintf("expected a field descriptor, got: '%T'", desc))
+					}
+					return types.Int(fauxrpc.SFixed32(fd, fauxrpc.GenOptions{}))
+				}),
+			),
+		),
+		cel.Function("gen_sfixed64",
+			cel.Overload("gen_sfixed64_one_arg", []*cel.Type{cel.StringType}, types.IntType,
+				cel.UnaryBinding(func(fieldName ref.Val) ref.Val {
+					nameStr := fieldName.Value().(string)
+					desc, err := files.FindDescriptorByName(protoreflect.FullName(nameStr))
+					if err != nil {
+						return types.NewErr(fmt.Sprintf("no descriptor found named '%s'", nameStr))
+					}
+					fd, ok := desc.(protoreflect.FieldDescriptor)
+					if !ok {
+						return types.NewErr(fmt.Sprintf("expected a field descriptor, got: '%T'", desc))
+					}
+					return types.Int(fauxrpc.SFixed64(fd, fauxrpc.GenOptions{}))
+				}),
+			),
+		),
+		cel.Function("gen_sint32",
+			cel.Overload("gen_sint32_one_arg", []*cel.Type{cel.StringType}, types.IntType,
+				cel.UnaryBinding(func(fieldName ref.Val) ref.Val {
+					nameStr := fieldName.Value().(string)
+					desc, err := files.FindDescriptorByName(protoreflect.FullName(nameStr))
+					if err != nil {
+						return types.NewErr(fmt.Sprintf("no descriptor found named '%s'", nameStr))
+					}
+					fd, ok := desc.(protoreflect.FieldDescriptor)
+					if !ok {
+						return types.NewErr(fmt.Sprintf("expected a field descriptor, got: '%T'", desc))
+					}
+					return types.Int(fauxrpc.SInt32(fd, fauxrpc.GenOptions{}))
+				}),
+			),
+		),
+		cel.Function("gen_sint64",
+			cel.Overload("gen_sint64_one_arg", []*cel.Type{cel.StringType}, types.IntType,
+				cel.UnaryBinding(func(fieldName ref.Val) ref.Val {
+					nameStr := fieldName.Value().(string)
+					desc, err := files.FindDescriptorByName(protoreflect.FullName(nameStr))
+					if err != nil {
+						return types.NewErr(fmt.Sprintf("no descriptor found named '%s'", nameStr))
+					}
+					fd, ok := desc.(protoreflect.FieldDescriptor)
+					if !ok {
+						return types.NewErr(fmt.Sprintf("expected a field descriptor, got: '%T'", desc))
+					}
+					return types.Int(fauxrpc.SInt64(fd, fauxrpc.GenOptions{}))
+				}),
+			),
+		),
+		cel.Function("gen_string",
+			cel.Overload("gen_string_one_arg", []*cel.Type{cel.StringType}, types.StringType,
+				cel.UnaryBinding(func(fieldName ref.Val) ref.Val {
+					nameStr := fieldName.Value().(string)
+					desc, err := files.FindDescriptorByName(protoreflect.FullName(nameStr))
+					if err != nil {
+						return types.NewErr(fmt.Sprintf("no descriptor found named '%s'", nameStr))
+					}
+					fd, ok := desc.(protoreflect.FieldDescriptor)
+					if !ok {
+						return types.NewErr(fmt.Sprintf("expected a field descriptor, got: '%T'", desc))
+					}
+					return types.String(fauxrpc.String(fd, fauxrpc.GenOptions{}))
+				}),
+			),
+		),
+		cel.Function("gen_uint32",
+			cel.Overload("gen_uint32_one_arg", []*cel.Type{cel.StringType}, types.UintType,
+				cel.UnaryBinding(func(fieldName ref.Val) ref.Val {
+					nameStr := fieldName.Value().(string)
+					desc, err := files.FindDescriptorByName(protoreflect.FullName(nameStr))
+					if err != nil {
+						return types.NewErr(fmt.Sprintf("no descriptor found named '%s'", nameStr))
+					}
+					fd, ok := desc.(protoreflect.FieldDescriptor)
+					if !ok {
+						return types.NewErr(fmt.Sprintf("expected a field descriptor, got: '%T'", desc))
+					}
+					return types.Uint(fauxrpc.UInt32(fd, fauxrpc.GenOptions{}))
+				}),
+			),
+		),
+		cel.Function("gen_uint64",
+			cel.Overload("gen_uint64_one_arg", []*cel.Type{cel.StringType}, types.UintType,
+				cel.UnaryBinding(func(fieldName ref.Val) ref.Val {
+					nameStr := fieldName.Value().(string)
+					desc, err := files.FindDescriptorByName(protoreflect.FullName(nameStr))
+					if err != nil {
+						return types.NewErr(fmt.Sprintf("no descriptor found named '%s'", nameStr))
+					}
+					fd, ok := desc.(protoreflect.FieldDescriptor)
+					if !ok {
+						return types.NewErr(fmt.Sprintf("expected a field descriptor, got: '%T'", desc))
+					}
+					return types.Uint(fauxrpc.UInt64(fd, fauxrpc.GenOptions{}))
+				}),
+			),
+		),
+	)
 }

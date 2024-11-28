@@ -10,6 +10,7 @@ import (
 	"connectrpc.com/vanguard"
 	"github.com/MadAppGang/httplog"
 	"github.com/bufbuild/protovalidate-go"
+	"github.com/sudorandom/fauxrpc"
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/private/stubs"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -96,9 +97,15 @@ func (s *server) rebuildHandlers() error {
 		}
 		validate = v
 	}
+
+	faker := fauxrpc.NewMultiFaker([]fauxrpc.ProtoFaker{
+		stubs.NewStubFaker(s.StubDatabase, s.opts.OnlyStubs),
+		fauxrpc.NewFauxFaker(),
+	})
+
 	s.ServiceRegistry.ForEachService(func(sd protoreflect.ServiceDescriptor) {
 		vgservice := vanguard.NewServiceWithSchema(
-			sd, NewHandler(sd, s.StubDatabase, validate, s.opts.OnlyStubs),
+			sd, NewHandler(sd, faker, validate),
 			vanguard.WithTargetProtocols(vanguard.ProtocolGRPC),
 			vanguard.WithTargetCodecs(vanguard.CodecProto))
 		vgservices = append(vgservices, vgservice)
