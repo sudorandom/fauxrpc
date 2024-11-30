@@ -113,9 +113,12 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 					Req:              input,
 				}),
 			}); err != nil {
-				var statusErr *stubs.StatusError
-				if errors.As(err, &statusErr) {
-					return grpcStatusFromError(statusErr.StubsError).Err()
+				var stubErr *stubs.StatusError
+				switch {
+				case errors.Is(err, stubs.ErrNoMatchingStubs):
+					return status.New(codes.NotFound, err.Error()).Err()
+				case errors.As(err, &stubErr):
+					return grpcStatusFromError(stubErr.StubsError).Err()
 				}
 				return status.New(codes.Internal, err.Error()).Err()
 			}

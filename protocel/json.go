@@ -36,6 +36,9 @@ func jsonToMessage(md protoreflect.MessageDescriptor, m map[string]any) (nodeMes
 		if err != nil {
 			return nil, err
 		}
+		if val == nil {
+			continue
+		}
 		fields[k] = val
 	}
 	return Message(fields), nil
@@ -117,6 +120,8 @@ func jsonToNode(fd protoreflect.FieldDescriptor, ival any) (Node, error) {
 			return nil, fmt.Errorf("%s: wrong type, expected a list but was: %s", fd.FullName(), fd.Kind())
 		}
 		return jsonToRepeated(fd, tt)
+	case nil:
+		return nil, nil
 	default:
 		return nil, fmt.Errorf("unhandled type: %T", ival)
 	}

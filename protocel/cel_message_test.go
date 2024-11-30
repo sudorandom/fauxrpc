@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	testv1 "github.com/sudorandom/fauxrpc/proto/gen/test/v1"
 	"github.com/sudorandom/fauxrpc/protocel"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 )
@@ -346,6 +347,40 @@ func TestDynamicStructNewMessage(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Equal(t, "hello!", msg.ProtoReflect().Get(md.Fields().ByTextName("sentence")).Interface())
+	})
+
+	t.Run("with nested nil msg", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
+		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
+		ds, err := protocel.NewCELMessage(files, md, map[string]protocel.Node{
+			"msg_value": protocel.Message(map[string]protocel.Node{
+				"string_value": protocel.CEL(`req.msg_value.string_value`),
+			}),
+		})
+		require.NoError(t, err)
+
+		msg, err := ds.NewMessage(protocel.WithCELContext(
+			context.Background(),
+			&protocel.CELContext{Req: &testv1.AllTypes{}}))
+		require.NoError(t, err)
+		assert.True(t, proto.Equal(&testv1.AllTypes{MsgValue: &testv1.AllTypes{}}, msg))
+	})
+
+	t.Run("with no msg", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
+		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
+		ds, err := protocel.NewCELMessage(files, md, map[string]protocel.Node{
+			"msg_value": protocel.Message(map[string]protocel.Node{
+				"string_value": protocel.CEL(`req.msg_value.string_value`),
+			}),
+		})
+		require.NoError(t, err)
+
+		msg, err := ds.NewMessage(protocel.WithCELContext(context.Background(), &protocel.CELContext{}))
+		assert.ErrorContains(t, err, "no such key: msg_value")
+		assert.Nil(t, msg)
 	})
 }
 

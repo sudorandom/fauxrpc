@@ -251,6 +251,10 @@ func addServicesFromDescriptorsBytes(registry ServiceRegistry, fdp *descriptorpb
 	return registry.AddFile(fd)
 }
 
+func looksLikeBSR(path string) bool {
+	return strings.HasPrefix(path, "buf.build/")
+}
+
 // AddServicesFromBSR adds services from the BSR. Not yet supported
 func AddServicesFromBSR(registry ServiceRegistry, module string) error {
 	slog.Debug("AddServicesFromBSR", slog.String("module", module))

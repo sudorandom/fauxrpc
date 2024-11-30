@@ -67,7 +67,7 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 				entry.ActiveIf = r
 			}
 
-			name = t.Output().FullName()
+			// name = t.Output().FullName()
 			md = t.Output()
 		case protoreflect.MessageDescriptor:
 			md = t
@@ -100,6 +100,7 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 		}
 
 		if stub.CelContentJson != "" {
+			fmt.Println("stub.CelContentJson", stub.CelContentJson)
 			celmsg, err := protocel.UnmarshalDynamicMessageJSON(h.registry.Files(), md, []byte(stub.CelContentJson))
 			if err != nil {
 				return nil, err

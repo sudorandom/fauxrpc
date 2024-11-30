@@ -161,6 +161,7 @@ func (d *celMessage) SetDataOnMessage(ctx context.Context, msg protoreflect.Prot
 		if err != nil {
 			return err
 		}
+		// TODO: handle setting every field from a dynamic message
 		msg.ProtoReflect().Set(field, protoreflect.ValueOf(val))
 	}
 	for field, celmsg := range d.nested {
