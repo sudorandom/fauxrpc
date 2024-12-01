@@ -161,8 +161,26 @@ func (d *celMessage) SetDataOnMessage(ctx context.Context, msg protoreflect.Prot
 		if err != nil {
 			return err
 		}
-		// TODO: handle setting every field from a dynamic message
-		msg.ProtoReflect().Set(field, protoreflect.ValueOf(val))
+		prVal := protoreflect.ValueOf(val)
+		switch tt := val.(type) {
+		case protoreflect.Map:
+			if !tt.IsValid() {
+				continue
+			}
+			msg.ProtoReflect().Set(field, prVal)
+		case protoreflect.List:
+			if !tt.IsValid() {
+				continue
+			}
+			msg.ProtoReflect().Set(field, prVal)
+		case protoreflect.Value:
+			if !tt.IsValid() {
+				continue
+			}
+			msg.ProtoReflect().Set(field, tt)
+		default:
+			msg.ProtoReflect().Set(field, prVal)
+		}
 	}
 	for field, celmsg := range d.nested {
 		nestedMsg := registry.NewMessage(field.Message()).Interface()

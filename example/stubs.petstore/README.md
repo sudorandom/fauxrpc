@@ -17,3 +17,9 @@ fauxrpc run --schema petstore.binpb --only-stubs --stubs=example/stubs.petstore/
 ```shell
 $ buf curl --http2-prior-knowledge -d '{"pet_id": "1"}' http://127.0.0.1:6660/io.swagger.petstore.v2.PetService/GetPetByID
 ```
+
+Using the `google.api.http` annotations:
+```shell
+curl http://127.0.0.1:6660/pet/1
+curl http://127.0.0.1:6660/pet/2
+```

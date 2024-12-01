@@ -1,3 +1,16 @@
 {
-    
+    "stubs": [
+        {
+            "id": "update-pet",
+            "target": "io.swagger.petstore.v2.PetService/UpdatePet",
+            "cel_content": {
+                "id": "req.id",
+                "category": "req.category",
+                "name": "req.name",
+                "photo_urls": "req.photo_urls",
+                "tags": "req.tags",
+                "status": "req.status"
+            }
+        }
+    ]
 }

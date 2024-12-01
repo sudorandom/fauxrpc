@@ -4,12 +4,12 @@
             "id": "add-pet",
             "target": "io.swagger.petstore.v2.PetService/AddPet",
             "cel_content": {
-                "id": "req.id"
-                // "category": "req.category",
-                // "name": "req.name",
-                // "photo_urls": "req.photo_urls",
-                // "tags": "req.tags",
-                // "status": "req.status"
+                "id": "req.id",
+                "category": "req.category",
+                "name": "req.name",
+                "photo_urls": "req.photo_urls",
+                "tags": "req.tags",
+                "status": "req.status"
             }
         }
     ]
