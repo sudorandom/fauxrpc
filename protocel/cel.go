@@ -69,6 +69,12 @@ func (p *protocel) SetDataOnMessage(ctx context.Context, pmsg protoreflect.Proto
 	case map[ref.Val]ref.Val:
 		return p.setFieldsOnMsg(msg, tval)
 	case proto.Message:
+		outMsg := tval.ProtoReflect()
+		if msg.Descriptor() != outMsg.Descriptor() {
+			got, want := outMsg.Descriptor().FullName(), outMsg.Descriptor().FullName()
+			return fmt.Errorf("descriptor mismatch: %v != %v", got, want)
+		}
+
 		proto.Merge(pmsg, tval)
 		return nil
 	default:
@@ -168,6 +174,8 @@ func (p *protocel) celToValue(fd protoreflect.FieldDescriptor, val any) (protore
 			return protoreflect.ValueOf(nil), err
 		}
 		return protoreflect.ValueOfMessage(nested), nil
+	case proto.Message:
+		return protoreflect.ValueOfMessage(tv.ProtoReflect()), nil
 	default:
 		switch fd.Kind() {
 		case protoreflect.EnumKind:

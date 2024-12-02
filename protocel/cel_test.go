@@ -359,4 +359,44 @@ func TestProtocel(t *testing.T) {
 
 		assert.Equal(t, "hello!", msg.ProtoReflect().Get(md.Fields().ByTextName("sentence")).Interface())
 	})
+
+	t.Run("using req at root type mismatch", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(elizav1.File_connectrpc_eliza_v1_eliza_proto))
+		md := elizav1.File_connectrpc_eliza_v1_eliza_proto.Messages().ByName("ConverseResponse")
+		ds, err := protocel.New(files, md, `req`)
+		require.NoError(t, err)
+
+		_, err = ds.NewMessage(protocel.WithCELContext(
+			context.Background(),
+			&protocel.CELContext{
+				Req: &elizav1.ConverseRequest{
+					Sentence: "hello!",
+				},
+			}))
+		assert.ErrorContains(t, err, "descriptor mismatch: connectrpc.eliza.v1.ConverseRequest != connectrpc.eliza.v1.ConverseRequest")
+	})
+
+	t.Run("using req msg", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
+		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
+		ds, err := protocel.New(files, md, `{"msg_value": req.msg_value}`)
+		require.NoError(t, err)
+
+		msg, err := ds.NewMessage(protocel.WithCELContext(
+			context.Background(),
+			&protocel.CELContext{
+				Req: &testv1.AllTypes{
+					MsgValue: &testv1.AllTypes{
+						StringValue: "Hello World!",
+					},
+				},
+			}))
+		require.NoError(t, err)
+
+		assertFieldIsSet(t, md, msg.ProtoReflect(), "msgValue")
+		nested := msg.ProtoReflect().Get(md.Fields().ByTextName("msg_value")).Message()
+		assert.Equal(t, "Hello World!", nested.Get(md.Fields().ByTextName("string_value")).Interface())
+	})
 }
