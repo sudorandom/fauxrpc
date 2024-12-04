@@ -20,6 +20,7 @@ import (
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"golang.org/x/sync/errgroup"
+	"gopkg.in/yaml.v3"
 
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/private/server"
@@ -184,43 +185,54 @@ func (f StubFile) ToRequest() (*stubsv1.AddStubsRequest, error) {
 }
 
 type StubFileEntry struct {
-	ID           string `json:"id"`
-	Target       string `json:"target"`
-	Content      any    `json:"content,omitempty"`
-	CelContent   string `json:"cel_content,omitempty"`
-	ActiveIf     string `json:"active_if,omitempty"`
-	ErrorCode    int    `json:"error_code,omitempty"`
-	ErrorMessage string `json:"error_message,omitempty"`
-	Priority     int32  `json:"priority,omitempty"`
+	ID           string `json:"id" yaml:"id"`
+	Target       string `json:"target" yaml:"target"`
+	Content      any    `json:"content,omitempty" yaml:"content"`
+	CelContent   string `json:"cel_content,omitempty" yaml:"cel_content"`
+	ActiveIf     string `json:"active_if,omitempty" yaml:"active_if"`
+	ErrorCode    int    `json:"error_code,omitempty" yaml:"error_code"`
+	ErrorMessage string `json:"error_message,omitempty" yaml:"error_message"`
+	Priority     int32  `json:"priority,omitempty" yaml:"priority"`
 }
 
 func addStubsFromFile(h stubsv1connect.StubsServiceHandler, stubsPath string) error {
-	addStubFile := func(stubPath string) error {
-		slog.Debug("addStubsFromFile", "path", stubPath)
-		contents, err := os.ReadFile(stubPath)
-		if err != nil {
-			return fmt.Errorf("%s: %w", stubPath, err)
-		}
-		// handle .jsonc format
-		if filepath.Ext(stubPath) == ".jsonc" {
-			standardContents, err := standardizeJSON(contents)
-			if err != nil {
-				return fmt.Errorf("standardize.json: %s: %w", stubPath, err)
-			}
-			contents = standardContents
-		}
+	handleFile := func(path string) error {
+		slog.Debug("addStubsFromFile", "path", path)
 		stubFile := StubFile{}
-		if err := json.Unmarshal(contents, &stubFile); err != nil {
-			return fmt.Errorf("json.Unmarshal: %s: %w", stubPath, err)
+		switch filepath.Ext(path) {
+		case ".json", ".jsonc":
+			contents, err := os.ReadFile(path)
+			if err != nil {
+				return fmt.Errorf("%s: %w", path, err)
+			}
+			// handle .jsonc format
+			if filepath.Ext(path) == ".jsonc" {
+				standardContents, err := standardizeJSON(contents)
+				if err != nil {
+					return fmt.Errorf("standardize.json: %s: %w", path, err)
+				}
+				contents = standardContents
+			}
+			if err := json.Unmarshal(contents, &stubFile); err != nil {
+				return fmt.Errorf("json.Unmarshal: %s: %w", path, err)
+			}
+		case ".yaml":
+			contents, err := os.ReadFile(path)
+			if err != nil {
+				return fmt.Errorf("%s: %w", path, err)
+			}
+			if err := yaml.Unmarshal(contents, &stubFile); err != nil {
+				return fmt.Errorf("%s: %w", path, err)
+			}
 		}
 
 		req, err := stubFile.ToRequest()
 		if err != nil {
-			return fmt.Errorf("%s: %w", stubPath, err)
+			return fmt.Errorf("%s: %w", path, err)
 		}
 
 		if _, err := h.AddStubs(context.Background(), connect.NewRequest(req)); err != nil {
-			return fmt.Errorf("%s: %w", stubPath, err)
+			return fmt.Errorf("%s: %w", path, err)
 		}
 		return nil
 	}
@@ -235,14 +247,10 @@ func addStubsFromFile(h stubsv1connect.StubsServiceHandler, stubsPath string) er
 			if err != nil {
 				return err
 			}
-			switch filepath.Ext(path) {
-			case ".json", ".jsonc":
-				return addStubFile(filepath.Join(stubsPath, path))
-			}
-			return nil
+			return handleFile(filepath.Join(stubsPath, path))
 		})
 	case mode.IsRegular():
-		return addStubFile(stubsPath)
+		return handleFile(stubsPath)
 	}
 	return nil
 }

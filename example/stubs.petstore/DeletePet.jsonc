@@ -1,9 +1,0 @@
-{
-    "stubs": [
-        {
-            "id": "delete-pet-empty",
-            "target": "io.swagger.petstore.v2.PetService/DeletePet",
-            "content": {}
-        }
-    ]
-}

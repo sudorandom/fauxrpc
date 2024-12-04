@@ -1,9 +1,0 @@
-{
-    "stubs": [
-        {
-            "id": "add-pet",
-            "target": "io.swagger.petstore.v2.PetService/AddPet",
-            "cel_content": "req"
-        }
-    ]
-}

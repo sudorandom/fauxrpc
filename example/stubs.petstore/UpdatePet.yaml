@@ -1,0 +1,5 @@
+---
+stubs:
+- id: update-pet
+  target: io.swagger.petstore.v2.PetService/UpdatePet
+  cel_content: req
