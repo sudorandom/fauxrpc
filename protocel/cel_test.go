@@ -96,40 +96,84 @@ func TestProtocel(t *testing.T) {
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
 		ds, err := protocel.New(files, md, `
 		{
-			"double_value": gen_float64("test.v1.AllTypes.double_value"),
-			"float_value": gen_float32("test.v1.AllTypes.float_value"),
-			"int32_value": gen_int32("test.v1.AllTypes.int32_value"),
-			"int64_value": gen_int64("test.v1.AllTypes.int64_value"),
-			"uint32_value": gen_uint32("test.v1.AllTypes.uint32_value"),
-			"uint64_value": gen_uint64("test.v1.AllTypes.uint64_value"),
-			"sint32_value": gen_sint32("test.v1.AllTypes.sint32_value"),
-			"sint64_value": gen_sint64("test.v1.AllTypes.sint64_value"),
-			"fixed32_value": gen_fixed32("test.v1.AllTypes.fixed32_value"),
-			"fixed64_value": gen_fixed64("test.v1.AllTypes.fixed64_value"),
-			"sfixed32_value": gen_sfixed32("test.v1.AllTypes.sfixed32_value"),
-			"sfixed64_value": gen_sfixed64("test.v1.AllTypes.sfixed64_value"),
-			"bool_value": gen_bool("test.v1.AllTypes.bool_value"),
-			"string_value": gen_string("test.v1.AllTypes.string_value"),
-			"bytes_value": gen_bytes("test.v1.AllTypes.bytes_value"),
-			"opt_double_value": gen_float64("test.v1.AllTypes.opt_double_value"),
-			"opt_float_value": gen_float32("test.v1.AllTypes.opt_float_value"),
-			"opt_int32_value": gen_int32("test.v1.AllTypes.opt_int32_value"),
-			"opt_int64_value": gen_int64("test.v1.AllTypes.opt_int64_value"),
-			"opt_uint32_value": gen_uint32("test.v1.AllTypes.opt_uint32_value"),
-			"opt_uint64_value": gen_uint64("test.v1.AllTypes.opt_uint64_value"),
-			"opt_sint32_value": gen_sint32("test.v1.AllTypes.opt_sint32_value"),
-			"opt_sint64_value": gen_sint64("test.v1.AllTypes.opt_sint64_value"),
-			"opt_fixed32_value": gen_fixed32("test.v1.AllTypes.opt_fixed32_value"),
-			"opt_fixed64_value": gen_fixed64("test.v1.AllTypes.opt_fixed64_value"),
-			"opt_sfixed32_value": gen_sfixed32("test.v1.AllTypes.opt_sfixed32_value"),
-			"opt_sfixed64_value": gen_sfixed64("test.v1.AllTypes.opt_sfixed64_value"),
-			"opt_bool_value": gen_bool("test.v1.AllTypes.opt_bool_value"),
-			"opt_string_value": gen_string("test.v1.AllTypes.opt_string_value"),
-			"opt_bytes_value": gen_bytes("test.v1.AllTypes.opt_bytes_value"),
+			"double_value": gen,
+			"float_value": gen,
+			"int32_value": gen,
+			"int64_value": gen,
+			"uint32_value": gen,
+			"uint64_value": gen,
+			"sint32_value": gen,
+			"sint64_value": gen,
+			"fixed32_value": gen,
+			"fixed64_value": gen,
+			"sfixed32_value": gen,
+			"sfixed64_value": gen,
+			"bool_value": gen,
+			"string_value": gen,
+			"bytes_value": gen,
+			"opt_double_value": gen,
+			"opt_float_value": gen,
+			"opt_int32_value": gen,
+			"opt_int64_value": gen,
+			"opt_uint32_value": gen,
+			"opt_uint64_value": gen,
+			"opt_sint32_value": gen,
+			"opt_sint64_value": gen,
+			"opt_fixed32_value": gen,
+			"opt_fixed64_value": gen,
+			"opt_sfixed32_value": gen,
+			"opt_sfixed64_value": gen,
+			"opt_bool_value": gen,
+			"opt_string_value": gen,
+			"opt_bytes_value": gen,
 		}`)
 		require.NoError(t, err)
 
-		msg, err := ds.NewMessage(context.Background())
+		msg, err := ds.NewMessage(protocel.WithCELContext(context.Background(), &protocel.CELContext{}))
+		require.NoError(t, err)
+
+		pmsg := msg.ProtoReflect()
+		assertFieldIsSet(t, md, pmsg, "doubleValue")
+		assertFieldIsSet(t, md, pmsg, "floatValue")
+		assertFieldIsSet(t, md, pmsg, "int32Value")
+		assertFieldIsSet(t, md, pmsg, "int64Value")
+		assertFieldIsSet(t, md, pmsg, "uint32Value")
+		assertFieldIsSet(t, md, pmsg, "uint64Value")
+		assertFieldIsSet(t, md, pmsg, "sint32Value")
+		assertFieldIsSet(t, md, pmsg, "sint64Value")
+		assertFieldIsSet(t, md, pmsg, "fixed32Value")
+		assertFieldIsSet(t, md, pmsg, "fixed64Value")
+		assertFieldIsSet(t, md, pmsg, "sfixed32Value")
+		assertFieldIsSet(t, md, pmsg, "sfixed64Value")
+		assertFieldIsSet(t, md, pmsg, "boolValue")
+		assertFieldIsSet(t, md, pmsg, "stringValue")
+		assertFieldIsSet(t, md, pmsg, "bytesValue")
+		assertFieldIsSet(t, md, pmsg, "optDoubleValue")
+		assertFieldIsSet(t, md, pmsg, "optFloatValue")
+		assertFieldIsSet(t, md, pmsg, "optInt32Value")
+		assertFieldIsSet(t, md, pmsg, "optInt64Value")
+		assertFieldIsSet(t, md, pmsg, "optUint32Value")
+		assertFieldIsSet(t, md, pmsg, "optUint64Value")
+		assertFieldIsSet(t, md, pmsg, "optSint32Value")
+		assertFieldIsSet(t, md, pmsg, "optSint64Value")
+		assertFieldIsSet(t, md, pmsg, "optFixed32Value")
+		assertFieldIsSet(t, md, pmsg, "optFixed64Value")
+		assertFieldIsSet(t, md, pmsg, "optSfixed32Value")
+		assertFieldIsSet(t, md, pmsg, "optSfixed64Value")
+		assertFieldIsSet(t, md, pmsg, "optBoolValue")
+		assertFieldIsSet(t, md, pmsg, "optStringValue")
+		assertFieldIsSet(t, md, pmsg, "optBytesValue")
+		assertFieldIsSet(t, md, pmsg, "optMsgValue")
+	})
+
+	t.Run("scalars gen", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
+		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
+		ds, err := protocel.New(files, md, `gen`)
+		require.NoError(t, err)
+
+		msg, err := ds.NewMessage(protocel.WithCELContext(context.Background(), &protocel.CELContext{}))
 		require.NoError(t, err)
 
 		pmsg := msg.ProtoReflect()
@@ -399,4 +443,17 @@ func TestProtocel(t *testing.T) {
 		nested := msg.ProtoReflect().Get(md.Fields().ByTextName("msg_value")).Message()
 		assert.Equal(t, "Hello World!", nested.Get(md.Fields().ByTextName("string_value")).Interface())
 	})
+}
+
+func assertFieldIsSet(t *testing.T, md protoreflect.MessageDescriptor, msg protoreflect.Message, fieldName string) {
+	value := requireFieldByName(t, md, msg, fieldName)
+	assert.NotNil(t, value, "field not set: %s", fieldName)
+	assert.NotZero(t, value.Interface())
+	assert.True(t, value.IsValid())
+}
+
+func requireFieldByName(t *testing.T, md protoreflect.MessageDescriptor, msg protoreflect.Message, fieldName string) protoreflect.Value {
+	fd := md.Fields().ByJSONName(fieldName)
+	require.NotNil(t, fd, "field %s does not exist", fieldName)
+	return msg.Get(fd)
 }

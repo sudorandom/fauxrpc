@@ -23,20 +23,7 @@
         {
             "id": "get-pets-by-id-default",
             "target": "io.swagger.petstore.v2.PetService/GetPetByID",
-            "cel_content": {
-                "id": "req.pet_id",
-                "category": {
-                    "id": "gen_int32(field)",
-                    "name": "gen_string(field)"
-                },
-                "name": "gen_string(field)",
-                "photo_urls": ["gen_string(field)", "gen_string(field)"],
-                "tags": [
-                    {"id": "gen_int32(field)", "name": "gen_string(field)"},
-                    {"id": "gen_int32(field)", "name": "gen_string(field)"}
-                ],
-                "status": "gen_string(field)"
-            }
+            "cel_content": "{'id': req.pet_id, 'category': {'id': gen, 'name': 'gen'}, 'name': gen, 'photo_urls': [gen, gen], 'tags': [{'id': gen, 'name': gen}], 'status': gen}"
         }
     ]
 }

@@ -7,11 +7,18 @@ import (
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
+	"github.com/sudorandom/fauxrpc"
 	"github.com/sudorandom/fauxrpc/private/registry"
+	stubsv1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 )
+
+type CELMessage interface {
+	NewMessage(ctx context.Context) (proto.Message, error)
+	SetDataOnMessage(ctx context.Context, msg protoreflect.ProtoMessage) error
+}
 
 var validTopLevelTypes = []*types.Type{
 	types.DynType,
@@ -19,6 +26,8 @@ var validTopLevelTypes = []*types.Type{
 	cel.MapType(types.StringType, cel.MapType(types.StringType, types.StringType)),
 	cel.MapType(types.StringType, cel.MapType(types.StringType, types.DynType)),
 }
+
+var _ CELMessage = (*protocel)(nil)
 
 type protocel struct {
 	messageDescriptor protoreflect.MessageDescriptor
@@ -62,12 +71,14 @@ func (p *protocel) SetDataOnMessage(ctx context.Context, pmsg protoreflect.Proto
 	input := GetCELContext(ctx).ToInput()
 	val, _, err := p.program.Eval(input)
 	if err != nil {
-		return err
+		return fmt.Errorf("cel eval: %w", err)
 	}
 	msg := pmsg.ProtoReflect()
 	switch tval := val.Value().(type) {
 	case map[ref.Val]ref.Val:
 		return p.setFieldsOnMsg(msg, tval)
+	case *stubsv1.CELGenerate:
+		return fauxrpc.SetDataOnMessage(pmsg, fauxrpc.GenOptions{MaxDepth: 5})
 	case proto.Message:
 		outMsg := tval.ProtoReflect()
 		if msg.Descriptor() != outMsg.Descriptor() {
@@ -110,6 +121,12 @@ func (p *protocel) setFieldsOnMsg(msg protoreflect.Message, fields map[ref.Val]r
 		case []ref.Val:
 			if err := p.setRepeatedField(msg, fd, tval); err != nil {
 				return err
+			}
+		case *stubsv1.CELGenerate:
+			if val := fauxrpc.FieldValue(fd, fauxrpc.GenOptions{
+				MaxDepth: 5,
+			}); val != nil {
+				msg.Set(fd, *val)
 			}
 		default:
 			value, err := p.celToValue(fd, val)
@@ -203,4 +220,29 @@ func isCELType(t *types.Type, targets ...*types.Type) bool {
 		}
 	}
 	return false
+}
+
+func getFieldFromName(fds protoreflect.FieldDescriptors, key string) protoreflect.FieldDescriptor {
+	if field := fds.ByName(protoreflect.Name(key)); field != nil {
+		return field
+	}
+	if field := fds.ByTextName(key); field != nil {
+		return field
+	}
+	if field := fds.ByJSONName(key); field != nil {
+		return field
+	}
+	return nil
+}
+
+func newEnv(files *protoregistry.Files) (*cel.Env, error) {
+	return cel.NewEnv(
+		cel.TypeDescs(files),
+		cel.Variable("req", cel.DynType),
+		cel.Variable("service", cel.StringType),
+		cel.Variable("method", cel.StringType),
+		cel.Variable("procedure", cel.StringType),
+		cel.Variable("gen", cel.DynType),
+		cel.Types(&stubsv1.CELGenerate{}),
+	)
 }

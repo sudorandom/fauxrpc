@@ -3,6 +3,7 @@ package protocel
 import (
 	"context"
 
+	stubsv1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -18,6 +19,7 @@ func (c *CELContext) ToInput() map[string]any {
 	}
 	m := map[string]any{
 		"req": c.Req,
+		"gen": &stubsv1.CELGenerate{},
 	}
 	if c.MethodDescriptor != nil {
 		m["service"] = string(c.MethodDescriptor.Parent().FullName())

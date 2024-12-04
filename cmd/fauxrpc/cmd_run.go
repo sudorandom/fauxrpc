@@ -171,20 +171,12 @@ func (f StubFile) ToRequest() (*stubsv1.AddStubsRequest, error) {
 			}
 			contentsJSON = string(b)
 		}
-		var celContentsJSON string
-		if stub.CelContent != nil {
-			b, err := json.Marshal(stub.CelContent)
-			if err != nil {
-				return nil, err
-			}
-			celContentsJSON = string(b)
-		}
 		stubs[i] = &stubsv1.Stub{
-			Ref:            &stubsv1.StubRef{Id: stub.ID, Target: stub.Target},
-			Content:        &stubsv1.Stub_Json{Json: contentsJSON},
-			CelContentJson: celContentsJSON,
-			ActiveIf:       stub.ActiveIf,
-			Priority:       stub.Priority,
+			Ref:        &stubsv1.StubRef{Id: stub.ID, Target: stub.Target},
+			Content:    &stubsv1.Stub_Json{Json: contentsJSON},
+			CelContent: stub.CelContent,
+			ActiveIf:   stub.ActiveIf,
+			Priority:   stub.Priority,
 		}
 	}
 
@@ -195,7 +187,7 @@ type StubFileEntry struct {
 	ID           string `json:"id"`
 	Target       string `json:"target"`
 	Content      any    `json:"content,omitempty"`
-	CelContent   any    `json:"cel_content,omitempty"`
+	CelContent   string `json:"cel_content,omitempty"`
 	ActiveIf     string `json:"active_if,omitempty"`
 	ErrorCode    int    `json:"error_code,omitempty"`
 	ErrorMessage string `json:"error_message,omitempty"`

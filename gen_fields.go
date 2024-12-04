@@ -72,7 +72,7 @@ var kindToGenerator = map[protoreflect.Kind]func(fd protoreflect.FieldDescriptor
 	},
 }
 
-func getFieldValue(fd protoreflect.FieldDescriptor, opts GenOptions) *protoreflect.Value {
+func FieldValue(fd protoreflect.FieldDescriptor, opts GenOptions) *protoreflect.Value {
 	if opts.MaxDepth <= 0 {
 		return nil
 	}

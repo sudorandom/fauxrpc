@@ -99,9 +99,8 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 			entry.Error = &StatusError{StubsError: t.Error}
 		}
 
-		if stub.CelContentJson != "" {
-			fmt.Println("stub.CelContentJson", stub.CelContentJson)
-			celmsg, err := protocel.UnmarshalDynamicMessageJSON(h.registry.Files(), md, []byte(stub.CelContentJson))
+		if stub.CelContent != "" {
+			celmsg, err := protocel.New(h.registry.Files(), md, stub.CelContent)
 			if err != nil {
 				return nil, err
 			}

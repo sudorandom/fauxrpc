@@ -14,9 +14,8 @@ message Stub {
   }
   // CEL rule to decide if this stub should be used for a given request.
   string active_if = 5;
-  // Similar to the json attribute but instead of values there are CEL expressions which evaluate to
-  // the value that will be used.
-  string cel_content_json = 6;
+  // Similar to the json attribute but is a CEL expression that returns the result.
+  string cel_content = 6;
   int32 priority = 7 [(buf.validate.field).int32 = {
     gte: 0
     lte: 100
@@ -62,4 +61,8 @@ enum ErrorCode {
   ERROR_CODE_UNAVAILABLE = 14;
   ERROR_CODE_DATA_LOSS = 15;
   ERROR_CODE_UNAUTHENTICATED = 16;
+}
+
+message CELGenerate {
+  bool enabled = 1;
 }

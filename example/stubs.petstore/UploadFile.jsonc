@@ -7,9 +7,7 @@
                 "code": 0,
                 "type": "SUCCESS",
             },
-            "cel_content": {
-                "message": "'Successfully uploaded file for pet: '+string(req.pet_id)"
-            }
+            "cel_content": "{'message': 'Successfully uploaded file for pet: '+string(req.pet_id)}"
         }
     ]
 }
