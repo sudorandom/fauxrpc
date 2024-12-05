@@ -10,6 +10,7 @@
 * **Isolation & Control:** Test frontend components in isolation with controlled fake data.
 * **Multi-Protocol Support:** Supports multiple protocols (gRPC, gRPC-Web, Connect, and REST).
 * **Prototyping & Demos:** Create prototypes and demos quickly without building the full backend. Fake it till you make it.
+* **API Stubs:** Define static or dynamic API responses with powerful stubs featuring [CEL expressions](https://cel.dev/) for precise behavior control. Stubs can be defined using config files or dynamically at runtime.
 * **Improved Collaboration:** Bridge the gap between frontend and backend teams.
 * **Plays well with others:** Test data from FauxRPC will try to automatically follow any [protovalidate](https://github.com/bufbuild/protovalidate) constraints that are defined.
 * **Request Validation:** Ensure data integrity with automatic request validation using [protovalidate](https://github.com/bufbuild/protovalidate). Catch errors early and prevent invalid data from reaching your application logic.
