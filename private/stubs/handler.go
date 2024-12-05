@@ -6,14 +6,14 @@ import (
 	"strings"
 
 	"connectrpc.com/connect"
+	"github.com/brianvoe/gofakeit/v7"
 	"github.com/sudorandom/fauxrpc/private/registry"
 	stubsv1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
 	stubsv1connect "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1/stubsv1connect"
+	"github.com/sudorandom/fauxrpc/protocel"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/reflect/protoregistry"
-	"google.golang.org/protobuf/types/dynamicpb"
 )
 
 var _ stubsv1connect.StubsServiceHandler = (*handler)(nil)
@@ -32,15 +32,24 @@ func NewHandler(registry registry.ServiceRegistry, stubdb StubDatabase) *handler
 
 // AddStubs implements stubsv1connect.StubsServiceHandler.
 func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.AddStubsRequest]) (*connect.Response[stubsv1.AddStubsResponse], error) {
-	ids := make([]string, len(req.Msg.Stubs))
-	names := make([]protoreflect.FullName, len(req.Msg.Stubs))
-	values := make([]StubEntry, len(req.Msg.Stubs))
+	entries := make([]StubEntry, len(req.Msg.Stubs))
 	stubs := make([]*stubsv1.Stub, len(req.Msg.Stubs))
 	for i, stub := range req.Msg.Stubs {
+		if stub.Ref == nil {
+			stub.Ref = &stubsv1.StubRef{}
+		}
+		if stub.GetRef().Id == "" {
+			stub.Ref.Id = gofakeit.AdjectiveDescriptive() + "-" + strings.ReplaceAll(gofakeit.Animal(), " ", "-") + gofakeit.DigitN(3)
+		}
+
 		ref := stub.GetRef()
 		name, err := normalizeTargetName(ref.GetTarget())
 		if err != nil {
 			return nil, err
+		}
+
+		entry := StubEntry{
+			Priority: int(stub.GetPriority()),
 		}
 
 		desc, err := h.registry.Files().FindDescriptorByName(name)
@@ -50,7 +59,15 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 		var md protoreflect.MessageDescriptor
 		switch t := desc.(type) {
 		case protoreflect.MethodDescriptor:
-			name = t.Output().FullName()
+			if len(stub.ActiveIf) > 0 {
+				r, err := NewActiveIf(t, stub.ActiveIf)
+				if err != nil {
+					return nil, err
+				}
+				entry.ActiveIf = r
+			}
+
+			// name = t.Output().FullName()
 			md = t.Output()
 		case protoreflect.MessageDescriptor:
 			md = t
@@ -61,17 +78,19 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 		}
 
 		ref.Target = string(md.FullName())
+		entry.Key = StubKey{ID: stub.GetRef().GetId(), Name: name}
 
-		entry := StubEntry{}
 		switch t := stub.GetContent().(type) {
 		case *stubsv1.Stub_Json:
-			msg := newMessage(md).Interface()
-			if err := protojson.Unmarshal([]byte(t.Json), msg); err != nil {
-				return nil, err
+			if t.Json != "" {
+				msg := registry.NewMessage(md).Interface()
+				if err := protojson.Unmarshal([]byte(t.Json), msg); err != nil {
+					return nil, err
+				}
+				entry.Message = msg
 			}
-			entry.Message = msg
 		case *stubsv1.Stub_Proto:
-			msg := newMessage(md).Interface()
+			msg := registry.NewMessage(md).Interface()
 			if err := proto.Unmarshal(t.Proto, msg); err != nil {
 				return nil, err
 			}
@@ -79,14 +98,21 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 		case *stubsv1.Stub_Error:
 			entry.Error = &StatusError{StubsError: t.Error}
 		}
-		ids[i] = stub.GetRef().GetId()
-		names[i] = name
-		values[i] = entry
+
+		if stub.CelContent != "" {
+			celmsg, err := protocel.New(h.registry.Files(), md, stub.CelContent)
+			if err != nil {
+				return nil, err
+			}
+			entry.CELMessage = celmsg
+		}
+
+		entries[i] = entry
 		stubs[i] = stub
 	}
 
-	for i, id := range ids {
-		h.stubdb.AddStub(names[i], id, values[i])
+	for _, entry := range entries {
+		h.stubdb.AddStub(entry)
 	}
 
 	return connect.NewResponse(&stubsv1.AddStubsResponse{Stubs: stubs}), nil
@@ -99,11 +125,23 @@ func (h *handler) ListStubs(ctx context.Context, req *connect.Request[stubsv1.Li
 	if err != nil {
 		return nil, err
 	}
-	pbstubs, err := stubsToProto(h.stubdb.ListStubs(targetName, ref.GetId()))
+	filtered := []StubEntry{}
+	for _, stub := range h.stubdb.GetStubs() {
+		if ref.GetTarget() != "" && targetName != stub.Key.Name {
+			continue
+		}
+		if ref.GetId() != "" && ref.GetId() != stub.Key.ID {
+			continue
+		}
+		filtered = append(filtered, stub)
+	}
+
+	pbstubs, err := stubsToProto(filtered)
 	if err != nil {
 		return nil, err
 	}
 	return connect.NewResponse(&stubsv1.ListStubsResponse{Stubs: pbstubs}), nil
+
 }
 
 // RemoveAllStubs implements stubsv1connect.StubsServiceHandler.
@@ -119,43 +157,39 @@ func (h *handler) RemoveStubs(ctx context.Context, msg *connect.Request[stubsv1.
 		if err != nil {
 			return nil, err
 		}
-		h.stubdb.RemoveStub(targetName, ref.GetId())
+		h.stubdb.RemoveStub(StubKey{
+			Name: targetName,
+			ID:   ref.GetId(),
+		})
 	}
 	return connect.NewResponse(&stubsv1.RemoveStubsResponse{}), nil
 }
 
-func stubsToProto(allStubs map[protoreflect.FullName]map[string]StubEntry) ([]*stubsv1.Stub, error) {
+func stubsToProto(stubs []StubEntry) ([]*stubsv1.Stub, error) {
 	pbStubs := []*stubsv1.Stub{}
-	for target, stubs := range allStubs {
-		for id, stub := range stubs {
-			pbStub := &stubsv1.Stub{
-				Ref: &stubsv1.StubRef{
-					Id:     id,
-					Target: string(target),
-				},
-			}
-			if stub.Error != nil {
-				pbStub.Content = &stubsv1.Stub_Error{Error: stub.Error.StubsError}
-			}
-			if stub.Message != nil {
-				content, err := protojson.Marshal(stub.Message)
-				if err != nil {
-					return nil, err
-				}
-				pbStub.Content = &stubsv1.Stub_Json{Json: string(content)}
-			}
-			pbStubs = append(pbStubs, pbStub)
+	for _, stub := range stubs {
+		pbStub := &stubsv1.Stub{
+			Ref: &stubsv1.StubRef{
+				Id:     stub.Key.ID,
+				Target: string(stub.Key.Name),
+			},
 		}
+		if stub.ActiveIf != nil {
+			pbStub.ActiveIf = stub.ActiveIf.GetString()
+		}
+		if stub.Error != nil {
+			pbStub.Content = &stubsv1.Stub_Error{Error: stub.Error.StubsError}
+		}
+		if stub.Message != nil {
+			content, err := protojson.Marshal(stub.Message)
+			if err != nil {
+				return nil, err
+			}
+			pbStub.Content = &stubsv1.Stub_Json{Json: string(content)}
+		}
+		pbStubs = append(pbStubs, pbStub)
 	}
 	return pbStubs, nil
-}
-
-func newMessage(md protoreflect.MessageDescriptor) protoreflect.Message {
-	mt, err := protoregistry.GlobalTypes.FindMessageByName(md.FullName())
-	if err != nil {
-		return dynamicpb.NewMessageType(md).New()
-	}
-	return mt.New()
 }
 
 func normalizeTargetName(target string) (protoreflect.FullName, error) {

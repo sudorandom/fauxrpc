@@ -14,11 +14,10 @@ import (
 
 	"buf.build/gen/go/grpc/grpc/connectrpc/go/grpc/reflection/v1/reflectionv1connect"
 	reflectionv1 "buf.build/gen/go/grpc/grpc/protocolbuffers/go/grpc/reflection/v1"
+	"buf.build/go/protoyaml"
 	"connectrpc.com/connect"
 	"github.com/bufbuild/protocompile/parser"
 	"github.com/bufbuild/protocompile/reporter"
-	"github.com/bufbuild/protoyaml-go"
-	"github.com/golang/protobuf/protoc-gen-go/descriptor"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/proto"
@@ -123,7 +122,7 @@ func AddServicesFromDescriptorsFilePB(registry ServiceRegistry, filepath string)
 		return err
 	}
 
-	dss := new(descriptor.FileDescriptorSet)
+	dss := new(descriptorpb.FileDescriptorSet)
 	if err := proto.Unmarshal(descBytes, dss); err != nil {
 		return fmt.Errorf("unmarshal: %w", err)
 	}
@@ -143,7 +142,7 @@ func AddServicesFromDescriptorsFileJSON(registry ServiceRegistry, filepath strin
 		return err
 	}
 
-	dss := new(descriptor.FileDescriptorSet)
+	dss := new(descriptorpb.FileDescriptorSet)
 	unmarshaller := protojson.UnmarshalOptions{DiscardUnknown: true}
 	if err := unmarshaller.Unmarshal(descBytes, dss); err != nil {
 		return fmt.Errorf("unmarshal: %w", err)
@@ -164,7 +163,7 @@ func AddServicesFromDescriptorsFileYAML(registry ServiceRegistry, filepath strin
 		return err
 	}
 
-	dss := new(descriptor.FileDescriptorSet)
+	dss := new(descriptorpb.FileDescriptorSet)
 	unmarshaller := protoyaml.UnmarshalOptions{DiscardUnknown: true}
 	if err := unmarshaller.Unmarshal(descBytes, dss); err != nil {
 		return fmt.Errorf("unmarshal: %w", err)
@@ -185,7 +184,7 @@ func AddServicesFromDescriptorsFileTXTPB(registry ServiceRegistry, filepath stri
 		return err
 	}
 
-	dss := new(descriptor.FileDescriptorSet)
+	dss := new(descriptorpb.FileDescriptorSet)
 	unmarshaller := prototext.UnmarshalOptions{DiscardUnknown: true}
 	if err := unmarshaller.Unmarshal(descBytes, dss); err != nil {
 		return fmt.Errorf("unmarshal: %w", err)
@@ -229,7 +228,7 @@ func AddServicesFromReflection(registry ServiceRegistry, addr string) error {
 			return err
 		}
 		for _, descBytes := range resp.GetFileDescriptorResponse().GetFileDescriptorProto() {
-			fdp := new(descriptor.FileDescriptorProto)
+			fdp := new(descriptorpb.FileDescriptorProto)
 			if err := proto.Unmarshal(descBytes, fdp); err != nil {
 				return fmt.Errorf("unmarshal: %w", err)
 			}
@@ -249,6 +248,10 @@ func addServicesFromDescriptorsBytes(registry ServiceRegistry, fdp *descriptorpb
 	}
 
 	return registry.AddFile(fd)
+}
+
+func looksLikeBSR(path string) bool {
+	return strings.HasPrefix(path, "buf.build/")
 }
 
 // AddServicesFromBSR adds services from the BSR. Not yet supported

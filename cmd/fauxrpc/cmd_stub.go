@@ -11,10 +11,8 @@ import (
 	"net"
 	"net/http"
 	"slices"
-	"strings"
 
 	"connectrpc.com/connect"
-	"github.com/brianvoe/gofakeit/v7"
 	stubsv1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
 	"github.com/sudorandom/fauxrpc/proto/gen/stubs/v1/stubsv1connect"
 	"golang.org/x/net/http2"
@@ -36,19 +34,21 @@ type StubAddCmd struct {
 	JSON         string  `help:"Protobuf method or type" example:"'connectrpc.eliza.v1/Say', 'connectrpc.eliza.v1.IntroduceResponse'"`
 	ErrorMessage string  `help:"Message to return with the error"`
 	ErrorCode    *uint32 `help:"gRPC Error code to return"`
+	ActiveIf     string  `help:"CEL expression that must be true before this mock is used."`
+	Priority     int32   `help:"Priority from 0-100 (higher is more preferred)" default:"0"`
+	CEL          string  `name:"cel" help:"CEL expression"`
 }
 
 func (c *StubAddCmd) Run(globals *Globals) error {
 	client := newStubClient(c.Addr)
-	stubs := []*stubsv1.Stub{}
-	if c.ID == "" {
-		c.ID = gofakeit.AdjectiveDescriptive() + "-" + strings.ReplaceAll(gofakeit.Animal(), " ", "-") + gofakeit.DigitN(3)
-	}
 	stub := &stubsv1.Stub{
 		Ref: &stubsv1.StubRef{
 			Id:     c.ID,
 			Target: c.Target,
 		},
+		ActiveIf:   c.ActiveIf,
+		Priority:   c.Priority,
+		CelContent: c.CEL,
 	}
 	if c.JSON != "" {
 		stub.Content = &stubsv1.Stub_Json{Json: c.JSON}
@@ -63,8 +63,7 @@ func (c *StubAddCmd) Run(globals *Globals) error {
 	} else {
 		return errors.New("one of: --error-code or --json is required.")
 	}
-	stubs = append(stubs, stub)
-	resp, err := client.AddStubs(context.Background(), connect.NewRequest(&stubsv1.AddStubsRequest{Stubs: stubs}))
+	resp, err := client.AddStubs(context.Background(), connect.NewRequest(&stubsv1.AddStubsRequest{Stubs: []*stubsv1.Stub{stub}}))
 	if err != nil {
 		return err
 	}
@@ -157,8 +156,13 @@ func (c *StubRemoveAllCmd) Run(globals *Globals) error {
 }
 
 type StubForOutput struct {
-	Ref     *stubsv1.StubRef `json:"ref,omitempty"`
-	Content any              `json:"content,omitempty"`
+	Ref          *stubsv1.StubRef `json:"ref,omitempty"`
+	Content      any              `json:"content,omitempty"`
+	CelContent   any              `json:"cel_content,omitempty"`
+	ActiveIf     string           `json:"active_if,omitempty"`
+	ErrorCode    int              `json:"error_code,omitempty"`
+	ErrorMessage string           `json:"error_message,omitempty"`
+	Priority     int32            `json:"priority,omitempty"`
 }
 
 func outputStubs(stubs []*stubsv1.Stub) {
@@ -166,6 +170,13 @@ func outputStubs(stubs []*stubsv1.Stub) {
 		return cmp.Compare(a.GetRef().GetId(), b.GetRef().GetId())
 	})
 	for _, stub := range stubs {
+		outputStub := StubForOutput{
+			Ref:        stub.Ref,
+			ActiveIf:   stub.ActiveIf,
+			Priority:   stub.Priority,
+			CelContent: stub.CelContent,
+		}
+
 		switch t := stub.GetContent().(type) {
 		case *stubsv1.Stub_Json:
 			var v any
@@ -173,20 +184,17 @@ func outputStubs(stubs []*stubsv1.Stub) {
 				slog.Error("error marshalling for output", slog.Any("error", err))
 				continue
 			}
-			outputStub := StubForOutput{
-				Ref:     stub.Ref,
-				Content: v,
-			}
-			b, err := json.MarshalIndent(outputStub, "", "  ")
-			if err != nil {
-				slog.Error("error marshalling for output", slog.Any("error", err))
-				continue
-			}
-			fmt.Println(string(b))
+			outputStub.Content = v
 		case *stubsv1.Stub_Error:
-			fmt.Printf("error-code: %d\n", t.Error.GetCode())
-			fmt.Printf("error-message: %s\n", t.Error.GetMessage())
+			outputStub.ErrorCode = int(t.Error.GetCode())
+			outputStub.ErrorMessage = t.Error.GetMessage()
 		}
+		b, err := json.MarshalIndent(outputStub, "", "  ")
+		if err != nil {
+			slog.Error("error marshalling for output", slog.Any("error", err))
+			continue
+		}
+		fmt.Println(string(b))
 	}
 }
 
