@@ -10,25 +10,26 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/brianvoe/gofakeit/v7"
 	"github.com/bufbuild/protovalidate-go"
 	"github.com/sudorandom/fauxrpc"
 	"github.com/sudorandom/fauxrpc/private/grpc"
+	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/private/stubs"
+	"github.com/sudorandom/fauxrpc/protocel"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/reflect/protoregistry"
 	"google.golang.org/protobuf/runtime/protoiface"
-	"google.golang.org/protobuf/types/dynamicpb"
 
 	stubsv1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
 )
 
 const maxMessageSize = 4 * 1024 * 1024
 
-func NewHandler(service protoreflect.ServiceDescriptor, db stubs.StubDatabase, validate *protovalidate.Validator) http.Handler {
+func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker, validate *protovalidate.Validator) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Trailer", "Grpc-Status,Grpc-Message,Grpc-Status-Details-Bin")
 		w.Header().Add("Content-Type", "application/grpc")
@@ -52,18 +53,18 @@ func NewHandler(service protoreflect.ServiceDescriptor, db stubs.StubDatabase, v
 		}
 		defer r.Body.Close()
 
-		readMessage := func() *status.Status {
+		readMessage := func() (proto.Message, *status.Status) {
 			body := make([]byte, maxMessageSize)
 			size, err := grpc.ReadGRPCMessage(r.Body, body)
 			if err != nil {
 				if errors.Is(err, io.EOF) {
-					return nil
+					return nil, nil
 				}
-				return status.New(codes.NotFound, err.Error())
+				return nil, status.New(codes.NotFound, err.Error())
 			}
-			msg := newMessage(method.Input()).Interface()
+			msg := registry.NewMessage(method.Input()).Interface()
 			if err := proto.Unmarshal(body[:size], msg); err != nil {
-				return status.New(codes.NotFound, err.Error())
+				return nil, status.New(codes.NotFound, err.Error())
 			}
 			if err := validate.Validate(msg); err != nil {
 				grpcErr := status.New(codes.InvalidArgument, err.Error())
@@ -73,47 +74,51 @@ func NewHandler(service protoreflect.ServiceDescriptor, db stubs.StubDatabase, v
 						slog.Error("error serializing validation details", "error", err)
 					}
 				}
-				return grpcErr
+				return nil, grpcErr
 			}
-			return nil
+			return msg, nil
 		}
 
-		slog.Info("MethodCalled", slog.String("service", serviceName), slog.String("method", methodName))
-
-		eg, _ := errgroup.WithContext(r.Context())
+		eg, ctx := errgroup.WithContext(r.Context())
 
 		// Handle reading requests
-		if validate == nil {
+		var input proto.Message
+		if method.IsStreamingClient() {
+			// completely ignore the body. Maybe later we'll need it as input to the response message
 			eg.Go(func() error {
-				_, _ = io.Copy(io.Discard, r.Body)
-				return nil
+				for {
+					if _, st := readMessage(); st != nil {
+						return st.Err()
+					}
+				}
 			})
 		} else {
-			if method.IsStreamingClient() {
-				// completely ignore the body. Maybe later we'll need it as input to the response message
-				eg.Go(func() error {
-					for {
-						if st := readMessage(); st != nil {
-							return st.Err()
-						}
-					}
-				})
+			if msg, st := readMessage(); st != nil {
+				grpcWriteStatus(w, st)
+				return
 			} else {
-				if st := readMessage(); st != nil {
-					grpcWriteStatus(w, st)
-					return
-				}
+				input = msg
 			}
 		}
 
 		// Handle writing response
 		var msg []byte
 		eg.Go(func() error {
-			out, err := fauxrpc.NewMessage(method.Output(), fauxrpc.GenOptions{MaxDepth: 20, StubDB: db})
-			if err != nil {
-				var statusErr *stubs.StatusError
-				if errors.As(err, &statusErr) {
-					return grpcStatusFromError(statusErr.StubsError).Err()
+			out := registry.NewMessage(method.Output()).Interface()
+			if err := faker.SetDataOnMessage(out, fauxrpc.GenOptions{
+				MaxDepth: 20,
+				Faker:    gofakeit.New(0),
+				Context: protocel.WithCELContext(ctx, &protocel.CELContext{
+					MethodDescriptor: method,
+					Req:              input,
+				}),
+			}); err != nil {
+				var stubErr *stubs.StatusError
+				switch {
+				case errors.Is(err, stubs.ErrNoMatchingStubs):
+					return status.New(codes.NotFound, err.Error()).Err()
+				case errors.As(err, &stubErr):
+					return grpcStatusFromError(stubErr.StubsError).Err()
 				}
 				return status.New(codes.Internal, err.Error()).Err()
 			}
@@ -167,12 +172,4 @@ func grpcStatusFromError(e *stubsv1.Error) *status.Status {
 		}
 	}
 	return status
-}
-
-func newMessage(md protoreflect.MessageDescriptor) protoreflect.Message {
-	mt, err := protoregistry.GlobalTypes.FindMessageByName(md.FullName())
-	if err != nil {
-		return dynamicpb.NewMessageType(md).New()
-	}
-	return mt.New()
 }

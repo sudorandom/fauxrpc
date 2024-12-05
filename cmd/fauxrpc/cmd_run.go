@@ -2,23 +2,31 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
+	"log/slog"
 	"net/http"
+	"os"
+	"path/filepath"
 
 	"connectrpc.com/connect"
 	connectcors "connectrpc.com/cors"
 	"connectrpc.com/validate"
 	"github.com/quic-go/quic-go/http3"
 	"github.com/rs/cors"
+	"github.com/tailscale/hujson"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"golang.org/x/sync/errgroup"
+	"gopkg.in/yaml.v3"
 
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/private/server"
 	"github.com/sudorandom/fauxrpc/private/stubs"
 	"github.com/sudorandom/fauxrpc/proto/gen/registry/v1/registryv1connect"
+	stubsv1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
 	"github.com/sudorandom/fauxrpc/proto/gen/stubs/v1/stubsv1connect"
 )
 
@@ -35,10 +43,19 @@ type RunCmd struct {
 	CertKey      string   `help:"Path to certificate key file"`
 	HTTP3        bool     `help:"Enables HTTP/3 support."`
 	Empty        bool     `help:"Allows the server to run with no services."`
+	OnlyStubs    bool     `help:"Only use pre-defined stubs and don't make up fake data."`
+	Stubs        []string `help:"Directories or file paths for JSON files."`
 }
 
 func (c *RunCmd) Run(globals *Globals) error {
-	srv, err := server.NewServer(version, !c.NoDocPage, !c.NoReflection, !c.NoHTTPLog, !c.NoValidate)
+	srv, err := server.NewServer(server.ServerOpts{
+		Version:       version,
+		RenderDocPage: !c.NoDocPage,
+		UseReflection: !c.NoReflection,
+		WithHTTPLog:   !c.NoHTTPLog,
+		WithValidate:  !c.NoValidate,
+		OnlyStubs:     c.OnlyStubs,
+	})
 	if err != nil {
 		return err
 	}
@@ -51,18 +68,25 @@ func (c *RunCmd) Run(globals *Globals) error {
 	if srv.ServiceCount() == 0 && !c.Empty {
 		return errors.New("no services found in the given schemas")
 	}
-	// TODO: Load descriptors from stdin (assume protocol descriptors in binary format)
+
+	stubsHandler := stubs.NewHandler(srv, srv)
+	for _, path := range c.Stubs {
+		if err := addStubsFromFile(stubsHandler, path); err != nil {
+			return err
+		}
+	}
 
 	mux, err := srv.Mux()
 	if err != nil {
 		return err
 	}
+
 	validateInterceptor, err := validate.NewInterceptor()
 	if err != nil {
 		return err
 	}
+	mux.Handle(stubsv1connect.NewStubsServiceHandler(stubsHandler, connect.WithInterceptors(validateInterceptor)))
 
-	mux.Handle(stubsv1connect.NewStubsServiceHandler(stubs.NewHandler(srv, srv), connect.WithInterceptors(validateInterceptor)))
 	mux.Handle(registryv1connect.NewRegistryServiceHandler(registry.NewHandler(srv), connect.WithInterceptors(validateInterceptor)))
 
 	var handler http.Handler = mux
@@ -81,7 +105,7 @@ func (c *RunCmd) Run(globals *Globals) error {
 		Handler: h2c.NewHandler(handler, &http2.Server{}),
 	}
 
-	fmt.Printf("FauxRPC (%s) - %d services loaded\n", fullVersion(), srv.ServiceCount())
+	fmt.Printf("FauxRPC (%s) - %d services loaded, %d stubs loaded\n", fullVersion(), srv.ServiceCount(), srv.NumStubs())
 	fmt.Printf("Listening on http://%s\n", c.Addr)
 	if !c.NoDocPage {
 		fmt.Printf("OpenAPI documentation: http://%s/fauxrpc/openapi.html\n", c.Addr)
@@ -125,7 +149,119 @@ func (c *RunCmd) Run(globals *Globals) error {
 		eg.Go(server.ListenAndServe)
 	}
 
-	fmt.Println("Server started.")
+	slog.Info("Server started.")
 
 	return eg.Wait()
+}
+
+type StubFile struct {
+	Stubs []StubFileEntry `json:"stubs"`
+}
+
+func (f StubFile) ToRequest() (*stubsv1.AddStubsRequest, error) {
+	stubs := make([]*stubsv1.Stub, len(f.Stubs))
+	for i, stub := range f.Stubs {
+		if stub.Target == "" {
+			return nil, fmt.Errorf(`"target" is required for each stub; missing for stub %d`, i)
+		}
+		var contentsJSON string
+		if stub.Content != nil {
+			b, err := json.Marshal(stub.Content)
+			if err != nil {
+				return nil, err
+			}
+			contentsJSON = string(b)
+		}
+		stubs[i] = &stubsv1.Stub{
+			Ref:        &stubsv1.StubRef{Id: stub.ID, Target: stub.Target},
+			Content:    &stubsv1.Stub_Json{Json: contentsJSON},
+			CelContent: stub.CelContent,
+			ActiveIf:   stub.ActiveIf,
+			Priority:   stub.Priority,
+		}
+	}
+
+	return &stubsv1.AddStubsRequest{Stubs: stubs}, nil
+}
+
+type StubFileEntry struct {
+	ID           string `json:"id" yaml:"id"`
+	Target       string `json:"target" yaml:"target"`
+	Content      any    `json:"content,omitempty" yaml:"content"`
+	CelContent   string `json:"cel_content,omitempty" yaml:"cel_content"`
+	ActiveIf     string `json:"active_if,omitempty" yaml:"active_if"`
+	ErrorCode    int    `json:"error_code,omitempty" yaml:"error_code"`
+	ErrorMessage string `json:"error_message,omitempty" yaml:"error_message"`
+	Priority     int32  `json:"priority,omitempty" yaml:"priority"`
+}
+
+func addStubsFromFile(h stubsv1connect.StubsServiceHandler, stubsPath string) error {
+	handleFile := func(path string) error {
+		slog.Debug("addStubsFromFile", "path", path)
+		stubFile := StubFile{}
+		switch filepath.Ext(path) {
+		case ".json", ".jsonc":
+			contents, err := os.ReadFile(path)
+			if err != nil {
+				return fmt.Errorf("%s: %w", path, err)
+			}
+			// handle .jsonc format
+			if filepath.Ext(path) == ".jsonc" {
+				standardContents, err := standardizeJSON(contents)
+				if err != nil {
+					return fmt.Errorf("standardize.json: %s: %w", path, err)
+				}
+				contents = standardContents
+			}
+			if err := json.Unmarshal(contents, &stubFile); err != nil {
+				return fmt.Errorf("json.Unmarshal: %s: %w", path, err)
+			}
+		case ".yaml":
+			contents, err := os.ReadFile(path)
+			if err != nil {
+				return fmt.Errorf("%s: %w", path, err)
+			}
+			if err := yaml.Unmarshal(contents, &stubFile); err != nil {
+				return fmt.Errorf("%s: %w", path, err)
+			}
+		}
+
+		req, err := stubFile.ToRequest()
+		if err != nil {
+			return fmt.Errorf("%s: %w", path, err)
+		}
+
+		if _, err := h.AddStubs(context.Background(), connect.NewRequest(req)); err != nil {
+			return fmt.Errorf("%s: %w", path, err)
+		}
+		return nil
+	}
+
+	fi, err := os.Stat(stubsPath)
+	if err != nil {
+		return err
+	}
+	switch mode := fi.Mode(); {
+	case mode.IsDir():
+		return fs.WalkDir(os.DirFS(stubsPath), ".", func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			return handleFile(filepath.Join(stubsPath, path))
+		})
+	case mode.IsRegular():
+		return handleFile(stubsPath)
+	}
+	return nil
+}
+
+func standardizeJSON(b []byte) ([]byte, error) {
+	ast, err := hujson.Parse(b)
+	if err != nil {
+		return b, err
+	}
+
+	ast.Standardize()
+	return ast.Pack(), nil
+
 }

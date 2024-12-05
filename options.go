@@ -1,17 +1,25 @@
 package fauxrpc
 
 import (
+	"context"
+
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	"github.com/brianvoe/gofakeit/v7"
-	"github.com/sudorandom/fauxrpc/private/stubs"
 )
 
 type GenOptions struct {
-	StubDB   stubs.StubDatabase
 	MaxDepth int
 	Faker    *gofakeit.Faker
+	Context  context.Context
 
 	extraFieldConstraints *validate.FieldConstraints
+}
+
+func (st GenOptions) GetContext() context.Context {
+	if st.Context == nil {
+		return context.Background()
+	}
+	return st.Context
 }
 
 func (st GenOptions) fake() *gofakeit.Faker {

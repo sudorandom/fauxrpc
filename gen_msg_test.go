@@ -32,6 +32,7 @@ func ExampleNewMessage() {
 	b, _ := protojson.MarshalOptions{Indent: "  "}.Marshal(msg)
 	fmt.Println(string(b))
 }
+
 func requireFieldByName(t *testing.T, md protoreflect.MessageDescriptor, msg protoreflect.Message, fieldName string) protoreflect.Value {
 	fd := md.Fields().ByJSONName(fieldName)
 	require.NotNil(t, fd, "field %s does not exist", fieldName)
@@ -50,7 +51,6 @@ func TestNewMessage(t *testing.T) {
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
 		msg := dynamicpb.NewMessage(md)
 		require.NoError(t, fauxrpc.SetDataOnMessage(msg, fauxrpc.GenOptions{}))
-		assertFieldIsSet(t, md, msg, "doubleValue")
 		assertFieldIsSet(t, md, msg, "doubleValue")
 		assertFieldIsSet(t, md, msg, "floatValue")
 		assertFieldIsSet(t, md, msg, "int32Value")

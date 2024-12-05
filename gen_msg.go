@@ -1,6 +1,7 @@
 package fauxrpc
 
 import (
+	"github.com/sudorandom/fauxrpc/private/registry"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -11,7 +12,8 @@ func NewMessage(md protoreflect.MessageDescriptor, opts GenOptions) (protoreflec
 	if opts.MaxDepth == 0 {
 		opts.MaxDepth = defaultMaxDepth
 	}
-	msg := newMessage(md).Interface()
+	opts.GetContext()
+	msg := registry.NewMessage(md).Interface()
 	err := setDataOnMessage(msg, opts)
 	if err != nil {
 		return nil, err
@@ -34,28 +36,6 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) error {
 	msg := pm.ProtoReflect()
 	desc := msg.Descriptor()
 
-	if opts.StubDB != nil {
-		stubs := opts.StubDB.GetStubs(desc.FullName())
-		if len(stubs) > 0 {
-			idx := opts.fake().IntRange(0, len(stubs)-1)
-			stub := stubs[idx]
-			if stub.Error != nil {
-				return stub.Error
-			}
-			if stub.Message == nil {
-				return nil
-			}
-			fields := desc.Fields()
-			for i := 0; i < fields.Len(); i++ {
-				field := fields.Get(i)
-				if stub.Message.ProtoReflect().Has(field) {
-					msg.Set(field, stub.Message.ProtoReflect().Get(field))
-				}
-			}
-			return nil
-		}
-	}
-
 	oneOfFields := map[protoreflect.FullName]struct{}{}
 	oneOfs := desc.Oneofs()
 	// gather one-of fields
@@ -71,7 +51,7 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) error {
 		options := oneOf.Fields()
 		idx := opts.fake().IntRange(0, options.Len()-1)
 		field := options.Get(idx)
-		if v := getFieldValue(field, opts.nested()); v != nil {
+		if v := FieldValue(field, opts.nested()); v != nil {
 			msg.Set(field, *v)
 		}
 	}
@@ -94,7 +74,7 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) error {
 			}
 			continue
 		}
-		if v := getFieldValue(field, opts.nested()); v != nil {
+		if v := FieldValue(field, opts.nested()); v != nil {
 			msg.Set(field, *v)
 		}
 	}

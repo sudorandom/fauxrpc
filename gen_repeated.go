@@ -8,7 +8,7 @@ func repeatedSimple(msg protoreflect.Message, fd protoreflect.FieldDescriptor, o
 	listVal := msg.NewField(fd)
 	itemCount := opts.fake().IntRange(0, 4)
 	for i := 0; i < itemCount; i++ {
-		if v := getFieldValue(fd, opts.nested()); v != nil {
+		if v := FieldValue(fd, opts.nested()); v != nil {
 			listVal.List().Append(*v)
 		}
 	}
@@ -36,7 +36,7 @@ func Repeated(msg protoreflect.Message, fd protoreflect.FieldDescriptor, opts Ge
 	listVal := msg.NewField(fd)
 	itemCount := opts.fake().IntRange(int(min), int(max))
 	for i := 0; i < itemCount; i++ {
-		if v := getFieldValue(fd, opts.nested().withExtraFieldConstraints(constraints.GetRepeated().Items)); v != nil {
+		if v := FieldValue(fd, opts.nested().withExtraFieldConstraints(constraints.GetRepeated().Items)); v != nil {
 			listVal.List().Append(*v)
 		}
 	}

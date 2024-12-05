@@ -1,0 +1,19 @@
+---
+stubs:
+- id: find-pets-by-tag
+  target: io.swagger.petstore.v2.PetService/FindPetsByTag
+  content:
+    pets:
+    - id: 1
+      category:
+        id: 1
+        name: cat
+      name: Whiskers
+      photo_urls:
+      - https://cataas.com/cat
+      tags:
+      - id: 1
+        name: cute
+      - id: 2
+        name: kid-friendly
+      status: available

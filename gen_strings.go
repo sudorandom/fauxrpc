@@ -21,15 +21,21 @@ func stringSimple(fd protoreflect.FieldDescriptor, opts GenOptions) string {
 	case strings.Contains(lowerName, "lastname"):
 		return opts.fake().LastName()
 	case strings.Contains(lowerName, "name"):
+		return opts.fake().FirstName()
+	case strings.Contains(lowerName, "fullname"):
 		return opts.fake().Name()
 	case strings.Contains(lowerName, "id"):
 		return opts.fake().UUID()
 	case strings.Contains(lowerName, "token"):
 		return opts.fake().UUID()
+	case strings.Contains(lowerName, "photo") && strings.Contains(lowerName, "url"):
+		return "https://picsum.photos/400"
 	case strings.Contains(lowerName, "url"):
 		return opts.fake().URL()
 	case strings.Contains(lowerName, "version"):
 		return opts.fake().AppVersion()
+	case strings.Contains(lowerName, "status"):
+		return opts.fake().RandomString([]string{"active", "inactive", "hidden", "archived", "deleted", "pending"})
 	}
 
 	return opts.fake().HipsterSentence(int(randInt64GeometricDist(0.5, opts) + 1))

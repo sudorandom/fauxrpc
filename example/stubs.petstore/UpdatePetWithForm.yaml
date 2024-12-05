@@ -1,0 +1,5 @@
+---
+stubs:
+- id: update-pet-with-form
+  target: io.swagger.petstore.v2.PetService/UpdatePet
+  cel_content: "{'id': req.pet_id, 'name': req.name, 'status': req.status}"
