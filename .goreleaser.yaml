@@ -1,4 +1,3 @@
-version: 2
 project_name: fauxrpc
 builds:
   - main: ./cmd/fauxrpc/
