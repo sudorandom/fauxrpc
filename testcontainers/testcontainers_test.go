@@ -18,7 +18,7 @@ func TestContainersTest(t *testing.T) {
 	ctx := context.Background()
 
 	// Start fauxrpc container
-	container, err := fauxrpctestcontainers.Run(ctx, "docker.io/sudorandom/fauxrpc:v0.3.0-amd64")
+	container, err := fauxrpctestcontainers.Run(ctx, "docker.io/sudorandom/fauxrpc:latest")
 	if err != nil {
 		t.Fatalf("unable to set up faux eliza: %s", err)
 	}
