@@ -115,7 +115,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 			}); err != nil {
 				var stubErr *stubs.StatusError
 				switch {
-				case errors.Is(err, stubs.ErrNoMatchingStubs):
+				case errors.Is(err, fauxrpc.ErrNotFaked):
 					return status.New(codes.NotFound, err.Error()).Err()
 				case errors.As(err, &stubErr):
 					return grpcStatusFromError(stubErr.StubsError).Err()

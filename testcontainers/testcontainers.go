@@ -15,6 +15,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/reflect/protoregistry"
 	"google.golang.org/protobuf/types/descriptorpb"
 )
 
@@ -95,6 +96,29 @@ func (c *FauxRPCContainer) AddFileDescriptor(ctx context.Context, fd protoreflec
 			},
 		},
 	}))
+	return err
+}
+
+// MustAddFiles adds the given protoregistry.Files to the FauxRPC registry. A panic happens if anything fails.
+func (c *FauxRPCContainer) MustAddFiles(ctx context.Context, files *protoregistry.Files) {
+	if err := c.AddFiles(ctx, files); err != nil {
+		panic(err)
+	}
+}
+
+// AddFiles adds the given protoregistry.Files to the FauxRPC registry.
+func (c *FauxRPCContainer) AddFiles(ctx context.Context, files *protoregistry.Files) error {
+	client, err := c.RegistryClient(ctx)
+	if err != nil {
+		return err
+	}
+	fds := &descriptorpb.FileDescriptorSet{}
+	files.RangeFiles(func(fd protoreflect.FileDescriptor) bool {
+		fds.File = append(fds.File, protodesc.ToFileDescriptorProto(fd))
+		return true
+	})
+
+	_, err = client.AddDescriptors(ctx, connect.NewRequest(&registryv1.AddDescriptorsRequest{Descriptors: fds}))
 	return err
 }
 

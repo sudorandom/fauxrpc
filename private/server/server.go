@@ -98,10 +98,14 @@ func (s *server) rebuildHandlers() error {
 		validate = v
 	}
 
-	faker := fauxrpc.NewMultiFaker([]fauxrpc.ProtoFaker{
-		stubs.NewStubFaker(s.StubDatabase, s.opts.OnlyStubs),
-		fauxrpc.NewFauxFaker(),
-	})
+	fakers := []fauxrpc.ProtoFaker{
+		stubs.NewStubFaker(s.StubDatabase),
+	}
+	if !s.opts.OnlyStubs {
+		fakers = append(fakers, fauxrpc.NewFauxFaker())
+	}
+
+	faker := fauxrpc.NewMultiFaker(fakers)
 
 	s.ServiceRegistry.ForEachService(func(sd protoreflect.ServiceDescriptor) {
 		vgservice := vanguard.NewServiceWithSchema(

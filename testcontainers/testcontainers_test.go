@@ -8,6 +8,7 @@ import (
 	"connectrpc.com/connect"
 	stubsv1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
 	fauxrpctestcontainers "github.com/sudorandom/fauxrpc/testcontainers"
+	"google.golang.org/protobuf/reflect/protoregistry"
 
 	"buf.build/gen/go/connectrpc/eliza/connectrpc/go/connectrpc/eliza/v1/elizav1connect"
 	elizav1 "buf.build/gen/go/connectrpc/eliza/protocolbuffers/go/connectrpc/eliza/v1"
@@ -17,7 +18,7 @@ func TestContainersTest(t *testing.T) {
 	ctx := context.Background()
 
 	// Start fauxrpc container
-	container, err := fauxrpctestcontainers.Run(ctx, "docker.io/sudorandom/fauxrpc:latest")
+	container, err := fauxrpctestcontainers.Run(ctx, "docker.io/sudorandom/fauxrpc:v0.3.0-amd64")
 	if err != nil {
 		t.Fatalf("unable to set up faux eliza: %s", err)
 	}
@@ -27,6 +28,20 @@ func TestContainersTest(t *testing.T) {
 	container.MustAddFileDescriptor(ctx, elizav1.File_connectrpc_eliza_v1_eliza_proto)
 
 	baseURL := container.MustBaseURL(ctx)
+
+	t.Run("register files", func(t *testing.T) {
+		container.MustAddFiles(ctx, protoregistry.GlobalFiles)
+		elizaClient := elizav1connect.NewElizaServiceClient(http.DefaultClient, baseURL)
+		resp, err := elizaClient.Say(ctx, connect.NewRequest(&elizav1.SayRequest{
+			Sentence: "testing!",
+		}))
+		if err != nil {
+			t.Fatalf("unable to call eliza.Say: %s", err)
+		}
+		if len(resp.Msg.Sentence) == 0 {
+			t.Fatal("sentence should not be empty, but it was")
+		}
+	})
 
 	// Now we can call the service and generated data will be returned
 	t.Run("using the default generated responses", func(t *testing.T) {
@@ -94,4 +109,7 @@ func TestContainersTest(t *testing.T) {
 			t.Fatalf("stubbed error message does not match! %s != %s", err.Error(), expected)
 		}
 	})
+
+	container.MustResetStubs(ctx)
+
 }

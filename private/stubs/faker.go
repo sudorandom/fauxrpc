@@ -2,7 +2,6 @@ package stubs
 
 import (
 	"context"
-	"errors"
 	"math/rand/v2"
 
 	"github.com/sudorandom/fauxrpc"
@@ -10,18 +9,12 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-var ErrNoMatchingStubs = errors.New("no matching stubs")
-
 type stubFaker struct {
-	db        StubDatabase
-	onlyStubs bool
+	db StubDatabase
 }
 
-func NewStubFaker(db StubDatabase, onlyStubs bool) *stubFaker {
-	return &stubFaker{
-		db:        db,
-		onlyStubs: onlyStubs,
-	}
+func NewStubFaker(db StubDatabase) *stubFaker {
+	return &stubFaker{db: db}
 }
 
 func (f *stubFaker) SetDataOnMessage(pm protoreflect.ProtoMessage, opts fauxrpc.GenOptions) error {
@@ -66,8 +59,5 @@ func (f *stubFaker) SetDataOnMessage(pm protoreflect.ProtoMessage, opts fauxrpc.
 		}
 	}
 
-	if f.onlyStubs {
-		return ErrNoMatchingStubs
-	}
-	return nil
+	return fauxrpc.ErrNotFaked
 }
