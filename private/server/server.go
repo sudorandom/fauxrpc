@@ -75,7 +75,7 @@ func (s *server) Reset() error {
 func (s *server) AddFile(fd protoreflect.FileDescriptor) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
-	if err := s.ServiceRegistry.AddFile(fd); err != nil {
+	if err := s.ServiceRegistry.RegisterFile(fd); err != nil {
 		return err
 	}
 	return s.rebuildHandlers()
