@@ -24,9 +24,6 @@ func TestContainersTest(t *testing.T) {
 	}
 	t.Cleanup(func() { container.Terminate(context.Background()) })
 
-	// Register our eliza service with fauxrpc
-	container.MustAddFileDescriptor(ctx, elizav1.File_connectrpc_eliza_v1_eliza_proto)
-
 	baseURL := container.MustBaseURL(ctx)
 
 	t.Run("register files", func(t *testing.T) {
@@ -43,8 +40,13 @@ func TestContainersTest(t *testing.T) {
 		}
 	})
 
+	container.MustResetStubs(ctx)
+	container.MustResetRegistry(ctx)
+
 	// Now we can call the service and generated data will be returned
 	t.Run("using the default generated responses", func(t *testing.T) {
+		container.MustAddFileDescriptor(ctx, elizav1.File_connectrpc_eliza_v1_eliza_proto)
+
 		elizaClient := elizav1connect.NewElizaServiceClient(http.DefaultClient, baseURL)
 		resp, err := elizaClient.Say(ctx, connect.NewRequest(&elizav1.SayRequest{
 			Sentence: "testing!",
@@ -57,8 +59,12 @@ func TestContainersTest(t *testing.T) {
 		}
 	})
 
+	container.MustResetStubs(ctx)
+	container.MustResetRegistry(ctx)
+
 	// We can also register stubs, to set up specific scenarios
 	t.Run("using stubs responses", func(t *testing.T) {
+		container.MustAddFileDescriptor(ctx, elizav1.File_connectrpc_eliza_v1_eliza_proto)
 		container.MustAddStub(ctx, "connectrpc.eliza.v1.ElizaService/Say", &elizav1.SayResponse{Sentence: "I am setting this text!"})
 
 		elizaClient := elizav1connect.NewElizaServiceClient(http.DefaultClient, baseURL)
@@ -73,9 +79,11 @@ func TestContainersTest(t *testing.T) {
 	})
 
 	container.MustResetStubs(ctx)
+	container.MustResetRegistry(ctx)
 
 	// We can also register stubs based on the message type
 	t.Run("using stubs responses on type", func(t *testing.T) {
+		container.MustAddFileDescriptor(ctx, elizav1.File_connectrpc_eliza_v1_eliza_proto)
 		container.MustAddStub(ctx, "connectrpc.eliza.v1.SayResponse", &elizav1.SayResponse{
 			Sentence: "I am setting this text!",
 		})
@@ -94,9 +102,11 @@ func TestContainersTest(t *testing.T) {
 	})
 
 	container.MustResetStubs(ctx)
+	container.MustResetRegistry(ctx)
 
 	// We can also register error stubs
 	t.Run("using stubs responses on type", func(t *testing.T) {
+		container.MustAddFileDescriptor(ctx, elizav1.File_connectrpc_eliza_v1_eliza_proto)
 		container.MustAddStubError(ctx, "connectrpc.eliza.v1.ElizaService/Say", "server down", stubsv1.ErrorCode_ERROR_CODE_UNAVAILABLE)
 
 		elizaClient := elizav1connect.NewElizaServiceClient(http.DefaultClient, baseURL)
@@ -111,5 +121,24 @@ func TestContainersTest(t *testing.T) {
 	})
 
 	container.MustResetStubs(ctx)
+	container.MustResetRegistry(ctx)
 
+	// We can also add protobuf schema from a file path
+	t.Run("add schema from path", func(t *testing.T) {
+		container.MustAddFromPath(ctx, "eliza.binpb")
+		container.MustAddStubError(ctx, "connectrpc.eliza.v1.ElizaService/Say", "server down", stubsv1.ErrorCode_ERROR_CODE_UNAVAILABLE)
+
+		elizaClient := elizav1connect.NewElizaServiceClient(http.DefaultClient, baseURL)
+		resp, err := elizaClient.Say(ctx, connect.NewRequest(&elizav1.SayRequest{Sentence: "testing!"}))
+		if err == nil {
+			t.Fatalf("error was expected! but we didn't get one! resp=%v", resp.Msg)
+		}
+		expected := "unavailable: server down"
+		if err.Error() != expected {
+			t.Fatalf("stubbed error message does not match! %s != %s", err.Error(), expected)
+		}
+	})
+
+	container.MustResetStubs(ctx)
+	container.MustResetRegistry(ctx)
 }

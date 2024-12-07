@@ -45,10 +45,11 @@ type openAPIBase struct {
 func convertToOpenAPISpec(registry registry.ServiceRegistry, version string) ([]byte, error) {
 	descBuilder := strings.Builder{}
 	descBuilder.WriteString("This is a [FauxRPC](https://fauxrpc.com/) server that is currently hosting the following services:\n")
-	registry.ForEachService(func(sd protoreflect.ServiceDescriptor) {
+	registry.ForEachService(func(sd protoreflect.ServiceDescriptor) bool {
 		descBuilder.WriteString("- ")
 		descBuilder.WriteString(string(sd.FullName()))
 		descBuilder.WriteByte('\n')
+		return true
 	})
 	descBuilder.WriteByte('\n')
 	descBuilder.WriteString("FauxRPC is a mock server that supports gRPC, gRPC-Web, Connect and HTTP/JSON transcoding.")

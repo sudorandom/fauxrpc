@@ -88,7 +88,6 @@ func (s *server) AddFileFrompath(path string) error {
 func (s *server) rebuildHandlers() error {
 	serviceNames := []string{}
 	vgservices := []*vanguard.Service{}
-	var srvErr error
 	var validate *protovalidate.Validator
 	if s.opts.WithValidate {
 		v, err := protovalidate.New()
@@ -107,17 +106,15 @@ func (s *server) rebuildHandlers() error {
 
 	faker := fauxrpc.NewMultiFaker(fakers)
 
-	s.ServiceRegistry.ForEachService(func(sd protoreflect.ServiceDescriptor) {
+	s.ServiceRegistry.ForEachService(func(sd protoreflect.ServiceDescriptor) bool {
 		vgservice := vanguard.NewServiceWithSchema(
 			sd, NewHandler(sd, faker, validate),
 			vanguard.WithTargetProtocols(vanguard.ProtocolGRPC),
 			vanguard.WithTargetCodecs(vanguard.CodecProto))
 		vgservices = append(vgservices, vgservice)
 		serviceNames = append(serviceNames, string(sd.FullName()))
+		return true
 	})
-	if srvErr != nil {
-		return srvErr
-	}
 
 	transcoder, err := vanguard.NewTranscoder(vgservices)
 	if err != nil {

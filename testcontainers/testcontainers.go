@@ -6,6 +6,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
+	"github.com/sudorandom/fauxrpc/private/registry"
 	registryv1 "github.com/sudorandom/fauxrpc/proto/gen/registry/v1"
 	"github.com/sudorandom/fauxrpc/proto/gen/registry/v1/registryv1connect"
 	stubsv1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
@@ -97,6 +98,23 @@ func (c *FauxRPCContainer) AddFileDescriptor(ctx context.Context, fd protoreflec
 		},
 	}))
 	return err
+}
+
+// MustAddFromPath adds the given protoregistry.Files to the FauxRPC registry. A panic happens if anything fails.
+func (c *FauxRPCContainer) MustAddFromPath(ctx context.Context, path string) {
+	if err := c.AddFromPath(ctx, path); err != nil {
+		panic(err)
+	}
+}
+
+// AddFromPath adds the given protoregistry.Files to the FauxRPC registry.
+func (c *FauxRPCContainer) AddFromPath(ctx context.Context, path string) error {
+	files := new(protoregistry.Files)
+	if err := registry.AddServicesFromPath(files, path); err != nil {
+		return err
+	}
+
+	return c.AddFiles(ctx, files)
 }
 
 // MustAddFiles adds the given protoregistry.Files to the FauxRPC registry. A panic happens if anything fails.

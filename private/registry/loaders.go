@@ -38,9 +38,14 @@ import (
 	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
 )
 
+type LoaderTarget interface {
+	protodesc.Resolver
+	RegisterFile(file protoreflect.FileDescriptor) error
+}
+
 // AddServicesFromPath imports services from a given 'path' which can be a local file path, directory,
 // BSR repo, server address for server reflection.
-func AddServicesFromPath(registry ServiceRegistry, path string) error {
+func AddServicesFromPath(registry LoaderTarget, path string) error {
 	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
 		return AddServicesFromReflection(registry, path)
 	}
@@ -70,7 +75,7 @@ func AddServicesFromPath(registry ServiceRegistry, path string) error {
 }
 
 // AddServicesFromSingleFile imports services from a single (non-directory) file
-func AddServicesFromSingleFile(registry ServiceRegistry, filepath string) error {
+func AddServicesFromSingleFile(registry LoaderTarget, filepath string) error {
 	ext := path.Ext(filepath)
 	switch ext {
 	case ".proto":
@@ -90,7 +95,7 @@ func AddServicesFromSingleFile(registry ServiceRegistry, filepath string) error 
 }
 
 // AddServicesFromDescriptorsFilePB imports services from a .proto file
-func AddServicesFromProtoFile(registry ServiceRegistry, filepath string) error {
+func AddServicesFromProtoFile(registry LoaderTarget, filepath string) error {
 	slog.Debug("AddServicesFromProtoFile", slog.String("filepath", filepath))
 	f, err := os.Open(filepath)
 	if err != nil {
@@ -106,16 +111,16 @@ func AddServicesFromProtoFile(registry ServiceRegistry, filepath string) error {
 	if err != nil {
 		return fmt.Errorf("convert from AST: %w", err)
 	}
-	fd, err := protodesc.NewFile(res.FileDescriptorProto(), registry.Files())
+	fd, err := protodesc.NewFile(res.FileDescriptorProto(), registry)
 	if err != nil {
 		return fmt.Errorf("protodesc.NewFile: %w", err)
 	}
 
-	return registry.AddFile(fd)
+	return registry.RegisterFile(fd)
 }
 
 // AddServicesFromDescriptorsFilePB imports services from a .pb file
-func AddServicesFromDescriptorsFilePB(registry ServiceRegistry, filepath string) error {
+func AddServicesFromDescriptorsFilePB(registry LoaderTarget, filepath string) error {
 	slog.Debug("AddServicesFromDescriptorsFilePB", slog.String("filepath", filepath))
 	descBytes, err := os.ReadFile(filepath)
 	if err != nil {
@@ -135,7 +140,7 @@ func AddServicesFromDescriptorsFilePB(registry ServiceRegistry, filepath string)
 }
 
 // AddServicesFromDescriptorsFileJSON imports services from a .json file
-func AddServicesFromDescriptorsFileJSON(registry ServiceRegistry, filepath string) error {
+func AddServicesFromDescriptorsFileJSON(registry LoaderTarget, filepath string) error {
 	slog.Debug("AddServicesFromDescriptorsFileJSON", slog.String("filepath", filepath))
 	descBytes, err := os.ReadFile(filepath)
 	if err != nil {
@@ -156,7 +161,7 @@ func AddServicesFromDescriptorsFileJSON(registry ServiceRegistry, filepath strin
 }
 
 // AddServicesFromDescriptorsFileYAML imports services from a .yaml file
-func AddServicesFromDescriptorsFileYAML(registry ServiceRegistry, filepath string) error {
+func AddServicesFromDescriptorsFileYAML(registry LoaderTarget, filepath string) error {
 	slog.Debug("AddServicesFromDescriptorsFileYAML", slog.String("filepath", filepath))
 	descBytes, err := os.ReadFile(filepath)
 	if err != nil {
@@ -177,7 +182,7 @@ func AddServicesFromDescriptorsFileYAML(registry ServiceRegistry, filepath strin
 }
 
 // AddServicesFromDescriptorsFileTXTPB imports services from a .txtpb file
-func AddServicesFromDescriptorsFileTXTPB(registry ServiceRegistry, filepath string) error {
+func AddServicesFromDescriptorsFileTXTPB(registry LoaderTarget, filepath string) error {
 	slog.Debug("AddServicesFromDescriptorsFileTXTPB", slog.String("filepath", filepath))
 	descBytes, err := os.ReadFile(filepath)
 	if err != nil {
@@ -199,7 +204,7 @@ func AddServicesFromDescriptorsFileTXTPB(registry ServiceRegistry, filepath stri
 
 // AddServicesFromReflection uses the given address to connect to a gRPC server that has Server Reflection. The
 // services are imported from the file descriptors advertised there.
-func AddServicesFromReflection(registry ServiceRegistry, addr string) error {
+func AddServicesFromReflection(registry LoaderTarget, addr string) error {
 	slog.Debug("AddServicesFromReflection", slog.String("addr", addr))
 	reflectClient := reflectionv1connect.NewServerReflectionClient(http.DefaultClient, addr, connect.WithGRPC())
 	reflectReq := reflectClient.ServerReflectionInfo(context.Background())
@@ -241,13 +246,13 @@ func AddServicesFromReflection(registry ServiceRegistry, addr string) error {
 	return nil
 }
 
-func addServicesFromDescriptorsBytes(registry ServiceRegistry, fdp *descriptorpb.FileDescriptorProto) error {
-	fd, err := protodesc.NewFile(fdp, registry.Files())
+func addServicesFromDescriptorsBytes(registry LoaderTarget, fdp *descriptorpb.FileDescriptorProto) error {
+	fd, err := protodesc.NewFile(fdp, registry)
 	if err != nil {
 		return fmt.Errorf("protodesc.NewFile: %w", err)
 	}
 
-	return registry.AddFile(fd)
+	return registry.RegisterFile(fd)
 }
 
 func looksLikeBSR(path string) bool {
@@ -255,7 +260,7 @@ func looksLikeBSR(path string) bool {
 }
 
 // AddServicesFromBSR adds services from the BSR. Not yet supported
-func AddServicesFromBSR(registry ServiceRegistry, module string) error {
+func AddServicesFromBSR(registry LoaderTarget, module string) error {
 	slog.Debug("AddServicesFromBSR", slog.String("module", module))
 	// TODO: Add support for downloading from the buf registry.
 	// buf.registry.module.v1.CommitService/GetCommits
@@ -266,7 +271,7 @@ func AddServicesFromBSR(registry ServiceRegistry, module string) error {
 }
 
 // AddServicesFromGlobal adds the 'well known' types to the registry. This is typically implicitly called.
-func AddServicesFromGlobal(registry ServiceRegistry) error {
+func AddServicesFromGlobal(registry LoaderTarget) error {
 	for _, fd := range []protoreflect.FileDescriptor{
 		descriptorpb.File_google_protobuf_descriptor_proto,
 		anypb.File_google_protobuf_any_proto,
@@ -280,7 +285,7 @@ func AddServicesFromGlobal(registry ServiceRegistry) error {
 		typepb.File_google_protobuf_type_proto,
 		wrapperspb.File_google_protobuf_wrappers_proto,
 	} {
-		if err := registry.AddFile(fd); err != nil {
+		if err := registry.RegisterFile(fd); err != nil {
 			return err
 		}
 	}

@@ -13,14 +13,20 @@ import (
 
 var _ ServiceRegistry = (*serviceRegistry)(nil)
 
+var f protoregistry.Files
+
 type ServiceRegistry interface {
 	Get(name string) protoreflect.ServiceDescriptor
-	AddFile(fd protoreflect.FileDescriptor) error
 	Reset() error
-	ForEachService(cb func(protoreflect.ServiceDescriptor))
+	ForEachService(cb func(protoreflect.ServiceDescriptor) bool)
 	ServiceCount() int
 	Files() *protoregistry.Files
 	NumFiles() int
+	// Act like protoreflect.Files
+	RegisterFile(file protoreflect.FileDescriptor) error
+	// protoregistry.Resolver
+	FindFileByPath(string) (protoreflect.FileDescriptor, error)
+	FindDescriptorByName(protoreflect.FullName) (protoreflect.Descriptor, error)
 }
 
 type serviceRegistry struct {
@@ -55,10 +61,10 @@ func (r *serviceRegistry) Get(name string) protoreflect.ServiceDescriptor {
 	return r.services[name]
 }
 
-func (r *serviceRegistry) AddFile(fd protoreflect.FileDescriptor) error {
+func (r *serviceRegistry) RegisterFile(fd protoreflect.FileDescriptor) error {
 	r.lock.Lock()
 	defer r.lock.Unlock()
-	slog.Debug("AddFile", "name", fd.FullName(), "path", fd.Path())
+	slog.Debug("RegisterFile", "name", fd.FullName(), "path", fd.Path())
 	if _, err := r.files.FindFileByPath(fd.Path()); err == nil {
 		return nil
 	} else if !errors.Is(err, protoregistry.NotFound) {
@@ -90,12 +96,14 @@ func (r *serviceRegistry) ServiceCount() int {
 	return len(r.services)
 }
 
-func (r *serviceRegistry) ForEachService(cb func(protoreflect.ServiceDescriptor)) {
+func (r *serviceRegistry) ForEachService(cb func(protoreflect.ServiceDescriptor) bool) {
 	r.lock.RLock()
 	services := r.services
 	r.lock.RUnlock()
 	for _, service := range services {
-		cb(service)
+		if !cb(service) {
+			break
+		}
 	}
 }
 func (r *serviceRegistry) ForEachFile(cb func(protoreflect.FileDescriptor)) {
@@ -111,6 +119,18 @@ func (r *serviceRegistry) Files() *protoregistry.Files {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 	return r.files
+}
+
+func (r *serviceRegistry) FindFileByPath(path string) (protoreflect.FileDescriptor, error) {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+	return r.files.FindFileByPath(path)
+}
+
+func (r *serviceRegistry) FindDescriptorByName(name protoreflect.FullName) (protoreflect.Descriptor, error) {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+	return r.files.FindDescriptorByName(name)
 }
 
 func (r *serviceRegistry) NumFiles() int {

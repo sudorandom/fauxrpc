@@ -34,7 +34,7 @@ func (h *handler) AddDescriptors(ctx context.Context, req *connect.Request[regis
 		return nil, err
 	}
 	for _, fd := range sortedFiles {
-		if err := h.registry.AddFile(fd); err != nil {
+		if err := h.registry.RegisterFile(fd); err != nil {
 			return nil, fmt.Errorf("%s: %w", fd.FullName(), err)
 		}
 	}
