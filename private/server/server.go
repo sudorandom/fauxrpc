@@ -122,7 +122,7 @@ func (s *server) rebuildHandlers() error {
 	}
 	s.handlerTranscoder.SetHandler(transcoder)
 	if s.opts.UseReflection {
-		reflector := grpcreflect.NewReflector(&staticNames{names: serviceNames}, grpcreflect.WithDescriptorResolver(s.ServiceRegistry.Files()))
+		reflector := grpcreflect.NewReflector(&staticNames{names: serviceNames}, grpcreflect.WithDescriptorResolver(s.ServiceRegistry))
 		_, v1Handler := grpcreflect.NewHandlerV1(reflector)
 		s.handlerReflectorV1.SetHandler(v1Handler)
 

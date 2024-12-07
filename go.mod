@@ -22,7 +22,7 @@ require (
 	github.com/quic-go/quic-go v0.48.2
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.10.0
-	github.com/sudorandom/protoc-gen-connect-openapi v0.14.4
+	github.com/sudorandom/protoc-gen-connect-openapi v0.15.2
 	github.com/tailscale/hujson v0.0.0-20241010212012-29efb4a0184b
 	golang.org/x/net v0.31.0
 	golang.org/x/sync v0.10.0
@@ -63,6 +63,6 @@ require (
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/tools v0.27.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20241202173237-19429a94021a // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20241206012308-a4fef0638583 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241202173237-19429a94021a // indirect
 )

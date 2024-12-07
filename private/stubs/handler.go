@@ -52,7 +52,7 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 			Priority: int(stub.GetPriority()),
 		}
 
-		desc, err := h.registry.Files().FindDescriptorByName(name)
+		desc, err := h.registry.FindDescriptorByName(name)
 		if err != nil {
 			return nil, fmt.Errorf("unable to find object named %s: %w", name, err)
 		}

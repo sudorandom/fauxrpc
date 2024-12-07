@@ -37,7 +37,7 @@ func (c *GenerateCmd) Run(globals *Globals) error {
 		}
 	}
 
-	desc, err := theRegistry.Files().FindDescriptorByName(protoreflect.FullName(c.Target))
+	desc, err := theRegistry.FindDescriptorByName(protoreflect.FullName(c.Target))
 	if err != nil {
 		return err
 	}
