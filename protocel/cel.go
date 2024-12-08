@@ -191,6 +191,14 @@ func (p *protocel) celToValue(fd protoreflect.FieldDescriptor, val any) (protore
 			return protoreflect.ValueOf(nil), err
 		}
 		return protoreflect.ValueOfMessage(nested), nil
+	case *stubsv1.CELGenerate:
+		if val := fauxrpc.FieldValue(fd, fauxrpc.GenOptions{
+			MaxDepth: 5,
+		}); val != nil {
+			return *val, nil
+		} else {
+			return protoreflect.ValueOf(nil), nil
+		}
 	case proto.Message:
 		return protoreflect.ValueOfMessage(tv.ProtoReflect()), nil
 	default:
