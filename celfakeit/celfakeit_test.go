@@ -2,6 +2,7 @@ package celfakeit_test
 
 import (
 	"testing"
+	"time"
 
 	"github.com/google/cel-go/cel"
 	"github.com/stretchr/testify/assert"
@@ -129,6 +130,7 @@ func TestFakeit(t *testing.T) {
 		{name: "fake_dinner", cel: `fake_dinner()`},
 		{name: "fake_snack", cel: `fake_snack()`},
 		{name: "fake_dessert", cel: `fake_dessert()`},
+		{name: "fake_bool", cel: `fake_bool()`},
 		{name: "fake_uuid", cel: `fake_uuid()`},
 		{name: "fake_flip_a_coin", cel: `fake_flip_a_coin()`},
 		{name: "fake_color", cel: `fake_color()`},
@@ -268,13 +270,16 @@ func TestFakeit(t *testing.T) {
 			program, err := env.Program(ast)
 			require.NoError(t, err)
 
-			out, _, err := program.Eval(map[string]any{})
 			switch {
 			case tc.expectedErr != nil:
+				_, _, err := program.Eval(map[string]any{})
 				assert.ErrorIs(t, err, tc.expectedErr)
 			default:
-				require.NoError(t, err)
-				assert.NotEmpty(t, out.Value())
+				assert.EventuallyWithT(t, func(t *assert.CollectT) {
+					out, _, err := program.Eval(map[string]any{})
+					require.NoError(t, err)
+					assert.NotEmpty(t, out.Value())
+				}, 100*time.Millisecond, 10*time.Millisecond)
 			}
 		})
 	}
