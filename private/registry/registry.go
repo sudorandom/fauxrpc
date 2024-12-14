@@ -13,8 +13,6 @@ import (
 
 var _ ServiceRegistry = (*serviceRegistry)(nil)
 
-var f protoregistry.Files
-
 type ServiceRegistry interface {
 	Get(name string) protoreflect.ServiceDescriptor
 	Reset() error

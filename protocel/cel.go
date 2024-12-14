@@ -78,7 +78,7 @@ func (p *protocel) SetDataOnMessage(ctx context.Context, pmsg protoreflect.Proto
 			case error:
 				err = tt
 			default:
-				err = errors.New(fmt.Sprintf("%+v", tt))
+				err = fmt.Errorf("%+v", tt)
 			}
 		}
 	}()
