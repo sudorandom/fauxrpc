@@ -2,12 +2,14 @@ package protocel
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
 	"github.com/sudorandom/fauxrpc"
+	"github.com/sudorandom/fauxrpc/celfakeit"
 	"github.com/sudorandom/fauxrpc/private/registry"
 	stubsv1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
 	"google.golang.org/protobuf/proto"
@@ -67,7 +69,19 @@ func (p *protocel) NewMessage(ctx context.Context) (protoreflect.ProtoMessage, e
 }
 
 // SetDataOnMessage implements CELMessage.
-func (p *protocel) SetDataOnMessage(ctx context.Context, pmsg protoreflect.ProtoMessage) error {
+func (p *protocel) SetDataOnMessage(ctx context.Context, pmsg protoreflect.ProtoMessage) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			switch tt := r.(type) {
+			case string:
+				err = errors.New(tt)
+			case error:
+				err = tt
+			default:
+				err = errors.New(fmt.Sprintf("%+v", tt))
+			}
+		}
+	}()
 	input := GetCELContext(ctx).ToInput()
 	val, _, err := p.program.Eval(input)
 	if err != nil {
@@ -122,18 +136,22 @@ func (p *protocel) setFieldsOnMsg(msg protoreflect.Message, fields map[ref.Val]r
 			if err := p.setRepeatedField(msg, fd, tval); err != nil {
 				return err
 			}
-		case *stubsv1.CELGenerate:
-			if val := fauxrpc.FieldValue(fd, fauxrpc.GenOptions{
-				MaxDepth: 5,
-			}); val != nil {
-				msg.Set(fd, *val)
-			}
 		default:
-			value, err := p.celToValue(fd, val)
-			if err != nil {
-				return err
+			if fd.Cardinality() == protoreflect.Repeated {
+				list := msg.NewField(fd).List()
+				value, err := p.celToValue(fd, val)
+				if err != nil {
+					return err
+				}
+				list.Append(value)
+				msg.Set(fd, protoreflect.ValueOfList(list))
+			} else {
+				value, err := p.celToValue(fd, val)
+				if err != nil {
+					return err
+				}
+				msg.Set(fd, value)
 			}
-			msg.Set(fd, value)
 		}
 	}
 	return nil
@@ -245,12 +263,14 @@ func getFieldFromName(fds protoreflect.FieldDescriptors, key string) protoreflec
 
 func newEnv(files *protoregistry.Files) (*cel.Env, error) {
 	return cel.NewEnv(
+		celfakeit.Configure(),
 		cel.TypeDescs(files),
 		cel.Variable("req", cel.DynType),
 		cel.Variable("service", cel.StringType),
 		cel.Variable("method", cel.StringType),
 		cel.Variable("procedure", cel.StringType),
 		cel.Variable("gen", cel.DynType),
+		cel.Variable("faker", cel.DynType),
 		cel.Types(&stubsv1.CELGenerate{}),
 	)
 }

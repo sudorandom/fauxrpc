@@ -25,7 +25,18 @@ stubs:
         'id': req.pet_id,
         'category': {'id': gen, 'name': 'gen'},
         'name': gen,
-        'photo_urls': [gen, gen],
+        'photo_urls': gen,
         'tags': [{'id': gen, 'name': gen}],
         'status': gen
+    }
+- id: get-pets-by-id-dynamic
+  target: io.swagger.petstore.v2.PetService/GetPetByID
+  cel_content: |
+    {
+        'id': req.pet_id,
+        'status': ['available', 'pending', 'sold'][fake_int() % 3],
+        'category': [{'id': 1, 'name': 'cat'}, {'id': 1, 'name': 'cat'}][fake_int() % 2],
+        'name': ['Mr', 'Ms'][fake_int() % 2] + ' ' + fake_first_name(),
+        'photoUrls': ['https://picsum.photos/200'],
+        'tags': [{'id': gen, 'name': gen}]
     }

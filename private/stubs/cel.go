@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/cel-go/cel"
+	"github.com/sudorandom/fauxrpc/celfakeit"
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/protocel"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -18,6 +19,7 @@ type ActiveIf struct {
 func NewActiveIf(md protoreflect.MethodDescriptor, expr string) (*ActiveIf, error) {
 	reqMsg := registry.NewMessage(md.Input()).New()
 	env, err := cel.NewEnv(
+		celfakeit.Configure(),
 		cel.Types(reqMsg),
 		cel.Variable("req", cel.ObjectType(string(md.Input().FullName()))),
 		cel.Variable("service", cel.StringType),

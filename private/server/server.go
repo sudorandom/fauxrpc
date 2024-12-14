@@ -6,13 +6,21 @@ import (
 	"net/http"
 	"sync"
 
+	"connectrpc.com/connect"
+	connectcors "connectrpc.com/cors"
 	"connectrpc.com/grpcreflect"
+	"connectrpc.com/validate"
 	"connectrpc.com/vanguard"
 	"github.com/MadAppGang/httplog"
 	"github.com/bufbuild/protovalidate-go"
+	"github.com/go-chi/chi"
+	"github.com/go-chi/chi/middleware"
+	"github.com/rs/cors"
 	"github.com/sudorandom/fauxrpc"
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/private/stubs"
+	"github.com/sudorandom/fauxrpc/proto/gen/registry/v1/registryv1connect"
+	"github.com/sudorandom/fauxrpc/proto/gen/stubs/v1/stubsv1connect"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -31,6 +39,7 @@ type ServerOpts struct {
 	WithHTTPLog   bool
 	WithValidate  bool
 	OnlyStubs     bool
+	NoCORS        bool
 }
 
 type server struct {
@@ -81,7 +90,7 @@ func (s *server) AddFile(fd protoreflect.FileDescriptor) error {
 	return s.rebuildHandlers()
 }
 
-func (s *server) AddFileFrompath(path string) error {
+func (s *server) AddFileFromPath(path string) error {
 	return registry.AddServicesFromPath(s.ServiceRegistry, path)
 }
 
@@ -140,24 +149,41 @@ func (s *server) rebuildHandlers() error {
 	return nil
 }
 
-func (s *server) Mux() (*http.ServeMux, error) {
+func (s *server) Handler() (http.Handler, error) {
 	if err := s.rebuildHandlers(); err != nil {
 		return nil, err
 	}
 
-	mux := http.NewServeMux()
-	mux.Handle("/", httplog.Logger(s.handlerTranscoder))
+	mux := chi.NewMux()
+	mux.Use(middleware.RequestID, middleware.Recoverer, httplog.Logger)
+	if !s.opts.NoCORS {
+		mux.Use(cors.New(cors.Options{
+			AllowedOrigins: []string{"*"},
+			AllowedMethods: connectcors.AllowedMethods(),
+			AllowedHeaders: connectcors.AllowedHeaders(),
+			ExposedHeaders: connectcors.ExposedHeaders(),
+		}).Handler)
+	}
+
+	mux.Mount("/", httplog.Logger(s.handlerTranscoder))
 
 	if s.opts.UseReflection {
-		mux.Handle("/grpc.reflection.v1.ServerReflection/", httplog.Logger(s.handlerReflectorV1))
-		mux.Handle("/grpc.reflection.v1alpha.ServerReflection/", httplog.Logger(s.handlerReflectorV1Alpha))
+		mux.Mount("/grpc.reflection.v1.ServerReflection/", s.handlerReflectorV1)
+		mux.Mount("/grpc.reflection.v1alpha.ServerReflection/", s.handlerReflectorV1Alpha)
 	}
 
 	// OpenAPI Stuff
 	if s.opts.RenderDocPage {
-		mux.Handle("GET /fauxrpc/openapi.html", httplog.Logger(singleFileHandler(openapiHTML)))
-		mux.Handle("GET /fauxrpc/openapi.yaml", httplog.Logger(s.handlerOpenAPI))
+		mux.Get("/fauxrpc/openapi.html", singleFileHandler(openapiHTML))
+		mux.Handle("/fauxrpc/openapi.yaml", s.handlerOpenAPI)
 	}
+
+	validateInterceptor, err := validate.NewInterceptor()
+	if err != nil {
+		return nil, err
+	}
+	mux.Mount(stubsv1connect.NewStubsServiceHandler(stubs.NewHandler(s, s), connect.WithInterceptors(validateInterceptor)))
+	mux.Mount(registryv1connect.NewRegistryServiceHandler(registry.NewHandler(s), connect.WithInterceptors(validateInterceptor)))
 
 	return mux, nil
 }

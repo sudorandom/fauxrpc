@@ -17,6 +17,7 @@ func (c *CELContext) ToInput() map[string]any {
 	if c == nil {
 		return map[string]any{}
 	}
+
 	m := map[string]any{
 		"req": c.Req,
 		"gen": &stubsv1.CELGenerate{},
@@ -25,6 +26,7 @@ func (c *CELContext) ToInput() map[string]any {
 		m["service"] = string(c.MethodDescriptor.Parent().FullName())
 		m["method"] = string(c.MethodDescriptor.Name())
 		m["procedure"] = string(c.MethodDescriptor.FullName())
+
 	}
 	return m
 }

@@ -18,6 +18,7 @@ require (
 	github.com/brianvoe/gofakeit/v7 v7.1.2
 	github.com/bufbuild/protocompile v0.14.1
 	github.com/bufbuild/protovalidate-go v0.7.3
+	github.com/go-chi/chi v1.5.5
 	github.com/google/cel-go v0.22.1
 	github.com/quic-go/quic-go v0.48.2
 	github.com/rs/cors v1.11.1

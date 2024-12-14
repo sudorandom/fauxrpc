@@ -12,22 +12,16 @@ import (
 	"path/filepath"
 
 	"connectrpc.com/connect"
-	connectcors "connectrpc.com/cors"
-	"connectrpc.com/validate"
 	"github.com/quic-go/quic-go/http3"
-	"github.com/rs/cors"
 	"github.com/tailscale/hujson"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"golang.org/x/sync/errgroup"
 	"gopkg.in/yaml.v3"
 
-	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/private/server"
 	"github.com/sudorandom/fauxrpc/private/stubs"
-	"github.com/sudorandom/fauxrpc/proto/gen/registry/v1/registryv1connect"
 	stubsv1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
-	"github.com/sudorandom/fauxrpc/proto/gen/stubs/v1/stubsv1connect"
 )
 
 type RunCmd struct {
@@ -60,7 +54,7 @@ func (c *RunCmd) Run(globals *Globals) error {
 		return err
 	}
 	for _, schema := range c.Schema {
-		if err := srv.AddFileFrompath(schema); err != nil {
+		if err := srv.AddFileFromPath(schema); err != nil {
 			return err
 		}
 	}
@@ -69,37 +63,16 @@ func (c *RunCmd) Run(globals *Globals) error {
 		return errors.New("no services found in the given schemas")
 	}
 
-	stubsHandler := stubs.NewHandler(srv, srv)
 	for _, path := range c.Stubs {
-		if err := addStubsFromFile(stubsHandler, path); err != nil {
+		if err := addStubsFromFile(srv, path); err != nil {
 			return err
 		}
 	}
 
-	mux, err := srv.Mux()
+	handler, err := srv.Handler()
 	if err != nil {
 		return err
 	}
-
-	validateInterceptor, err := validate.NewInterceptor()
-	if err != nil {
-		return err
-	}
-	mux.Handle(stubsv1connect.NewStubsServiceHandler(stubsHandler, connect.WithInterceptors(validateInterceptor)))
-
-	mux.Handle(registryv1connect.NewRegistryServiceHandler(registry.NewHandler(srv), connect.WithInterceptors(validateInterceptor)))
-
-	var handler http.Handler = mux
-	if !c.NoCORS {
-		middleware := cors.New(cors.Options{
-			AllowedOrigins: []string{"*"},
-			AllowedMethods: connectcors.AllowedMethods(),
-			AllowedHeaders: connectcors.AllowedHeaders(),
-			ExposedHeaders: connectcors.ExposedHeaders(),
-		})
-		handler = middleware.Handler(handler)
-	}
-
 	server := &http.Server{
 		Addr:    c.Addr,
 		Handler: h2c.NewHandler(handler, &http2.Server{}),
@@ -124,7 +97,7 @@ func (c *RunCmd) Run(globals *Globals) error {
 		}
 		h3srv := http3.Server{
 			Addr:    c.Addr,
-			Handler: mux,
+			Handler: handler,
 		}
 		eg.Go(func() error {
 			return h3srv.ListenAndServeTLS(c.Cert, c.CertKey)
@@ -195,7 +168,8 @@ type StubFileEntry struct {
 	Priority     int32  `json:"priority,omitempty" yaml:"priority"`
 }
 
-func addStubsFromFile(h stubsv1connect.StubsServiceHandler, stubsPath string) error {
+func addStubsFromFile(srv server.Server, stubsPath string) error {
+	h := stubs.NewHandler(srv, srv)
 	handleFile := func(path string) error {
 		slog.Debug("addStubsFromFile", "path", path)
 		stubFile := StubFile{}

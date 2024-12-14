@@ -279,6 +279,31 @@ func TestProtocel(t *testing.T) {
 		assert.Equal(t, int32(7), int32List.Get(1).Interface())
 	})
 
+	t.Run("repeated scalars with single value", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
+		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
+		ds, err := protocel.New(files, md, `
+		{
+			"string_list": "Hello",
+			"int32_list": 1+2,
+		}`)
+		require.NoError(t, err)
+
+		msg, err := ds.NewMessage(context.Background())
+		require.NoError(t, err)
+
+		assertFieldIsSet(t, md, msg.ProtoReflect(), "msgList")
+
+		stringList := msg.ProtoReflect().Get(md.Fields().ByTextName("string_list")).List()
+		require.Equal(t, 1, stringList.Len())
+		assert.Equal(t, "Hello", stringList.Get(0).Interface())
+
+		int32List := msg.ProtoReflect().Get(md.Fields().ByTextName("int32_list")).List()
+		require.Equal(t, 1, int32List.Len())
+		assert.Equal(t, int32(3), int32List.Get(0).Interface())
+	})
+
 	t.Run("maps", func(t *testing.T) {
 		files := &protoregistry.Files{}
 		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
