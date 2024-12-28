@@ -1,12 +1,15 @@
-syntax = "proto3";
+edition = "2023";
 
 package test.v1;
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/field_mask.proto";
+import "google/protobuf/go_features.proto";
 import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/wrappers.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
 
 message ParameterValues {
   // scalar types
@@ -145,21 +148,21 @@ message AllTypes {
   map<string, bytes> bytes_map = 57;
 
   // explicit presence types
-  optional double opt_double_value = 58;
-  optional float opt_float_value = 59;
-  optional int32 opt_int32_value = 60;
-  optional int64 opt_int64_value = 61;
-  optional uint32 opt_uint32_value = 62;
-  optional uint64 opt_uint64_value = 63;
-  optional sint32 opt_sint32_value = 64;
-  optional sint64 opt_sint64_value = 65;
-  optional fixed32 opt_fixed32_value = 66;
-  optional fixed64 opt_fixed64_value = 67;
-  optional sfixed32 opt_sfixed32_value = 68;
-  optional sfixed64 opt_sfixed64_value = 69;
-  optional bool opt_bool_value = 70;
-  optional string opt_string_value = 71;
-  optional bytes opt_bytes_value = 72;
+  double opt_double_value = 58 [features.field_presence = EXPLICIT];
+  float opt_float_value = 59 [features.field_presence = EXPLICIT];
+  int32 opt_int32_value = 60 [features.field_presence = EXPLICIT];
+  int64 opt_int64_value = 61 [features.field_presence = EXPLICIT];
+  uint32 opt_uint32_value = 62 [features.field_presence = EXPLICIT];
+  uint64 opt_uint64_value = 63 [features.field_presence = EXPLICIT];
+  sint32 opt_sint32_value = 64 [features.field_presence = EXPLICIT];
+  sint64 opt_sint64_value = 65 [features.field_presence = EXPLICIT];
+  fixed32 opt_fixed32_value = 66 [features.field_presence = EXPLICIT];
+  fixed64 opt_fixed64_value = 67 [features.field_presence = EXPLICIT];
+  sfixed32 opt_sfixed32_value = 68 [features.field_presence = EXPLICIT];
+  sfixed64 opt_sfixed64_value = 69 [features.field_presence = EXPLICIT];
+  bool opt_bool_value = 70 [features.field_presence = EXPLICIT];
+  string opt_string_value = 71 [features.field_presence = EXPLICIT];
+  bytes opt_bytes_value = 72 [features.field_presence = EXPLICIT];
 
   // named types
   enum Enum {
@@ -169,8 +172,8 @@ message AllTypes {
   }
   AllTypes msg_value = 73;
   Enum enum_value = 74;
-  optional AllTypes opt_msg_value = 75;
-  optional Enum opt_enum_value = 76;
+  AllTypes opt_msg_value = 75 [features.field_presence = EXPLICIT];
+  Enum opt_enum_value = 76 [features.field_presence = EXPLICIT];
   repeated AllTypes msg_list = 77;
   repeated Enum enum_list = 78;
   map<string, AllTypes> msg_map = 79;

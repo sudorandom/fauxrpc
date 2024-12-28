@@ -16,6 +16,7 @@ import (
 	stubsv1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
 	"github.com/sudorandom/fauxrpc/proto/gen/stubs/v1/stubsv1connect"
 	"golang.org/x/net/http2"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
@@ -41,29 +42,28 @@ type StubAddCmd struct {
 
 func (c *StubAddCmd) Run(globals *Globals) error {
 	client := newStubClient(c.Addr)
-	stub := &stubsv1.Stub{
-		Ref: &stubsv1.StubRef{
-			Id:     c.ID,
-			Target: c.Target,
-		},
-		ActiveIf:   c.ActiveIf,
-		Priority:   c.Priority,
-		CelContent: c.CEL,
-	}
+	stub := stubsv1.Stub_builder{
+		Ref: stubsv1.StubRef_builder{
+			Id:     proto.String(c.ID),
+			Target: proto.String(c.Target),
+		}.Build(),
+		ActiveIf:   proto.String(c.ActiveIf),
+		Priority:   proto.Int32(c.Priority),
+		CelContent: proto.String(c.CEL),
+	}.Build()
 	if c.JSON != "" {
-		stub.Content = &stubsv1.Stub_Json{Json: c.JSON}
+		stub.SetJson(c.JSON)
 	} else if c.ErrorCode != nil {
-		stub.Content = &stubsv1.Stub_Error{
-			Error: &stubsv1.Error{
-				Code:    stubsv1.ErrorCode(*c.ErrorCode),
-				Message: c.ErrorMessage,
-				Details: []*anypb.Any{},
-			},
-		}
+		code := stubsv1.ErrorCode(*c.ErrorCode)
+		stub.SetError(stubsv1.Error_builder{
+			Code:    &code,
+			Message: proto.String(c.ErrorMessage),
+			Details: []*anypb.Any{},
+		}.Build())
 	} else {
 		return errors.New("one of: --error-code or --json is required.")
 	}
-	resp, err := client.AddStubs(context.Background(), connect.NewRequest(&stubsv1.AddStubsRequest{Stubs: []*stubsv1.Stub{stub}}))
+	resp, err := client.AddStubs(context.Background(), connect.NewRequest(stubsv1.AddStubsRequest_builder{Stubs: []*stubsv1.Stub{stub}}.Build()))
 	if err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func (c *StubListCmd) Run(globals *Globals) error {
 		return err
 	}
 	groupedStubs := map[string][]string{}
-	for _, stub := range resp.Msg.Stubs {
+	for _, stub := range resp.Msg.GetStubs() {
 		ref := stub.GetRef()
 		name := ref.GetTarget()
 		groupedStubs[name] = append(groupedStubs[name], ref.GetId())
@@ -107,12 +107,12 @@ type StubGetCmd struct {
 
 func (c *StubGetCmd) Run(globals *Globals) error {
 	client := newStubClient(c.Addr)
-	resp, err := client.ListStubs(context.Background(), connect.NewRequest(&stubsv1.ListStubsRequest{
-		StubRef: &stubsv1.StubRef{
-			Id:     c.ID,
-			Target: c.Target,
-		},
-	}))
+	resp, err := client.ListStubs(context.Background(), connect.NewRequest(stubsv1.ListStubsRequest_builder{
+		StubRef: stubsv1.StubRef_builder{
+			Id:     proto.String(c.ID),
+			Target: proto.String(c.Target),
+		}.Build(),
+	}.Build()))
 	if err != nil {
 		return err
 	}
@@ -128,14 +128,14 @@ type StubRemoveCmd struct {
 
 func (c *StubRemoveCmd) Run(globals *Globals) error {
 	client := newStubClient(c.Addr)
-	_, err := client.RemoveStubs(context.Background(), connect.NewRequest(&stubsv1.RemoveStubsRequest{
+	_, err := client.RemoveStubs(context.Background(), connect.NewRequest(stubsv1.RemoveStubsRequest_builder{
 		StubRefs: []*stubsv1.StubRef{
-			{
-				Id:     c.ID,
-				Target: c.Target,
-			},
+			stubsv1.StubRef_builder{
+				Id:     proto.String(c.ID),
+				Target: proto.String(c.Target),
+			}.Build(),
 		},
-	}))
+	}.Build()))
 	if err != nil {
 		return err
 	}
@@ -171,23 +171,23 @@ func outputStubs(stubs []*stubsv1.Stub) {
 	})
 	for _, stub := range stubs {
 		outputStub := StubForOutput{
-			Ref:        stub.Ref,
-			ActiveIf:   stub.ActiveIf,
-			Priority:   stub.Priority,
-			CelContent: stub.CelContent,
+			Ref:        stub.GetRef(),
+			ActiveIf:   stub.GetActiveIf(),
+			Priority:   stub.GetPriority(),
+			CelContent: stub.GetCelContent(),
 		}
 
-		switch t := stub.GetContent().(type) {
-		case *stubsv1.Stub_Json:
+		switch stub.WhichContent() {
+		case stubsv1.Stub_Json_case:
 			var v any
-			if err := json.Unmarshal([]byte(t.Json), &v); err != nil {
+			if err := json.Unmarshal([]byte(stub.GetJson()), &v); err != nil {
 				slog.Error("error marshalling for output", slog.Any("error", err))
 				continue
 			}
 			outputStub.Content = v
-		case *stubsv1.Stub_Error:
-			outputStub.ErrorCode = int(t.Error.GetCode())
-			outputStub.ErrorMessage = t.Error.GetMessage()
+		case stubsv1.Stub_Error_case:
+			outputStub.ErrorCode = int(stub.GetError().GetCode())
+			outputStub.ErrorMessage = stub.GetError().GetMessage()
 		}
 		b, err := json.MarshalIndent(outputStub, "", "  ")
 		if err != nil {

@@ -32,14 +32,14 @@ func NewHandler(registry registry.ServiceRegistry, stubdb StubDatabase) *handler
 
 // AddStubs implements stubsv1connect.StubsServiceHandler.
 func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.AddStubsRequest]) (*connect.Response[stubsv1.AddStubsResponse], error) {
-	entries := make([]StubEntry, len(req.Msg.Stubs))
-	stubs := make([]*stubsv1.Stub, len(req.Msg.Stubs))
-	for i, stub := range req.Msg.Stubs {
-		if stub.Ref == nil {
-			stub.Ref = &stubsv1.StubRef{}
+	entries := make([]StubEntry, len(req.Msg.GetStubs()))
+	stubs := make([]*stubsv1.Stub, len(req.Msg.GetStubs()))
+	for i, stub := range req.Msg.GetStubs() {
+		if !stub.HasRef() {
+			stub.SetRef(&stubsv1.StubRef{})
 		}
-		if stub.GetRef().Id == "" {
-			stub.Ref.Id = gofakeit.AdjectiveDescriptive() + "-" + strings.ReplaceAll(gofakeit.Animal(), " ", "-") + gofakeit.DigitN(3)
+		if stub.GetRef().GetId() == "" {
+			stub.GetRef().SetId(gofakeit.AdjectiveDescriptive() + "-" + strings.ReplaceAll(gofakeit.Animal(), " ", "-") + gofakeit.DigitN(3))
 		}
 
 		ref := stub.GetRef()
@@ -59,8 +59,8 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 		var md protoreflect.MessageDescriptor
 		switch t := desc.(type) {
 		case protoreflect.MethodDescriptor:
-			if len(stub.ActiveIf) > 0 {
-				r, err := NewActiveIf(t, stub.ActiveIf)
+			if len(stub.GetActiveIf()) > 0 {
+				r, err := NewActiveIf(t, stub.GetActiveIf())
 				if err != nil {
 					return nil, err
 				}
@@ -77,30 +77,30 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 			return nil, fmt.Errorf("not valid for %T", desc)
 		}
 
-		ref.Target = string(md.FullName())
+		ref.SetTarget(string(md.FullName()))
 		entry.Key = StubKey{ID: stub.GetRef().GetId(), Name: name}
 
-		switch t := stub.GetContent().(type) {
-		case *stubsv1.Stub_Json:
-			if t.Json != "" {
+		switch stub.WhichContent() {
+		case stubsv1.Stub_Json_case:
+			if stub.GetJson() != "" {
 				msg := registry.NewMessage(md).Interface()
-				if err := protojson.Unmarshal([]byte(t.Json), msg); err != nil {
+				if err := protojson.Unmarshal([]byte(stub.GetJson()), msg); err != nil {
 					return nil, err
 				}
 				entry.Message = msg
 			}
-		case *stubsv1.Stub_Proto:
+		case stubsv1.Stub_Proto_case:
 			msg := registry.NewMessage(md).Interface()
-			if err := proto.Unmarshal(t.Proto, msg); err != nil {
+			if err := proto.Unmarshal(stub.GetProto(), msg); err != nil {
 				return nil, err
 			}
 			entry.Message = msg
-		case *stubsv1.Stub_Error:
-			entry.Error = &StatusError{StubsError: t.Error}
+		case stubsv1.Stub_Error_case:
+			entry.Error = &StatusError{StubsError: stub.GetError()}
 		}
 
-		if stub.CelContent != "" {
-			celmsg, err := protocel.New(h.registry.Files(), md, stub.CelContent)
+		if stub.GetCelContent() != "" {
+			celmsg, err := protocel.New(h.registry.Files(), md, stub.GetCelContent())
 			if err != nil {
 				return nil, err
 			}
@@ -115,7 +115,7 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 		h.stubdb.AddStub(entry)
 	}
 
-	return connect.NewResponse(&stubsv1.AddStubsResponse{Stubs: stubs}), nil
+	return connect.NewResponse(stubsv1.AddStubsResponse_builder{Stubs: stubs}.Build()), nil
 }
 
 // ListStubs implements stubsv1connect.StubsServiceHandler.
@@ -140,7 +140,7 @@ func (h *handler) ListStubs(ctx context.Context, req *connect.Request[stubsv1.Li
 	if err != nil {
 		return nil, err
 	}
-	return connect.NewResponse(&stubsv1.ListStubsResponse{Stubs: pbstubs}), nil
+	return connect.NewResponse(stubsv1.ListStubsResponse_builder{Stubs: pbstubs}.Build()), nil
 
 }
 
@@ -168,24 +168,23 @@ func (h *handler) RemoveStubs(ctx context.Context, msg *connect.Request[stubsv1.
 func stubsToProto(stubs []StubEntry) ([]*stubsv1.Stub, error) {
 	pbStubs := []*stubsv1.Stub{}
 	for _, stub := range stubs {
-		pbStub := &stubsv1.Stub{
-			Ref: &stubsv1.StubRef{
-				Id:     stub.Key.ID,
-				Target: string(stub.Key.Name),
-			},
-		}
+		pbStub := &stubsv1.Stub{}
+		pbStub.SetRef(stubsv1.StubRef_builder{
+			Id:     proto.String(stub.Key.ID),
+			Target: proto.String(string(stub.Key.Name)),
+		}.Build())
 		if stub.ActiveIf != nil {
-			pbStub.ActiveIf = stub.ActiveIf.GetString()
+			pbStub.SetActiveIf(stub.ActiveIf.GetString())
 		}
 		if stub.Error != nil {
-			pbStub.Content = &stubsv1.Stub_Error{Error: stub.Error.StubsError}
+			pbStub.SetError(stub.Error.StubsError)
 		}
 		if stub.Message != nil {
 			content, err := protojson.Marshal(stub.Message)
 			if err != nil {
 				return nil, err
 			}
-			pbStub.Content = &stubsv1.Stub_Json{Json: string(content)}
+			pbStub.SetJson(string(content))
 		}
 		pbStubs = append(pbStubs, pbStub)
 	}
@@ -211,5 +210,5 @@ type StatusError struct {
 }
 
 func (s *StatusError) Error() string {
-	return s.Message
+	return s.GetMessage()
 }

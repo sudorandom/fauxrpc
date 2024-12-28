@@ -407,7 +407,7 @@ func TestProtocel(t *testing.T) {
 			context.Background(),
 			&protocel.CELContext{Req: &testv1.AllTypes{}}))
 		require.NoError(t, err)
-		assert.True(t, proto.Equal(&testv1.AllTypes{MsgValue: &testv1.AllTypes{}}, msg))
+		assert.True(t, proto.Equal(testv1.AllTypes_builder{MsgValue: testv1.AllTypes_builder{StringValue: proto.String("")}.Build()}.Build(), msg))
 	})
 
 	t.Run("using req at root", func(t *testing.T) {
@@ -456,11 +456,11 @@ func TestProtocel(t *testing.T) {
 		msg, err := ds.NewMessage(protocel.WithCELContext(
 			context.Background(),
 			&protocel.CELContext{
-				Req: &testv1.AllTypes{
-					MsgValue: &testv1.AllTypes{
-						StringValue: "Hello World!",
-					},
-				},
+				Req: testv1.AllTypes_builder{
+					MsgValue: testv1.AllTypes_builder{
+						StringValue: proto.String("Hello World!"),
+					}.Build(),
+				}.Build(),
 			}))
 		require.NoError(t, err)
 

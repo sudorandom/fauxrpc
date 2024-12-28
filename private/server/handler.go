@@ -158,10 +158,10 @@ func grpcWriteStatus(w http.ResponseWriter, st *status.Status) {
 }
 
 func grpcStatusFromError(e *stubsv1.Error) *status.Status {
-	status := status.New(codes.Code(e.Code), e.GetMessage())
-	if len(e.Details) > 0 {
-		details := make([]protoiface.MessageV1, len(e.Details))
-		for i, detail := range e.Details {
+	status := status.New(codes.Code(e.GetCode()), e.GetMessage())
+	if len(e.GetDetails()) > 0 {
+		details := make([]protoiface.MessageV1, len(e.GetDetails()))
+		for i, detail := range e.GetDetails() {
 			details[i] = detail
 		}
 		s, err := status.WithDetails(details...)

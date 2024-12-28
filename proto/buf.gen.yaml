@@ -6,6 +6,7 @@ managed:
       value: github.com/sudorandom/fauxrpc/proto/gen
   disable:
     - module: buf.build/bufbuild/protovalidate
+    - module: buf.build/protocolbuffers/wellknowntypes
 plugins:
   - remote: buf.build/protocolbuffers/go
     out: gen

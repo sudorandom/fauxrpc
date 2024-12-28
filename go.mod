@@ -28,7 +28,7 @@ require (
 	golang.org/x/net v0.31.0
 	golang.org/x/sync v0.10.0
 	google.golang.org/grpc v1.68.0
-	google.golang.org/protobuf v1.35.2
+	google.golang.org/protobuf v1.36.1
 	gopkg.in/yaml.v3 v3.0.1
 )
 

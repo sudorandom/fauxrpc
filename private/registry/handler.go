@@ -24,7 +24,7 @@ func NewHandler(registry ServiceRegistry) *handler {
 
 // AddDescriptors implements registryv1connect.RegistryServiceHandler.
 func (h *handler) AddDescriptors(ctx context.Context, req *connect.Request[registryv1.AddDescriptorsRequest]) (*connect.Response[registryv1.AddDescriptorsResponse], error) {
-	files, err := protodesc.NewFiles(req.Msg.Descriptors)
+	files, err := protodesc.NewFiles(req.Msg.GetDescriptors())
 	if err != nil {
 		return nil, err
 	}

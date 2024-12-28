@@ -1,8 +1,11 @@
-syntax = "proto3";
+edition = "2023";
 
 package stubs.v1;
 
+import "google/protobuf/go_features.proto";
 import "stubs/v1/stubs.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
 
 service StubsService {
   rpc AddStubs(AddStubsRequest) returns (AddStubsResponse) {}

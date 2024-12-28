@@ -1,8 +1,11 @@
-syntax = "proto3";
+edition = "2023";
 
 package registry.v1;
 
 import "google/protobuf/descriptor.proto";
+import "google/protobuf/go_features.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
 
 service RegistryService {
   rpc AddDescriptors(AddDescriptorsRequest) returns (AddDescriptorsResponse) {}

@@ -45,11 +45,11 @@ func (c *RegistryAddCmd) Run(globals *Globals) error {
 		filespb = append(filespb, protodesc.ToFileDescriptorProto(fd))
 	})
 	client := newRegistryClient(c.Addr)
-	if _, err := client.AddDescriptors(context.Background(), connect.NewRequest(&registryv1.AddDescriptorsRequest{
+	if _, err := client.AddDescriptors(context.Background(), connect.NewRequest(registryv1.AddDescriptorsRequest_builder{
 		Descriptors: &descriptorpb.FileDescriptorSet{
 			File: filespb,
 		},
-	})); err != nil {
+	}.Build())); err != nil {
 		return err
 	}
 

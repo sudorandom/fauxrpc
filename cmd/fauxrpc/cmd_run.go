@@ -22,6 +22,7 @@ import (
 	"github.com/sudorandom/fauxrpc/private/server"
 	"github.com/sudorandom/fauxrpc/private/stubs"
 	stubsv1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
+	"google.golang.org/protobuf/proto"
 )
 
 type RunCmd struct {
@@ -145,16 +146,16 @@ func (f StubFile) ToRequest() (*stubsv1.AddStubsRequest, error) {
 			}
 			contentsJSON = string(b)
 		}
-		stubs[i] = &stubsv1.Stub{
-			Ref:        &stubsv1.StubRef{Id: stub.ID, Target: stub.Target},
-			Content:    &stubsv1.Stub_Json{Json: contentsJSON},
-			CelContent: stub.CelContent,
-			ActiveIf:   stub.ActiveIf,
-			Priority:   stub.Priority,
-		}
+		stubs[i] = stubsv1.Stub_builder{
+			Ref:        stubsv1.StubRef_builder{Id: proto.String(stub.ID), Target: proto.String(stub.Target)}.Build(),
+			Json:       proto.String(contentsJSON),
+			CelContent: proto.String(stub.CelContent),
+			ActiveIf:   proto.String(stub.ActiveIf),
+			Priority:   proto.Int32(stub.Priority),
+		}.Build()
 	}
 
-	return &stubsv1.AddStubsRequest{Stubs: stubs}, nil
+	return stubsv1.AddStubsRequest_builder{Stubs: stubs}.Build(), nil
 }
 
 type StubFileEntry struct {
