@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"strings"
 
+	"buf.build/go/protovalidate"
 	"github.com/brianvoe/gofakeit/v7"
-	"github.com/bufbuild/protovalidate-go"
 	"github.com/sudorandom/fauxrpc"
 	"github.com/sudorandom/fauxrpc/private/grpc"
 	"github.com/sudorandom/fauxrpc/private/registry"

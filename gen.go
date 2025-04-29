@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
+	"buf.build/go/protovalidate/resolve"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -45,13 +46,13 @@ func (f multiFaker) SetDataOnMessage(msg protoreflect.ProtoMessage, opts GenOpti
 	return ErrNotFaked
 }
 
-func (st GenOptions) withExtraFieldConstraints(constraints *validate.FieldConstraints) GenOptions {
+func (st GenOptions) withExtraFieldConstraints(constraints *validate.FieldRules) GenOptions {
 	st.extraFieldConstraints = constraints
 	return st
 }
 
-func getFieldConstraints(fd protoreflect.FieldDescriptor, opts GenOptions) *validate.FieldConstraints {
-	if constraints := getResolver().ResolveFieldConstraints(fd); constraints != nil {
+func getFieldConstraints(fd protoreflect.FieldDescriptor, opts GenOptions) *validate.FieldRules {
+	if constraints := resolve.FieldRules(fd); constraints != nil {
 		return constraints
 	}
 	return opts.extraFieldConstraints

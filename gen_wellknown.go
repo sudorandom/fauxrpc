@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
+	"buf.build/go/protovalidate/resolve"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -18,7 +19,7 @@ func durationSimple(opts GenOptions) *durationpb.Duration {
 
 // GoogleDuration generates a random google.protobuf.Duration value.
 func GoogleDuration(fd protoreflect.FieldDescriptor, opts GenOptions) *durationpb.Duration {
-	constraints := getResolver().ResolveFieldConstraints(fd)
+	constraints := resolve.FieldRules(fd)
 	if constraints == nil {
 		return durationSimple(opts)
 	}
@@ -65,7 +66,7 @@ func generateTimestampSimple(opts GenOptions) *timestamppb.Timestamp {
 
 // GoogleTimestamp generates a random google.protobuf.Timestamp value.
 func GoogleTimestamp(fd protoreflect.FieldDescriptor, opts GenOptions) *timestamppb.Timestamp {
-	constraints := getResolver().ResolveFieldConstraints(fd)
+	constraints := resolve.FieldRules(fd)
 	if constraints == nil {
 		return generateTimestampSimple(opts)
 	}
