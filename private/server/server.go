@@ -6,15 +6,15 @@ import (
 	"net/http"
 	"sync"
 
+	"buf.build/go/protovalidate"
 	"connectrpc.com/connect"
 	connectcors "connectrpc.com/cors"
 	"connectrpc.com/grpcreflect"
 	"connectrpc.com/validate"
 	"connectrpc.com/vanguard"
 	"github.com/MadAppGang/httplog"
-	"github.com/bufbuild/protovalidate-go"
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/cors"
 	"github.com/sudorandom/fauxrpc"
 	"github.com/sudorandom/fauxrpc/private/registry"
@@ -97,7 +97,7 @@ func (s *server) AddFileFromPath(path string) error {
 func (s *server) rebuildHandlers() error {
 	serviceNames := []string{}
 	vgservices := []*vanguard.Service{}
-	var validate *protovalidate.Validator
+	var validate protovalidate.Validator
 	if s.opts.WithValidate {
 		v, err := protovalidate.New()
 		if err != nil {

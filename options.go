@@ -12,7 +12,7 @@ type GenOptions struct {
 	Faker    *gofakeit.Faker
 	Context  context.Context
 
-	extraFieldConstraints *validate.FieldConstraints
+	extraFieldConstraints *validate.FieldRules
 }
 
 func (st GenOptions) GetContext() context.Context {

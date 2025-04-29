@@ -1,6 +1,7 @@
 package fauxrpc
 
 import (
+	"buf.build/go/protovalidate/resolve"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -17,7 +18,7 @@ func repeatedSimple(msg protoreflect.Message, fd protoreflect.FieldDescriptor, o
 
 // Repeated returns a fake repeated value given a field descriptor.
 func Repeated(msg protoreflect.Message, fd protoreflect.FieldDescriptor, opts GenOptions) *protoreflect.Value {
-	constraints := getResolver().ResolveFieldConstraints(fd)
+	constraints := resolve.FieldRules(fd)
 	if constraints == nil {
 		return repeatedSimple(msg, fd, opts)
 	}
