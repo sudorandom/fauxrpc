@@ -97,7 +97,7 @@ func (s *server) AddFileFromPath(path string) error {
 func (s *server) rebuildHandlers() error {
 	serviceNames := []string{}
 	vgservices := []*vanguard.Service{}
-	var validate *protovalidate.Validator
+	var validate protovalidate.Validator
 	if s.opts.WithValidate {
 		v, err := protovalidate.New()
 		if err != nil {

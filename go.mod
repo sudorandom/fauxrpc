@@ -11,11 +11,11 @@ require (
 	buf.build/go/protoyaml v0.5.0
 	connectrpc.com/connect v1.18.1
 	connectrpc.com/cors v0.1.0
-	connectrpc.com/grpcreflect v1.2.0
+	connectrpc.com/grpcreflect v1.3.0
 	connectrpc.com/validate v0.2.0
 	connectrpc.com/vanguard v0.3.0
 	github.com/MadAppGang/httplog v1.3.0
-	github.com/alecthomas/kong v1.5.1
+	github.com/alecthomas/kong v1.10.0
 	github.com/brianvoe/gofakeit/v7 v7.2.1
 	github.com/bufbuild/protocompile v0.14.1
 	github.com/go-chi/chi/v5 v5.2.1
@@ -23,11 +23,11 @@ require (
 	github.com/quic-go/quic-go v0.51.0
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.10.0
-	github.com/sudorandom/protoc-gen-connect-openapi v0.16.2-0.20250429213250-a55cab071783
-	github.com/tailscale/hujson v0.0.0-20241010212012-29efb4a0184b
+	github.com/sudorandom/protoc-gen-connect-openapi v0.17.0
+	github.com/tailscale/hujson v0.0.0-20250226034555-ec1d1c113d33
 	golang.org/x/net v0.39.0
 	golang.org/x/sync v0.13.0
-	google.golang.org/grpc v1.71.0
+	google.golang.org/grpc v1.72.0
 	google.golang.org/protobuf v1.36.6
 	gopkg.in/yaml.v3 v3.0.1
 )

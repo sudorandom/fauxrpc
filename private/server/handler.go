@@ -29,7 +29,7 @@ import (
 
 const maxMessageSize = 4 * 1024 * 1024
 
-func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker, validate *protovalidate.Validator) http.Handler {
+func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker, validate protovalidate.Validator) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Trailer", "Grpc-Status,Grpc-Message,Grpc-Status-Details-Bin")
 		w.Header().Add("Content-Type", "application/grpc")
