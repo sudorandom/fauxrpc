@@ -17,6 +17,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/cors"
 	"github.com/sudorandom/fauxrpc"
+	"github.com/sudorandom/fauxrpc/private/frontend"
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/private/stubs"
 	"github.com/sudorandom/fauxrpc/proto/gen/registry/v1/registryv1connect"
@@ -166,6 +167,8 @@ func (s *server) Handler() (http.Handler, error) {
 	}
 
 	mux.Mount("/", httplog.Logger(s.handlerTranscoder))
+	// Mount the dashboard file server
+	mux.Mount("/dashboard", frontend.DashboardHandler())
 
 	if s.opts.UseReflection {
 		mux.Mount("/grpc.reflection.v1.ServerReflection/", s.handlerReflectorV1)
