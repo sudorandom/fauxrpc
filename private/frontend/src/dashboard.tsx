@@ -532,6 +532,9 @@ const Sidebar = ({ currentPage, setCurrentPage }) => {
                 <NavLink pageName="request-log"><ListIcon /><span className="ml-4">Request Log</span></NavLink>
                 <NavLink pageName="schema"><BookOpenIcon /><span className="ml-4">Schema</span></NavLink>
                 <NavLink pageName="stubs"><SettingsIcon /><span className="ml-4">Stubs</span></NavLink>
+                <a href="/fauxrpc/openapi.html" target="_blank" rel="noopener noreferrer" className="flex items-center w-full px-4 py-3 rounded-lg transition-colors duration-200 text-gray-300 hover:bg-gray-700">
+                    <BookOpenIcon /><span className="ml-4">OpenAPI Docs</span>
+                </a>
             </nav>
         </aside>
     );

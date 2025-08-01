@@ -20,6 +20,7 @@ import (
 	"github.com/sudorandom/fauxrpc/private/frontend"
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/private/stubs"
+	"github.com/sudorandom/fauxrpc/proto/gen/dashboard/v1/dashboardv1connect"
 	"github.com/sudorandom/fauxrpc/proto/gen/registry/v1/registryv1connect"
 	"github.com/sudorandom/fauxrpc/proto/gen/stubs/v1/stubsv1connect"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -41,6 +42,7 @@ type ServerOpts struct {
 	WithValidate  bool
 	OnlyStubs     bool
 	NoCORS        bool
+	Addr          string
 }
 
 type server struct {
@@ -167,8 +169,7 @@ func (s *server) Handler() (http.Handler, error) {
 	}
 
 	mux.Mount("/", httplog.Logger(s.handlerTranscoder))
-	// Mount the dashboard file server
-	mux.Mount("/dashboard", frontend.DashboardHandler())
+	mux.Mount("/fauxrpc", frontend.DashboardHandler())
 
 	if s.opts.UseReflection {
 		mux.Mount("/grpc.reflection.v1.ServerReflection/", s.handlerReflectorV1)
@@ -187,6 +188,7 @@ func (s *server) Handler() (http.Handler, error) {
 	}
 	mux.Mount(stubsv1connect.NewStubsServiceHandler(stubs.NewHandler(s, s), connect.WithInterceptors(validateInterceptor)))
 	mux.Mount(registryv1connect.NewRegistryServiceHandler(registry.NewHandler(s), connect.WithInterceptors(validateInterceptor)))
+	mux.Mount(dashboardv1connect.NewDashboardServiceHandler(frontend.NewHandler(s.ServiceRegistry, nil, s.opts.Version, s.opts.Addr)))
 
 	return mux, nil
 }

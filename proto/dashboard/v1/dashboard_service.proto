@@ -1,0 +1,39 @@
+edition = "2023";
+
+package dashboard.v1;
+
+// DashboardService provides an RPC for streaming dashboard summary data.
+service DashboardService {
+  // GetDashboardSummary starts a stream of dashboard summary data. The server
+  // will periodically send updates to the client.
+  rpc GetDashboardSummary(GetDashboardSummaryRequest) returns (stream GetDashboardSummaryResponse);
+}
+
+// GetDashboardSummaryRequest is the request message for the GetDashboardSummary RPC.
+// It is currently empty, but could be extended in the future to allow clients
+// to specify what data they are interested in.
+message GetDashboardSummaryRequest {}
+
+// GetDashboardSummaryResponse contains a snapshot of the dashboard summary data.
+message GetDashboardSummaryResponse {
+  // The total number of requests handled by the server.
+  int64 total_requests = 1;
+  // The current number of requests being processed per second.
+  double requests_per_second = 2;
+  // The total number of requests that resulted in an error.
+  int64 total_errors = 3;
+  // The error rate as a percentage string (e.g., "0.007%").
+  string error_rate = 4;
+  // The number of unique gRPC services discovered.
+  int64 unique_services = 5;
+  // The number of unique gRPC methods discovered.
+  int64 unique_methods = 6;
+  // A human-readable string representing server uptime (e.g., "2d 14h 32m").
+  string uptime = 7;
+  // The version of Go the server was built with.
+  string go_version = 8;
+  // The version of the FauxRPC server.
+  string fauxrpc_version = 9;
+  // The host and port the service is available on.
+  string http_host = 10;
+}

@@ -50,6 +50,7 @@ func (c *RunCmd) Run(globals *Globals) error {
 		WithHTTPLog:   !c.NoHTTPLog,
 		WithValidate:  !c.NoValidate,
 		OnlyStubs:     c.OnlyStubs,
+		Addr:          c.Addr,
 	})
 	if err != nil {
 		return err
