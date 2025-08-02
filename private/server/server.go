@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"sync"
 
@@ -84,6 +85,10 @@ func (s *server) Reset() error {
 	return s.rebuildHandlers()
 }
 
+func (s *server) RegisterFile(fd protoreflect.FileDescriptor) error {
+	return s.AddFile(fd)
+}
+
 func (s *server) AddFile(fd protoreflect.FileDescriptor) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -98,6 +103,7 @@ func (s *server) AddFileFromPath(path string) error {
 }
 
 func (s *server) rebuildHandlers() error {
+	slog.Debug("Rebuilding handlers")
 	serviceNames := []string{}
 	vgservices := []*vanguard.Service{}
 	var validate protovalidate.Validator
