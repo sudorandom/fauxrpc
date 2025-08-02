@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	dashboardv1 "github.com/sudorandom/fauxrpc/private/gen/dashboard/v1"
+	"github.com/sudorandom/fauxrpc/private/gen/dashboard/v1/dashboardv1connect"
 	"github.com/sudorandom/fauxrpc/private/registry"
-	dashboardv1 "github.com/sudorandom/fauxrpc/proto/gen/dashboard/v1"
-	"github.com/sudorandom/fauxrpc/proto/gen/dashboard/v1/dashboardv1connect"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )

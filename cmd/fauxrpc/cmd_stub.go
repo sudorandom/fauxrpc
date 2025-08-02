@@ -13,8 +13,8 @@ import (
 	"slices"
 
 	"connectrpc.com/connect"
-	stubsv1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
-	"github.com/sudorandom/fauxrpc/proto/gen/stubs/v1/stubsv1connect"
+	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
+	"github.com/sudorandom/fauxrpc/private/gen/stubs/v1/stubsv1connect"
 	"golang.org/x/net/http2"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"

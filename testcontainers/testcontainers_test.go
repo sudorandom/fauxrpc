@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
-	stubsv1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
+	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
 	fauxrpctestcontainers "github.com/sudorandom/fauxrpc/testcontainers"
 	"google.golang.org/protobuf/reflect/protoregistry"
 

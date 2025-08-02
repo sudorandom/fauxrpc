@@ -7,9 +7,9 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/brianvoe/gofakeit/v7"
+	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
+	stubsv1connect "github.com/sudorandom/fauxrpc/private/gen/stubs/v1/stubsv1connect"
 	"github.com/sudorandom/fauxrpc/private/registry"
-	stubsv1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
-	stubsv1connect "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1/stubsv1connect"
 	"github.com/sudorandom/fauxrpc/protocel"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"

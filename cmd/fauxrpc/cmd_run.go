@@ -19,9 +19,9 @@ import (
 	"golang.org/x/sync/errgroup"
 	"gopkg.in/yaml.v3"
 
+	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
 	"github.com/sudorandom/fauxrpc/private/server"
 	"github.com/sudorandom/fauxrpc/private/stubs"
-	stubsv1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
 	"google.golang.org/protobuf/proto"
 )
 

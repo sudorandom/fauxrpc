@@ -1,5 +1,9 @@
 version: v2
 clean: true
+
+inputs:
+  - directory: proto
+
 managed:
   enabled: true
   override:
@@ -8,10 +12,18 @@ managed:
   disable:
     - module: buf.build/bufbuild/protovalidate
     - module: buf.build/protocolbuffers/wellknowntypes
+
+
 plugins:
   - remote: buf.build/protocolbuffers/go
-    out: gen
+    out: private/gen
     opt: paths=source_relative
   - remote: buf.build/connectrpc/go
-    out: gen
+    out: private/gen
     opt: paths=source_relative
+
+  - remote: buf.build/connectrpc/query-es:v2.1.1
+    out: private/frontend/src/gen
+    opt: target=ts
+  - remote: buf.build/bufbuild/es:v2.6.2
+    out: private/frontend/src/gen

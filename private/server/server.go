@@ -19,11 +19,11 @@ import (
 	"github.com/rs/cors"
 	"github.com/sudorandom/fauxrpc"
 	"github.com/sudorandom/fauxrpc/private/frontend"
+	"github.com/sudorandom/fauxrpc/private/gen/dashboard/v1/dashboardv1connect"
+	"github.com/sudorandom/fauxrpc/private/gen/registry/v1/registryv1connect"
+	"github.com/sudorandom/fauxrpc/private/gen/stubs/v1/stubsv1connect"
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/private/stubs"
-	"github.com/sudorandom/fauxrpc/proto/gen/dashboard/v1/dashboardv1connect"
-	"github.com/sudorandom/fauxrpc/proto/gen/registry/v1/registryv1connect"
-	"github.com/sudorandom/fauxrpc/proto/gen/stubs/v1/stubsv1connect"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 

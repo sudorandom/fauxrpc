@@ -2,11 +2,15 @@ edition = "2023";
 
 package dashboard.v1;
 
+import "google/protobuf/go_features.proto";
+
+option features.(pb.go).api_level = API_OPAQUE;
+
 // DashboardService provides an RPC for streaming dashboard summary data.
 service DashboardService {
   // GetDashboardSummary starts a stream of dashboard summary data. The server
   // will periodically send updates to the client.
-  rpc GetDashboardSummary(GetDashboardSummaryRequest) returns (stream GetDashboardSummaryResponse);
+  rpc GetDashboardSummary(GetDashboardSummaryRequest) returns (GetDashboardSummaryResponse);
 }
 
 // GetDashboardSummaryRequest is the request message for the GetDashboardSummary RPC.

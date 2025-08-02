@@ -24,7 +24,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/runtime/protoiface"
 
-	stubsv1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
+	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
 )
 
 const maxMessageSize = 4 * 1024 * 1024
