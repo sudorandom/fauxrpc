@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"sync"
+	"time"
 
 	"buf.build/go/protovalidate"
 	"connectrpc.com/connect"
@@ -19,9 +20,9 @@ import (
 	"github.com/rs/cors"
 	"github.com/sudorandom/fauxrpc"
 	"github.com/sudorandom/fauxrpc/private/frontend"
-	"github.com/sudorandom/fauxrpc/private/gen/dashboard/v1/dashboardv1connect"
 	"github.com/sudorandom/fauxrpc/private/gen/registry/v1/registryv1connect"
 	"github.com/sudorandom/fauxrpc/private/gen/stubs/v1/stubsv1connect"
+	"github.com/sudorandom/fauxrpc/private/metrics"
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/private/stubs"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -33,6 +34,9 @@ var _ stubs.StubDatabase = (*server)(nil)
 type Server interface {
 	registry.ServiceRegistry
 	stubs.StubDatabase
+	GetStats() *metrics.Stats
+	IncrementTotalRequests()
+	IncrementErrors()
 }
 
 type ServerOpts struct {
@@ -56,7 +60,8 @@ type server struct {
 	handlerReflectorV1Alpha *wrappedHandler
 	handlerTranscoder       *wrappedHandler
 
-	opts ServerOpts
+	opts  ServerOpts
+	stats *metrics.Stats
 }
 
 func NewServer(opts ServerOpts) (*server, error) {
@@ -64,7 +69,7 @@ func NewServer(opts ServerOpts) (*server, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &server{
+	s := &server{
 		lock:                    &sync.Mutex{},
 		ServiceRegistry:         serviceRegistry,
 		StubDatabase:            stubs.NewStubDatabase(),
@@ -73,7 +78,13 @@ func NewServer(opts ServerOpts) (*server, error) {
 		handlerReflectorV1Alpha: NewWrappedHandler(),
 		handlerTranscoder:       NewWrappedHandler(),
 		opts:                    opts,
-	}, nil
+		stats: &metrics.Stats{
+			StartedAt:     time.Now(),
+			LastReset:     time.Now(),
+			RequestCounts: make(map[time.Time]int64),
+		},
+	}
+	return s, nil
 }
 
 func (s *server) Reset() error {
@@ -82,6 +93,7 @@ func (s *server) Reset() error {
 	if err := s.ServiceRegistry.Reset(); err != nil {
 		return err
 	}
+	s.stats.Reset()
 	return s.rebuildHandlers()
 }
 
@@ -100,6 +112,51 @@ func (s *server) AddFile(fd protoreflect.FileDescriptor) error {
 
 func (s *server) AddFileFromPath(path string) error {
 	return registry.AddServicesFromPath(s.ServiceRegistry, path)
+}
+
+func (s *server) GetStats() *metrics.Stats {
+	stats := s.stats.Copy()
+
+	stats.Uptime = time.Since(stats.StartedAt)
+	stats.UniqueServices = s.ServiceRegistry.ServiceCount()
+	// TODO: Implement UniqueMethods by iterating through all services and counting unique methods
+	// stats.UniqueMethods = s.ServiceRegistry
+	stats.HTTPHost = s.opts.Addr
+	stats.FauxRpcVersion = s.opts.Version
+	// Calculate requests per second for the last second
+	now := time.Now().Truncate(time.Second)
+	oneSecondAgo := now.Add(-time.Second)
+
+	var requestsInLastSecond int64
+	for t, count := range stats.RequestCounts {
+		if t.After(oneSecondAgo) || t.Equal(oneSecondAgo) {
+			requestsInLastSecond += count
+		}
+	}
+	stats.RequestsPerSecond = float64(requestsInLastSecond)
+
+	// Clean up old entries
+	for t := range stats.RequestCounts {
+		if t.Before(oneSecondAgo) {
+			delete(stats.RequestCounts, t)
+		}
+	}
+
+	if stats.TotalRequests > 0 {
+		stats.ErrorRate = fmt.Sprintf("%.3f%%", float64(stats.Errors)/float64(stats.TotalRequests)*100)
+	} else {
+		stats.ErrorRate = "0.000%"
+	}
+
+	return s.stats
+}
+
+func (s *server) IncrementTotalRequests() {
+	s.stats.IncrementTotalRequests()
+}
+
+func (s *server) IncrementErrors() {
+	s.stats.IncrementErrors()
 }
 
 func (s *server) rebuildHandlers() error {
@@ -126,7 +183,7 @@ func (s *server) rebuildHandlers() error {
 
 	s.ServiceRegistry.ForEachService(func(sd protoreflect.ServiceDescriptor) bool {
 		vgservice := vanguard.NewServiceWithSchema(
-			sd, NewHandler(sd, faker, validate),
+			sd, NewHandler(sd, faker, validate, s), // Pass the server instance here
 			vanguard.WithTargetProtocols(vanguard.ProtocolGRPC),
 			vanguard.WithTargetCodecs(vanguard.CodecProto))
 		vgservices = append(vgservices, vgservice)
@@ -175,7 +232,7 @@ func (s *server) Handler() (http.Handler, error) {
 	}
 
 	mux.Mount("/", httplog.Logger(s.handlerTranscoder))
-	mux.Mount("/fauxrpc", frontend.DashboardHandler())
+	mux.Mount("/fauxrpc", http.StripPrefix("/fauxrpc", frontend.DashboardHandler(s)))
 
 	if s.opts.UseReflection {
 		mux.Mount("/grpc.reflection.v1.ServerReflection/", s.handlerReflectorV1)
@@ -194,7 +251,6 @@ func (s *server) Handler() (http.Handler, error) {
 	}
 	mux.Mount(stubsv1connect.NewStubsServiceHandler(stubs.NewHandler(s, s), connect.WithInterceptors(validateInterceptor)))
 	mux.Mount(registryv1connect.NewRegistryServiceHandler(registry.NewHandler(s), connect.WithInterceptors(validateInterceptor)))
-	mux.Mount(dashboardv1connect.NewDashboardServiceHandler(frontend.NewHandler(s.ServiceRegistry, nil, s.opts.Version, s.opts.Addr)))
 
 	return mux, nil
 }

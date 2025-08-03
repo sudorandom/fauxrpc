@@ -231,8 +231,8 @@ const file_registry_v1_registry_service_proto_rawDesc = "" +
 	"\rResetResponse2\xb0\x01\n" +
 	"\x0fRegistryService\x12[\n" +
 	"\x0eAddDescriptors\x12\".registry.v1.AddDescriptorsRequest\x1a#.registry.v1.AddDescriptorsResponse\"\x00\x12@\n" +
-	"\x05Reset\x12\x19.registry.v1.ResetRequest\x1a\x1a.registry.v1.ResetResponse\"\x00B\xbc\x01\n" +
-	"\x0fcom.registry.v1B\x14RegistryServiceProtoP\x01Z>github.com/sudorandom/fauxrpc/proto/gen/registry/v1;registryv1\xa2\x02\x03RXX\xaa\x02\vRegistry.V1\xca\x02\vRegistry\\V1\xe2\x02\x17Registry\\V1\\GPBMetadata\xea\x02\fRegistry::V1\x92\x03\x05\xd2>\x02\x10\x03b\beditionsp\xe8\a"
+	"\x05Reset\x12\x19.registry.v1.ResetRequest\x1a\x1a.registry.v1.ResetResponse\"\x00B\xbe\x01\n" +
+	"\x0fcom.registry.v1B\x14RegistryServiceProtoP\x01Z@github.com/sudorandom/fauxrpc/private/gen/registry/v1;registryv1\xa2\x02\x03RXX\xaa\x02\vRegistry.V1\xca\x02\vRegistry\\V1\xe2\x02\x17Registry\\V1\\GPBMetadata\xea\x02\fRegistry::V1\x92\x03\x05\xd2>\x02\x10\x03b\beditionsp\xe8\a"
 
 var file_registry_v1_registry_service_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_registry_v1_registry_service_proto_goTypes = []any{

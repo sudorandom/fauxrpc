@@ -476,8 +476,8 @@ const file_stubs_v1_stubs_service_proto_rawDesc = "" +
 	"\bAddStubs\x12\x19.stubs.v1.AddStubsRequest\x1a\x1a.stubs.v1.AddStubsResponse\"\x00\x12L\n" +
 	"\vRemoveStubs\x12\x1c.stubs.v1.RemoveStubsRequest\x1a\x1d.stubs.v1.RemoveStubsResponse\"\x00\x12U\n" +
 	"\x0eRemoveAllStubs\x12\x1f.stubs.v1.RemoveAllStubsRequest\x1a .stubs.v1.RemoveAllStubsResponse\"\x00\x12F\n" +
-	"\tListStubs\x12\x1a.stubs.v1.ListStubsRequest\x1a\x1b.stubs.v1.ListStubsResponse\"\x00B\xa4\x01\n" +
-	"\fcom.stubs.v1B\x11StubsServiceProtoP\x01Z8github.com/sudorandom/fauxrpc/proto/gen/stubs/v1;stubsv1\xa2\x02\x03SXX\xaa\x02\bStubs.V1\xca\x02\bStubs\\V1\xe2\x02\x14Stubs\\V1\\GPBMetadata\xea\x02\tStubs::V1\x92\x03\x05\xd2>\x02\x10\x03b\beditionsp\xe8\a"
+	"\tListStubs\x12\x1a.stubs.v1.ListStubsRequest\x1a\x1b.stubs.v1.ListStubsResponse\"\x00B\xa6\x01\n" +
+	"\fcom.stubs.v1B\x11StubsServiceProtoP\x01Z:github.com/sudorandom/fauxrpc/private/gen/stubs/v1;stubsv1\xa2\x02\x03SXX\xaa\x02\bStubs.V1\xca\x02\bStubs\\V1\xe2\x02\x14Stubs\\V1\\GPBMetadata\xea\x02\tStubs::V1\x92\x03\x05\xd2>\x02\x10\x03b\beditionsp\xe8\a"
 
 var file_stubs_v1_stubs_service_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_stubs_v1_stubs_service_proto_goTypes = []any{

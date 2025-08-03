@@ -799,9 +799,9 @@ const file_stubs_v1_stubs_proto_rawDesc = "" +
 	"\x13ERROR_CODE_INTERNAL\x10\r\x12\x1a\n" +
 	"\x16ERROR_CODE_UNAVAILABLE\x10\x0e\x12\x18\n" +
 	"\x14ERROR_CODE_DATA_LOSS\x10\x0f\x12\x1e\n" +
-	"\x1aERROR_CODE_UNAUTHENTICATED\x10\x10B\x9d\x01\n" +
+	"\x1aERROR_CODE_UNAUTHENTICATED\x10\x10B\x9f\x01\n" +
 	"\fcom.stubs.v1B\n" +
-	"StubsProtoP\x01Z8github.com/sudorandom/fauxrpc/proto/gen/stubs/v1;stubsv1\xa2\x02\x03SXX\xaa\x02\bStubs.V1\xca\x02\bStubs\\V1\xe2\x02\x14Stubs\\V1\\GPBMetadata\xea\x02\tStubs::V1\x92\x03\x05\xd2>\x02\x10\x03b\beditionsp\xe8\a"
+	"StubsProtoP\x01Z:github.com/sudorandom/fauxrpc/private/gen/stubs/v1;stubsv1\xa2\x02\x03SXX\xaa\x02\bStubs.V1\xca\x02\bStubs\\V1\xe2\x02\x14Stubs\\V1\\GPBMetadata\xea\x02\tStubs::V1\x92\x03\x05\xd2>\x02\x10\x03b\beditionsp\xe8\a"
 
 var file_stubs_v1_stubs_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_stubs_v1_stubs_proto_msgTypes = make([]protoimpl.MessageInfo, 4)

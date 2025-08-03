@@ -29,25 +29,29 @@ import (
 
 const maxMessageSize = 4 * 1024 * 1024
 
-func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker, validate protovalidate.Validator) http.Handler {
+func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker, validate protovalidate.Validator, s Server) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		s.IncrementTotalRequests()
 		w.Header().Set("Trailer", "Grpc-Status,Grpc-Message,Grpc-Status-Details-Bin")
 		w.Header().Add("Content-Type", "application/grpc")
 
 		parts := strings.Split(r.URL.Path, "/")
 		if len(parts) != 3 {
+			s.IncrementErrors()
 			grpcWriteStatus(w, status.New(codes.NotFound, ""))
 			return
 		}
 
 		serviceName := parts[1]
 		if serviceName != string(service.FullName()) {
+			s.IncrementErrors()
 			grpcWriteStatus(w, status.New(codes.NotFound, "service not found"))
 			return
 		}
 		methodName := parts[2]
 		method := service.Methods().ByName(protoreflect.Name(methodName))
 		if method == nil {
+			s.IncrementErrors()
 			grpcWriteStatus(w, status.New(codes.NotFound, "method not found"))
 			return
 		}
@@ -60,13 +64,16 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 				if errors.Is(err, io.EOF) {
 					return nil, nil
 				}
+				s.IncrementErrors()
 				return nil, status.New(codes.NotFound, err.Error())
 			}
 			msg := registry.NewMessage(method.Input()).Interface()
 			if err := proto.Unmarshal(body[:size], msg); err != nil {
+				s.IncrementErrors()
 				return nil, status.New(codes.NotFound, err.Error())
 			}
 			if err := validate.Validate(msg); err != nil {
+				s.IncrementErrors()
 				grpcErr := status.New(codes.InvalidArgument, err.Error())
 				if validationErr := new(protovalidate.ValidationError); errors.As(err, &validationErr) {
 					grpcErr, err = grpcErr.WithDetails(validationErr.ToProto())
@@ -94,6 +101,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 			})
 		} else {
 			if msg, st := readMessage(); st != nil {
+				s.IncrementErrors()
 				grpcWriteStatus(w, st)
 				return
 			} else {
@@ -114,6 +122,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 				}),
 			}); err != nil {
 				var stubErr *stubs.StatusError
+				s.IncrementErrors()
 				switch {
 				case errors.Is(err, fauxrpc.ErrNotFaked):
 					return status.New(codes.NotFound, err.Error()).Err()
@@ -125,6 +134,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 
 			b, err := proto.Marshal(out)
 			if err != nil {
+				s.IncrementErrors()
 				slog.Error(fmt.Sprintf("error marshalling msg: %s", err))
 				return status.New(codes.Internal, err.Error()).Err()
 			}
@@ -134,6 +144,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 
 		// Write response
 		if err := eg.Wait(); err != nil {
+			s.IncrementErrors()
 			if st, ok := status.FromError(err); ok {
 				grpcWriteStatus(w, st)
 				return

@@ -4257,8 +4257,8 @@ const file_test_v1_test_proto_rawDesc = "" +
 	"\x10ENUM_UNSPECIFIED\x10\x00\x12\f\n" +
 	"\bENUM_ONE\x10\x01\x12\f\n" +
 	"\bENUM_TWO\x10\x02B\b\n" +
-	"\x06optionB\x95\x01\n" +
-	"\vcom.test.v1B\tTestProtoP\x01Z6github.com/sudorandom/fauxrpc/proto/gen/test/v1;testv1\xa2\x02\x03TXX\xaa\x02\aTest.V1\xca\x02\aTest\\V1\xe2\x02\x13Test\\V1\\GPBMetadata\xea\x02\bTest::V1\x92\x03\x05\xd2>\x02\x10\x03b\beditionsp\xe8\a"
+	"\x06optionB\x97\x01\n" +
+	"\vcom.test.v1B\tTestProtoP\x01Z8github.com/sudorandom/fauxrpc/private/gen/test/v1;testv1\xa2\x02\x03TXX\xaa\x02\aTest.V1\xca\x02\aTest\\V1\xe2\x02\x13Test\\V1\\GPBMetadata\xea\x02\bTest::V1\x92\x03\x05\xd2>\x02\x10\x03b\beditionsp\xe8\a"
 
 var file_test_v1_test_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
 var file_test_v1_test_proto_msgTypes = make([]protoimpl.MessageInfo, 36)
