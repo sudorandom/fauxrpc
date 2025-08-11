@@ -4,15 +4,30 @@ import (
 	"fmt"
 	"log/slog"
 	"runtime"
+	"runtime/debug"
+	"strings"
 
 	"github.com/alecthomas/kong"
 )
 
 var (
 	version = "dev"
-	commit  = "none"
-	date    = "unknown"
+	commit  = ""
+	date    = ""
 )
+
+func init() {
+	if info, ok := debug.ReadBuildInfo(); ok {
+		for _, setting := range info.Settings {
+			switch {
+			case setting.Key == "vcs.revision" && commit == "":
+				commit = setting.Value
+			case setting.Key == "vcs.time" && date == "":
+				date = setting.Value
+			}
+		}
+	}
+}
 
 type Globals struct {
 	LogLevel string      `short:"l" help:"Set the logging level (debug|info|warn|error)" default:"info"`
@@ -72,5 +87,14 @@ func main() {
 }
 
 func fullVersion() string {
-	return fmt.Sprintf("%s (%s) @ %s; %s", version, commit, date, runtime.Version())
+	var b strings.Builder
+	b.WriteString(version)
+	if commit != "" {
+		b.WriteString(fmt.Sprintf(" (%s)", commit))
+	}
+	if date != "" {
+		b.WriteString(fmt.Sprintf(" @ %s", date))
+	}
+	b.WriteString(fmt.Sprintf("; %s", runtime.Version()))
+	return b.String()
 }

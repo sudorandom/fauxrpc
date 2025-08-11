@@ -5,6 +5,7 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+	"runtime"
 	"sync"
 	"time"
 
@@ -79,9 +80,12 @@ func NewServer(opts ServerOpts) (*server, error) {
 		handlerTranscoder:       NewWrappedHandler(),
 		opts:                    opts,
 		stats: &metrics.Stats{
-			StartedAt:     time.Now(),
-			LastReset:     time.Now(),
-			RequestCounts: make(map[time.Time]int64),
+			StartedAt:      time.Now(),
+			LastReset:      time.Now(),
+			RequestCounts:  make(map[time.Time]int64),
+			HTTPHost:       opts.Addr,
+			GoVersion:      runtime.Version(),
+			FauxRpcVersion: opts.Version,
 		},
 	}
 	return s, nil
