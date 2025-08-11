@@ -2,3 +2,4 @@
 tmp
 dist
 private/frontend/node_modules/
+fauxrpc

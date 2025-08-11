@@ -1,32 +1,24 @@
 package partials
 
 templ RequestLog() {
-	<div x-data="{ 
-    logs: [],
-    isStreaming: true,
-    init() {
-        const generateMockLog = () => {
-            const mockServices = ['UserService', 'ProductService', 'OrderService', 'PaymentService', 'InventoryService'];
-            const mockMethods = { UserService: ['CreateUser', 'GetUser', 'UpdateProfile'], ProductService: ['GetProduct', 'ListProducts', 'SearchProducts'], OrderService: ['CreateOrder', 'GetOrder', 'CancelOrder'], PaymentService: ['ProcessPayment', 'GetPaymentStatus'], InventoryService: ['CheckStock', 'UpdateStock'] };
-            const service = mockServices[Math.floor(Math.random() * mockServices.length)];
-            const methods = mockMethods[service];
-            const method = methods[Math.floor(Math.random() * methods.length)];
-            const status = Math.random() < 0.05 ? 500 : (Math.random() < 0.1 ? 404 : 200);
-            return { id: crypto.randomUUID(), timestamp: new Date(), service, method, status, duration: (Math.random() * 200 + 10).toFixed(0), requestHeaders: { 'Content-Type': 'application/json', 'X-Request-ID': crypto.randomUUID(), 'User-Agent': 'FauxClient/1.0' }, responseHeaders: { 'Content-Type': 'application/json', 'Server': 'FauxRPC/0.5.2', 'X-Trace-ID': crypto.randomUUID() }, requestBody: { id: Math.floor(Math.random() * 1000) }, responseBody: status === 200 ? { success: true, data: `data_for_${method}` } : { success: false, error: 'An unexpected error occurred on the server.' } };
-        };
-
-        const streamLogs = () => {
-            if (this.isStreaming) {
-                this.logs.unshift(generateMockLog());
-                if (this.logs.length > 100) {
-                    this.logs.pop();
-                }
+	<div
+		x-data="{
+        logs: [],
+        isStreaming: true,
+    }"
+		hx-ext="sse"
+		sse-connect="/fauxrpc/sse/logs"
+		@sse:message.window="
+        if (isStreaming) {
+            const newLog = JSON.parse(event.detail.data);
+            newLog.timestamp = new Date(newLog.timestamp);
+            logs.unshift(newLog);
+            if (logs.length > 100) {
+                logs.pop();
             }
-            setTimeout(streamLogs, 1500);
-        };
-        streamLogs();
-    }
-}">
+        }
+    "
+	>
     <div class="flex justify-between items-center mb-6 flex-shrink-0">
         <h1 class="text-3xl font-bold text-white">Request Log</h1>
         <div class="flex items-center space-x-4">

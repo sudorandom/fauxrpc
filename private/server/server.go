@@ -22,6 +22,7 @@ import (
 	"github.com/sudorandom/fauxrpc/private/frontend"
 	"github.com/sudorandom/fauxrpc/private/gen/registry/v1/registryv1connect"
 	"github.com/sudorandom/fauxrpc/private/gen/stubs/v1/stubsv1connect"
+	fauxlog "github.com/sudorandom/fauxrpc/private/log"
 	"github.com/sudorandom/fauxrpc/private/metrics"
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/private/stubs"
@@ -37,6 +38,7 @@ type Server interface {
 	GetStats() *metrics.Stats
 	IncrementTotalRequests()
 	IncrementErrors()
+	GetLogger() *fauxlog.Logger
 }
 
 type ServerOpts struct {
@@ -60,8 +62,9 @@ type server struct {
 	handlerReflectorV1Alpha *wrappedHandler
 	handlerTranscoder       *wrappedHandler
 
-	opts  ServerOpts
-	stats *metrics.Stats
+	opts   ServerOpts
+	stats  *metrics.Stats
+	logger *fauxlog.Logger
 }
 
 func NewServer(opts ServerOpts) (*server, error) {
@@ -83,6 +86,7 @@ func NewServer(opts ServerOpts) (*server, error) {
 			LastReset:     time.Now(),
 			RequestCounts: make(map[time.Time]int64),
 		},
+		logger: fauxlog.NewLogger(100),
 	}
 	return s, nil
 }
@@ -112,6 +116,10 @@ func (s *server) AddFile(fd protoreflect.FileDescriptor) error {
 
 func (s *server) AddFileFromPath(path string) error {
 	return registry.AddServicesFromPath(s.ServiceRegistry, path)
+}
+
+func (s *server) GetLogger() *fauxlog.Logger {
+	return s.logger
 }
 
 func (s *server) GetStats() *metrics.Stats {
@@ -183,7 +191,7 @@ func (s *server) rebuildHandlers() error {
 
 	s.ServiceRegistry.ForEachService(func(sd protoreflect.ServiceDescriptor) bool {
 		vgservice := vanguard.NewServiceWithSchema(
-			sd, NewHandler(sd, faker, validate, s), // Pass the server instance here
+			sd, NewHandler(sd, faker, validate, s, s.logger), // Pass the server instance here
 			vanguard.WithTargetProtocols(vanguard.ProtocolGRPC),
 			vanguard.WithTargetCodecs(vanguard.CodecProto))
 		vgservices = append(vgservices, vgservice)

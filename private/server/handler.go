@@ -2,6 +2,7 @@ package server
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -9,50 +10,108 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"buf.build/go/protovalidate"
 	"github.com/brianvoe/gofakeit/v7"
+	"github.com/google/uuid"
 	"github.com/sudorandom/fauxrpc"
+	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
 	"github.com/sudorandom/fauxrpc/private/grpc"
+	fauxlog "github.com/sudorandom/fauxrpc/private/log"
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/private/stubs"
 	"github.com/sudorandom/fauxrpc/protocel"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/runtime/protoiface"
-
-	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
 )
 
 const maxMessageSize = 4 * 1024 * 1024
 
-func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker, validate protovalidate.Validator, s Server) http.Handler {
+func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker, validate protovalidate.Validator, s Server, logger *fauxlog.Logger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		startTime := time.Now()
 		s.IncrementTotalRequests()
+
+		var finalStatus *status.Status
+		var requestBody proto.Message
+		var responseBody proto.Message
+
+		defer func() {
+			if r.URL.Path == "/grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo" {
+				return
+			}
+			duration := time.Since(startTime)
+
+			reqHeaders, _ := json.Marshal(r.Header)
+			resHeaders, _ := json.Marshal(w.Header())
+
+			var reqBodyBytes []byte
+			if requestBody != nil {
+				reqBodyBytes, _ = protojson.Marshal(requestBody)
+			}
+
+			var resBodyBytes []byte
+			if responseBody != nil {
+				resBodyBytes, _ = protojson.Marshal(responseBody)
+			}
+
+			parts := strings.Split(r.URL.Path, "/")
+			serviceName := ""
+			methodName := ""
+			if len(parts) == 3 {
+				serviceName = parts[1]
+				methodName = parts[2]
+			}
+
+			code := codes.Unknown
+			if finalStatus != nil {
+				code = finalStatus.Code()
+			}
+
+			logger.Log(&fauxlog.LogEntry{
+				ID:              uuid.New().String(),
+				Timestamp:       startTime,
+				Service:         serviceName,
+				Method:          methodName,
+				Status:          int(code),
+				Duration:        duration.Milliseconds(),
+				RequestHeaders:  reqHeaders,
+				ResponseHeaders: resHeaders,
+				RequestBody:     reqBodyBytes,
+				ResponseBody:    resBodyBytes,
+			})
+		}()
+
 		w.Header().Set("Trailer", "Grpc-Status,Grpc-Message,Grpc-Status-Details-Bin")
 		w.Header().Add("Content-Type", "application/grpc")
 
 		parts := strings.Split(r.URL.Path, "/")
 		if len(parts) != 3 {
 			s.IncrementErrors()
-			grpcWriteStatus(w, status.New(codes.NotFound, ""))
+			finalStatus = status.New(codes.NotFound, "")
+			grpcWriteStatus(w, finalStatus)
 			return
 		}
 
 		serviceName := parts[1]
 		if serviceName != string(service.FullName()) {
 			s.IncrementErrors()
-			grpcWriteStatus(w, status.New(codes.NotFound, "service not found"))
+			finalStatus = status.New(codes.NotFound, "service not found")
+			grpcWriteStatus(w, finalStatus)
 			return
 		}
 		methodName := parts[2]
 		method := service.Methods().ByName(protoreflect.Name(methodName))
 		if method == nil {
 			s.IncrementErrors()
-			grpcWriteStatus(w, status.New(codes.NotFound, "method not found"))
+			finalStatus = status.New(codes.NotFound, "method not found")
+			grpcWriteStatus(w, finalStatus)
 			return
 		}
 		defer r.Body.Close()
@@ -100,13 +159,15 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 				}
 			})
 		} else {
-			if msg, st := readMessage(); st != nil {
+			var st *status.Status
+			input, st = readMessage()
+			if st != nil {
 				s.IncrementErrors()
+				finalStatus = st
 				grpcWriteStatus(w, st)
 				return
-			} else {
-				input = msg
 			}
+			requestBody = input
 		}
 
 		// Handle writing response
@@ -131,6 +192,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 				}
 				return status.New(codes.Internal, err.Error()).Err()
 			}
+			responseBody = out
 
 			b, err := proto.Marshal(out)
 			if err != nil {
@@ -146,15 +208,18 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 		if err := eg.Wait(); err != nil {
 			s.IncrementErrors()
 			if st, ok := status.FromError(err); ok {
+				finalStatus = st
 				grpcWriteStatus(w, st)
 				return
 			} else {
-				grpcWriteStatus(w, status.New(codes.Internal, err.Error()))
+				finalStatus = status.New(codes.Internal, err.Error())
+				grpcWriteStatus(w, finalStatus)
 				return
 			}
 		}
 		_ = grpc.WriteGRPCMessage(w, msg)
-		grpcWriteStatus(w, status.New(codes.OK, ""))
+		finalStatus = status.New(codes.OK, "")
+		grpcWriteStatus(w, finalStatus)
 	})
 }
 
