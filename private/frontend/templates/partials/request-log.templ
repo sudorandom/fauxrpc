@@ -1,100 +1,19 @@
 package partials
 
-templ RequestLog() {
-	<div
-		x-data="{
-        logs: [],
-        isStreaming: true,
-    }"
-		hx-ext="sse"
-		sse-connect="/fauxrpc/sse/logs"
-		@sse:message.window="
-        if (isStreaming) {
-            const newLog = JSON.parse(event.detail.data);
-            newLog.timestamp = new Date(newLog.timestamp);
-            logs.unshift(newLog);
-            if (logs.length > 100) {
-                logs.pop();
+import "github.com/sudorandom/fauxrpc/private/log"
+
+templ RequestLog(history []*log.LogEntry) {
+    <div>
+        <div class="flex justify-between items-center mb-6 flex-shrink-0">
+            <h1 class="text-3xl font-bold text-white">Request Log</h1>
+            <div class="flex items-center space-x-4">
+                <button onclick="document.getElementById('log-container').innerHTML = ''" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white font-semibold rounded-lg transition-colors">Clear</button>
+            </div>
+        </div>
+        <div id="log-container" class="overflow-y-auto pr-2 flex-grow" sse-swap="message" hx-swap="afterbegin">
+            for _, entry := range history {
+                @LogEntry(entry)
             }
-        }
-    "
-	>
-    <div class="flex justify-between items-center mb-6 flex-shrink-0">
-        <h1 class="text-3xl font-bold text-white">Request Log</h1>
-        <div class="flex items-center space-x-4">
-            <button @click="logs = []" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white font-semibold rounded-lg transition-colors">Clear</button>
-            <button @click="isStreaming = !isStreaming" :class="isStreaming ? 'bg-blue-600 hover:bg-blue-500 text-white' : 'bg-gray-700 hover:bg-gray-600 text-gray-300'" class="px-4 py-2 font-semibold rounded-lg transition-colors" x-text="isStreaming ? 'Pause Streaming' : 'Resume Streaming'"></button>
         </div>
     </div>
-    <div class="overflow-y-auto pr-2 flex-grow">
-        <template x-for="log in logs" :key="log.id">
-            <div x-data="{ isOpen: false }" class="bg-gray-800/60 border border-gray-700 rounded-lg mb-3 overflow-hidden">
-                <button @click="isOpen = !isOpen" class="w-full p-4 text-left flex items-center justify-between hover:bg-gray-700/50 transition-colors duration-200">
-                    <div class="flex items-center space-x-4 flex-wrap">
-                        <span class="px-2 py-1 text-xs font-bold rounded-md" :class="{ 'bg-red-500 text-red-100': log.status >= 500, 'bg-yellow-500 text-yellow-100': log.status >= 400 && log.status < 500, 'bg-green-500 text-green-100': log.status >= 200 && log.status < 400, 'bg-gray-500 text-gray-100': log.status < 200 }" x-text="log.status"></span>
-                        <span class="text-gray-400 font-mono text-sm" x-text="log.timestamp.toLocaleTimeString()"></span>
-                        <span class="text-white font-medium" x-text="log.service"></span>
-                        <span class="text-gray-400" x-text="log.method"></span>
-                    </div>
-                    <div class="flex items-center space-x-2 flex-shrink-0 ml-4">
-                        <span class="text-sm text-gray-500" x-text="`${log.duration}ms`"></span>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 text-gray-400 transition-transform duration-300" :class="{ 'rotate-180': isOpen }"><path d="m6 9 6 6 6-6"></path></svg>
-                    </div>
-                </button>
-                <div x-show="isOpen" x-cloak class="p-4 border-t border-gray-700 bg-gray-900/50">
-                    <div class="space-y-8">
-                        <div>
-                            <h4 class="text-lg font-semibold text-gray-300 mb-3">Request</h4>
-                            <div class="space-y-4">
-                                <div>
-                                    <h5 class="text-md font-medium text-gray-400 mb-2">Headers</h5>
-                                    <div class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto">
-                                        <table class="w-full">
-                                            <tbody>
-                                                <template x-for="[key, value] in Object.entries(log.requestHeaders)" :key="key">
-                                                    <tr class="border-b border-gray-700/50 last:border-b-0">
-                                                        <td class="py-1 pr-4 font-medium text-gray-400 align-top" x-text="key"></td>
-                                                        <td class="py-1 font-mono break-all" x-text="String(value)"></td>
-                                                    </tr>
-                                                </template>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                                <div>
-                                    <h5 class="text-md font-medium text-gray-400 mb-2">Body</h5>
-                                    <pre class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto"><code x-text="JSON.stringify(log.requestBody, null, 2)"></code></pre>
-                                </div>
-                            </div>
-                        </div>
-                        <div>
-                            <h4 class="text-lg font-semibold text-gray-300 mb-3">Response</h4>
-                            <div class="space-y-4">
-                                <div>
-                                    <h5 class="text-md font-medium text-gray-400 mb-2">Headers</h5>
-                                    <div class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto">
-                                        <table class="w-full">
-                                            <tbody>
-                                                <template x-for="[key, value] in Object.entries(log.responseHeaders)" :key="key">
-                                                    <tr class="border-b border-gray-700/50 last:border-b-0">
-                                                        <td class="py-1 pr-4 font-medium text-gray-400 align-top" x-text="key"></td>
-                                                        <td class="py-1 font-mono break-all" x-text="String(value)"></td>
-                                                    </tr>
-                                                </template>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                                <div>
-                                    <h5 class="text-md font-medium text-gray-400 mb-2">Body</h5>
-                                    <pre class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto"><code x-text="JSON.stringify(log.responseBody, null, 2)"></code></pre>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </template>
-    </div>
-</div>
 }

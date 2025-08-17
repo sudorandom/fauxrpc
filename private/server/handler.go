@@ -43,9 +43,6 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 		var responseBody proto.Message
 
 		defer func() {
-			if r.URL.Path == "/grpc.reflection.v1alpha.ServerReflection/ServerReflectionInfo" {
-				return
-			}
 			duration := time.Since(startTime)
 
 			reqHeaders, _ := json.Marshal(r.Header)

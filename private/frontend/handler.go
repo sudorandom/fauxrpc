@@ -4,8 +4,8 @@ package frontend
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/a-h/templ"
@@ -24,7 +24,7 @@ type Provider interface {
 func DashboardHandler(p Provider) http.Handler {
 	mux := http.NewServeMux()
 
-	mux.Handle("/sse/logs", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/fauxrpc/sse/logs", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		logger := p.GetLogger()
 		flusher, ok := w.(http.Flusher)
 		if !ok {
@@ -36,53 +36,45 @@ func DashboardHandler(p Provider) http.Handler {
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Connection", "keep-alive")
 
-		// Send history
-		history := logger.GetHistory()
-		for _, entry := range history {
-			var buf bytes.Buffer
-			enc := json.NewEncoder(&buf)
-			if err := enc.Encode(entry); err != nil {
-				// TODO: handle error
-				continue
-			}
-			fmt.Fprintf(w, "data: %s\n\n", buf.String())
-		}
-		flusher.Flush()
-
 		ch, unsubscribe := logger.Subscribe()
 		defer unsubscribe()
 
+		slog.Info("SSE handler started, listening for new entries")
 		ctx := r.Context()
 		for {
 			select {
 			case <-ctx.Done():
+				slog.Info("SSE client disconnected")
 				return // Client disconnected
 			case entry := <-ch:
 				var buf bytes.Buffer
-				enc := json.NewEncoder(&buf)
-				if err := enc.Encode(entry); err != nil {
-					// TODO: handle error
+				if err := partials.LogEntry(entry).Render(ctx, &buf); err != nil {
+					slog.Error("failed to render log entry partial", "err", err)
 					continue
 				}
-				fmt.Fprintf(w, "data: %s\n\n", buf.String())
+				if _, err := fmt.Fprintf(w, "event: message\ndata: %s\n\n", buf.String()); err != nil {
+					slog.Error("failed to write new entry to SSE stream", "err", err)
+					return
+				}
 				flusher.Flush()
 			}
 		}
 	}))
 
-	mux.Handle("/partials/request-log", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		templ.Handler(partials.RequestLog()).ServeHTTP(w, r)
+	mux.Handle("/fauxrpc/partials/request-log", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		templ.Handler(partials.RequestLog(nil)).ServeHTTP(w, r)
 	}))
-	mux.Handle("/partials/schema", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
+	mux.Handle("/fauxrpc/partials/schema", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		templ.Handler(partials.Schema()).ServeHTTP(w, r)
 	}))
-	mux.Handle("/partials/stubs", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/fauxrpc/partials/stubs", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		templ.Handler(partials.Stubs()).ServeHTTP(w, r)
 	}))
-	mux.Handle("/partials/summary", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/fauxrpc/partials/summary", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		templ.Handler(partials.Summary(p.GetStats())).ServeHTTP(w, r)
 	}))
-	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux.Handle("/fauxrpc/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		templ.Handler(templates.Index()).ServeHTTP(w, r)
 	}))
 	return mux

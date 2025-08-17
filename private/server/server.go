@@ -86,7 +86,7 @@ func NewServer(opts ServerOpts) (*server, error) {
 			LastReset:     time.Now(),
 			RequestCounts: make(map[time.Time]int64),
 		},
-		logger: fauxlog.NewLogger(100),
+		logger: fauxlog.NewLogger(),
 	}
 	return s, nil
 }
@@ -240,7 +240,7 @@ func (s *server) Handler() (http.Handler, error) {
 	}
 
 	mux.Mount("/", httplog.Logger(s.handlerTranscoder))
-	mux.Mount("/fauxrpc", http.StripPrefix("/fauxrpc", frontend.DashboardHandler(s)))
+	mux.Mount("/fauxrpc", frontend.DashboardHandler(s))
 
 	if s.opts.UseReflection {
 		mux.Mount("/grpc.reflection.v1.ServerReflection/", s.handlerReflectorV1)

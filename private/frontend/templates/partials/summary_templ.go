@@ -35,27 +35,27 @@ func Summary(stats *metrics.Stats) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div hx-get=\"/fauxrpc/partials/summary\" hx-trigger=\"every 1s\" hx-swap=\"innerHTML\" hx-indicator=\".htmx-indicator\" class=\"transition-opacity duration-500 ease-in-out\"><div class=\"bg-gray-800/50 border border-gray-700/80 rounded-lg mb-8 overflow-hidden\"><div class=\"p-6\"><h2 class=\"text-xl font-bold text-white mb-2\">FauxRPC is running</h2><p class=\"text-gray-400\">Service is available at <code class=\"bg-gray-900/70 text-blue-400 px-2 py-1 rounded-md\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div hx-get=\"/fauxrpc/partials/summary\" hx-trigger=\"every 1s\" hx-swap=\"innerHTML\" class=\"transition-opacity duration-500 ease-in-out\"><div class=\"htmx-indicator absolute top-0 right-0 m-4\"><svg class=\"animate-spin h-5 w-5 text-white\" xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\"><circle class=\"opacity-25\" cx=\"12\" cy=\"12\" r=\"10\" stroke=\"currentColor\" stroke-width=\"4\"></circle> <path class=\"opacity-75\" fill=\"currentColor\" d=\"M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z\"></path></svg></div><div class=\"bg-gray-800/50 border border-gray-700/80 rounded-lg mb-8 overflow-hidden\"><div class=\"p-6\"><h2 class=\"text-xl font-bold text-white mb-2\">FauxRPC is running</h2><p class=\"text-gray-400\">Service is available at <code class=\"bg-gray-900/70 text-blue-400 px-2 py-1 rounded-md\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(stats.HTTPHost)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 20, Col: 133}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 25, Col: 133}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</code></p></div><div x-data=\"{ isExampleExpanded: false }\"><div x-show=\"isExampleExpanded\" x-cloak class=\"px-6 pb-6 border-t border-gray-700/80 pt-6\"><div class=\"space-y-6\"><div x-data=\"{ copied: false }\" class=\"space-y-2\"><h3 class=\"text-lg font-semibold text-gray-300\">buf curl Example</h3><div class=\"relative bg-gray-900 rounded-lg p-4 font-mono text-sm text-gray-300\"><pre class=\"overflow-x-auto\"><code x-text=\"`buf curl --schema 'protos' -d '{\\'sentence\\': \\'hello from FauxRPC\\'}' http://${stats.HTTPHost}/connectrpc.eliza.v1.ElizaService/Say`\"></code></pre><button @click=\"navigator.clipboard.writeText(`buf curl --schema 'protos' -d '{\\'sentence\\': \\'hello from FauxRPC\\'}' http://${stats.HTTPHost}/connectrpc.eliza.v1.ElizaService/Say`); copied = true; setTimeout(() => copied = false, 2000)\" class=\"absolute top-3 right-3 p-2 bg-gray-700 hover:bg-gray-600 rounded-md text-gray-300 transition-colors\"><template x-if=\"!copied\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"h-5 w-5\"><path d=\"M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2\"></path><rect x=\"8\" y=\"2\" width=\"8\" height=\"4\" rx=\"1\" ry=\"1\"></rect></svg></template><template x-if=\"copied\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"h-5 w-5 text-green-400\"><polyline points=\"20 6 9 17 4 12\"></polyline></svg></template></button></div></div><div x-data=\"{ copied: false }\" class=\"space-y-2\"><h3 class=\"text-lg font-semibold text-gray-300\">curl Example</h3><div class=\"relative bg-gray-900 rounded-lg p-4 font-mono text-sm text-gray-300\"><pre class=\"overflow-x-auto\"><code x-text=\"`curl \\\n    --header 'Content-Type: application/json' \\\n    -d '{\\'sentence\\': \\'hello from FauxRPC\\'}' \\\n    http://${stats.HTTPHost}/connectrpc.eliza.v1.ElizaService/Say`\"></code></pre><button @click=\"navigator.clipboard.writeText(`curl \\n    --header 'Content-Type: application/json' \\n    -d '{\\'sentence\\': \\'hello from FauxRPC\\'}' \\n    http://${stats.HTTPHost}/connectrpc.eliza.v1.ElizaService/Say`); copied = true; setTimeout(() => copied = false, 2000)\" class=\"absolute top-3 right-3 p-2 bg-gray-700 hover:bg-gray-600 rounded-md text-gray-300 transition-colors\"><template x-if=\"!copied\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"h-5 w-5\"><path d=\"M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2\"></path><rect x=\"8\" y=\"2\" width=\"8\" height=\"4\" rx=\"1\" ry=\"1\"></rect></svg></template><template x-if=\"copied\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"h-5 w-5 text-green-400\"><polyline points=\"20 6 9 17 4 12\"></polyline></svg></template></button></div></div></div></div><button @click=\"isExampleExpanded = !isExampleExpanded\" class=\"w-full flex justify-center items-center p-2 text-sm text-gray-400 bg-gray-900/50 hover:bg-gray-900/80 transition-colors border-t border-gray-700/80\"><span class=\"mr-2\" x-text=\"isExampleExpanded ? 'Hide Examples' : 'Show Examples'\"></span> <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"h-5 w-5 transition-transform duration-300\" :class=\"{ 'rotate-180': isExampleExpanded }\"><path d=\"m6 9 6 6 6-6\"></path></svg></button></div><h1 class=\"text-3xl font-bold text-white mb-6\">Summary</h1><div class=\"grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6\"><!-- Stat Cards --><div class=\"bg-gray-800/50 border border-gray-700/80 rounded-lg p-5 shadow-md flex flex-col\"><div class=\"flex items-center justify-between mb-2\"><h3 class=\"text-sm font-medium text-gray-400\">Total Requests</h3><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"h-6 w-6 text-gray-400\"><path d=\"M3 3v18h18\"></path><path d=\"M9 17V9\"></path><path d=\"M15 17V5\"></path><path d=\"M12 17V13\"></path></svg></div><div><p class=\"text-3xl font-bold text-white\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</code></p></div><div x-data=\"{ isExampleExpanded: false }\"><div x-show=\"isExampleExpanded\" x-cloak class=\"px-6 pb-6 border-t border-gray-700/80 pt-6\"><div class=\"space-y-6\"><div x-data=\"{ copied: false }\" class=\"space-y-2\"><h3 class=\"text-lg font-semibold text-gray-300\">buf curl Example</h3><div class=\"relative bg-gray-900 rounded-lg p-4 font-mono text-sm text-gray-300\"><pre class=\"overflow-x-auto\"><code x-text=\"`buf curl --schema 'protos' -d '{\\'sentence\\': \\'hello from FauxRPC\\'}' http://{ stats.HTTPHost }/connectrpc.eliza.v1.ElizaService/Say`\"></code></pre><button @click=\"navigator.clipboard.writeText(`buf curl --schema 'protos' -d '{\\'sentence\\': \\'hello from FauxRPC\\'}' http://{ stats.HTTPHost }/connectrpc.eliza.v1.ElizaService/Say`); copied = true; setTimeout(() => copied = false, 2000)\" class=\"absolute top-3 right-3 p-2 bg-gray-700 hover:bg-gray-600 rounded-md text-gray-300 transition-colors\"><template x-if=\"!copied\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"h-5 w-5\"><path d=\"M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2\"></path><rect x=\"8\" y=\"2\" width=\"8\" height=\"4\" rx=\"1\" ry=\"1\"></rect></svg></template><template x-if=\"copied\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"h-5 w-5 text-green-400\"><polyline points=\"20 6 9 17 4 12\"></polyline></svg></template></button></div></div><div x-data=\"{ copied: false }\" class=\"space-y-2\"><h3 class=\"text-lg font-semibold text-gray-300\">curl Example</h3><div class=\"relative bg-gray-900 rounded-lg p-4 font-mono text-sm text-gray-300\"><pre class=\"overflow-x-auto\"><code x-text=\"`curl \\\n    --header 'Content-Type: application/json' \\\n    -d '{\\'sentence\\': \\'hello from FauxRPC\\'}' \\\n    http://{ stats.HTTPHost }/connectrpc.eliza.v1.ElizaService/Say`\"></code></pre><button @click=\"navigator.clipboard.writeText(`curl \n    --header 'Content-Type: application/json' \n    -d '{\\'sentence\\': \\'hello from FauxRPC\\'}' \n    http://{ stats.HTTPHost }/connectrpc.eliza.v1.ElizaService/Say`); copied = true; setTimeout(() => copied = false, 2000)\" class=\"absolute top-3 right-3 p-2 bg-gray-700 hover:bg-gray-600 rounded-md text-gray-300 transition-colors\"><template x-if=\"!copied\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"h-5 w-5\"><path d=\"M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2\"></path><rect x=\"8\" y=\"2\" width=\"8\" height=\"4\" rx=\"1\" ry=\"1\"></rect></svg></template><template x-if=\"copied\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"h-5 w-5 text-green-400\"><polyline points=\"20 6 9 17 4 12\"></polyline></svg></template></button></div></div></div></div><button @click=\"isExampleExpanded = !isExampleExpanded\" class=\"w-full flex justify-center items-center p-2 text-sm text-gray-400 bg-gray-900/50 hover:bg-gray-900/80 transition-colors border-t border-gray-700/80\"><span class=\"mr-2\" x-text=\"isExampleExpanded ? 'Hide Examples' : 'Show Examples'\"></span> <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"h-5 w-5 transition-transform duration-300\" :class=\"{ 'rotate-180': isExampleExpanded }\"><path d=\"m6 9 6 6 6-6\"></path></svg></button></div><h1 class=\"text-3xl font-bold text-white mb-6\">Summary</h1><div class=\"grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6\"><!-- Stat Cards --><div class=\"bg-gray-800/50 border border-gray-700/80 rounded-lg p-5 shadow-md flex flex-col\"><div class=\"flex items-center justify-between mb-2\"><h3 class=\"text-sm font-medium text-gray-400\">Total Requests</h3><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"h-6 w-6 text-gray-400\"><path d=\"M3 3v18h18\"></path><path d=\"M9 17V9\"></path><path d=\"M15 17V5\"></path><path d=\"M12 17V13\"></path></svg></div><div><p class=\"text-3xl font-bold text-white\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", stats.TotalRequests))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 63, Col: 91}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 71, Col: 91}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -68,7 +68,7 @@ func Summary(stats *metrics.Stats) templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%.1f", stats.RequestsPerSecond))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 67, Col: 97}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 75, Col: 97}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -81,7 +81,7 @@ func Summary(stats *metrics.Stats) templ.Component {
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", stats.Errors))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 71, Col: 84}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 79, Col: 84}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -94,7 +94,7 @@ func Summary(stats *metrics.Stats) templ.Component {
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(stats.ErrorRate)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 71, Col: 140}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 79, Col: 140}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
@@ -107,7 +107,7 @@ func Summary(stats *metrics.Stats) templ.Component {
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", stats.UniqueServices))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 75, Col: 92}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 83, Col: 92}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
@@ -120,7 +120,7 @@ func Summary(stats *metrics.Stats) templ.Component {
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", stats.UniqueMethods))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 79, Col: 91}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 87, Col: 91}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
@@ -133,7 +133,7 @@ func Summary(stats *metrics.Stats) templ.Component {
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(stats.Uptime.Round(time.Second).String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 83, Col: 93}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 91, Col: 93}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
@@ -146,7 +146,7 @@ func Summary(stats *metrics.Stats) templ.Component {
 		var templ_7745c5c3_Var10 string
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(stats.GoVersion)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 87, Col: 68}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 95, Col: 68}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
@@ -159,7 +159,7 @@ func Summary(stats *metrics.Stats) templ.Component {
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(stats.FauxRpcVersion)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 91, Col: 73}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 99, Col: 73}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
