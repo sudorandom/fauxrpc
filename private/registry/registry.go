@@ -45,6 +45,9 @@ func NewServiceRegistry() (*serviceRegistry, error) {
 }
 
 func (r *serviceRegistry) Reset() error {
+	slog.Debug("serviceRegistry.Reset()")
+	defer slog.Debug("serviceRegistry.Reset() complete")
+
 	r.lock.Lock()
 	r.services = map[string]protoreflect.ServiceDescriptor{}
 	r.files = new(protoregistry.Files)
@@ -62,7 +65,9 @@ func (r *serviceRegistry) Get(name string) protoreflect.ServiceDescriptor {
 func (r *serviceRegistry) RegisterFile(fd protoreflect.FileDescriptor) error {
 	r.lock.Lock()
 	defer r.lock.Unlock()
-	slog.Debug("RegisterFile", "name", fd.FullName(), "path", fd.Path())
+	slog.Debug("serviceRegistry.RegisterFile()", "name", fd.FullName(), "path", fd.Path())
+	defer slog.Debug("serviceRegistry.RegisterFile() complete", "name", fd.FullName(), "path", fd.Path())
+
 	if _, err := r.files.FindFileByPath(fd.Path()); err == nil {
 		return nil
 	} else if !errors.Is(err, protoregistry.NotFound) {

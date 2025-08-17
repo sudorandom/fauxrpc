@@ -101,6 +101,8 @@ func (s *server) AddFileFromPath(path string) error {
 
 func (s *server) rebuildHandlers() error {
 	slog.Debug("Rebuilding handlers")
+	defer slog.Debug("Rebuilding handlers complete")
+
 	serviceNames := []string{}
 	vgservices := []*vanguard.Service{}
 	var validate protovalidate.Validator

@@ -3,6 +3,7 @@ package registry
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"connectrpc.com/connect"
 	registryv1 "github.com/sudorandom/fauxrpc/proto/gen/registry/v1"
@@ -24,6 +25,9 @@ func NewHandler(registry ServiceRegistry) *handler {
 
 // AddDescriptors implements registryv1connect.RegistryServiceHandler.
 func (h *handler) AddDescriptors(ctx context.Context, req *connect.Request[registryv1.AddDescriptorsRequest]) (*connect.Response[registryv1.AddDescriptorsResponse], error) {
+	slog.Debug("registry.v1.RegistryService.AddDescriptors()", "files", len(req.Msg.GetDescriptors().GetFile()))
+	defer slog.Debug("registry.v1.RegistryService.AddDescriptors() complete")
+
 	files, err := protodesc.NewFiles(req.Msg.GetDescriptors())
 	if err != nil {
 		return nil, err
@@ -43,6 +47,9 @@ func (h *handler) AddDescriptors(ctx context.Context, req *connect.Request[regis
 
 // Reset implements registryv1connect.RegistryServiceHandler.
 func (h *handler) Reset(context.Context, *connect.Request[registryv1.ResetRequest]) (*connect.Response[registryv1.ResetResponse], error) {
+	slog.Debug("registry.v1.RegistryService.Reset()")
+	defer slog.Debug("registry.v1.RegistryService.Reset() complete")
+
 	if err := h.registry.Reset(); err != nil {
 		return nil, err
 	}

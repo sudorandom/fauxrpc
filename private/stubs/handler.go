@@ -3,6 +3,7 @@ package stubs
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"connectrpc.com/connect"
@@ -32,6 +33,9 @@ func NewHandler(registry registry.ServiceRegistry, stubdb StubDatabase) *handler
 
 // AddStubs implements stubsv1connect.StubsServiceHandler.
 func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.AddStubsRequest]) (*connect.Response[stubsv1.AddStubsResponse], error) {
+	slog.Debug("stubs.v1.StubsService.AddStubs()", "files", len(req.Msg.GetStubs()))
+	defer slog.Debug("stubs.v1.StubsService.AddStubs() complete")
+
 	entries := make([]StubEntry, len(req.Msg.GetStubs()))
 	stubs := make([]*stubsv1.Stub, len(req.Msg.GetStubs()))
 	for i, stub := range req.Msg.GetStubs() {
@@ -120,6 +124,9 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 
 // ListStubs implements stubsv1connect.StubsServiceHandler.
 func (h *handler) ListStubs(ctx context.Context, req *connect.Request[stubsv1.ListStubsRequest]) (*connect.Response[stubsv1.ListStubsResponse], error) {
+	slog.Debug("stubs.v1.StubsService.ListStubs()")
+	defer slog.Debug("stubs.v1.StubsService.ListStubs() complete")
+
 	ref := req.Msg.GetStubRef()
 	targetName, err := normalizeTargetName(ref.GetTarget())
 	if err != nil {
@@ -146,12 +153,18 @@ func (h *handler) ListStubs(ctx context.Context, req *connect.Request[stubsv1.Li
 
 // RemoveAllStubs implements stubsv1connect.StubsServiceHandler.
 func (h *handler) RemoveAllStubs(context.Context, *connect.Request[stubsv1.RemoveAllStubsRequest]) (*connect.Response[stubsv1.RemoveAllStubsResponse], error) {
+	slog.Debug("stubs.v1.StubsService.RemoveAllStubs()")
+	defer slog.Debug("stubs.v1.StubsService.RemoveAllStubs() complete")
+
 	h.stubdb.RemoveAllStubs()
 	return connect.NewResponse(&stubsv1.RemoveAllStubsResponse{}), nil
 }
 
 // RemoveStubs implements stubsv1connect.StubsServiceHandler.
 func (h *handler) RemoveStubs(ctx context.Context, msg *connect.Request[stubsv1.RemoveStubsRequest]) (*connect.Response[stubsv1.RemoveStubsResponse], error) {
+	slog.Debug("stubs.v1.StubsService.RemoveStubs()")
+	defer slog.Debug("stubs.v1.StubsService.RemoveStubs() complete")
+
 	for _, ref := range msg.Msg.GetStubRefs() {
 		targetName, err := normalizeTargetName(ref.GetTarget())
 		if err != nil {

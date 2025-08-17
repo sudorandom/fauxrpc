@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 
 	"connectrpc.com/connect"
 	"github.com/sudorandom/fauxrpc/private/registry"
@@ -45,7 +46,10 @@ func (c *RegistryAddCmd) Run(globals *Globals) error {
 		filespb = append(filespb, protodesc.ToFileDescriptorProto(fd))
 	})
 	client := newRegistryClient(c.Addr)
-	if _, err := client.AddDescriptors(context.Background(), connect.NewRequest(registryv1.AddDescriptorsRequest_builder{
+
+	ctx, cancelFn := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancelFn()
+	if _, err := client.AddDescriptors(ctx, connect.NewRequest(registryv1.AddDescriptorsRequest_builder{
 		Descriptors: &descriptorpb.FileDescriptorSet{
 			File: filespb,
 		},
