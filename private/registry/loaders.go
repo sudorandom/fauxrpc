@@ -101,7 +101,9 @@ func AddServicesFromProtoFile(registry LoaderTarget, filepath string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 	handler := reporter.NewHandler(nil)
 	ast, err := parser.Parse(filepath, f, handler)
 	if err != nil {

@@ -61,7 +61,7 @@ func (c *StubAddCmd) Run(globals *Globals) error {
 			Details: []*anypb.Any{},
 		}.Build())
 	} else {
-		return errors.New("one of: --error-code or --json is required.")
+		return errors.New("one of: --error-code or --json is required")
 	}
 	resp, err := client.AddStubs(context.Background(), connect.NewRequest(stubsv1.AddStubsRequest_builder{Stubs: []*stubsv1.Stub{stub}}.Build()))
 	if err != nil {

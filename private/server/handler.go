@@ -51,7 +51,9 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 			grpcWriteStatus(w, status.New(codes.NotFound, "method not found"))
 			return
 		}
-		defer r.Body.Close()
+		defer func() {
+			_ = r.Body.Close()
+		}()
 
 		readMessage := func() (proto.Message, *status.Status) {
 			body := make([]byte, maxMessageSize)

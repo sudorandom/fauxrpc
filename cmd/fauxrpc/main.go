@@ -56,7 +56,7 @@ func main() {
 		kong.Vars{
 			"version": version,
 		})
-	switch cli.Globals.LogLevel {
+	switch cli.LogLevel {
 	case "debug":
 		slog.SetLogLoggerLevel(slog.LevelDebug)
 	case "info":
@@ -66,7 +66,7 @@ func main() {
 	case "error":
 		slog.SetLogLoggerLevel(slog.LevelError)
 	default:
-		ctx.Fatalf("unknown log level: %s", cli.Globals.LogLevel)
+		ctx.Fatalf("unknown log level: %s", cli.LogLevel)
 	}
 	ctx.FatalIfErrorf(ctx.Run(&cli.Globals))
 }

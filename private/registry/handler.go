@@ -42,6 +42,9 @@ func (h *handler) AddDescriptors(ctx context.Context, req *connect.Request[regis
 			return nil, fmt.Errorf("%s: %w", fd.FullName(), err)
 		}
 	}
+	if err := h.registry.Rebuild(); err != nil {
+		return nil, err
+	}
 	return connect.NewResponse(&registryv1.AddDescriptorsResponse{}), nil
 }
 

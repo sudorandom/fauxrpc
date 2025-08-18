@@ -66,13 +66,13 @@ func (c *GenerateCmd) Run(globals *Globals) error {
 		if err != nil {
 			return err
 		}
-		os.Stdout.Write(jsonBytes)
+		_, _ = os.Stdout.Write(jsonBytes)
 	case "proto":
 		protoBytes, err := proto.Marshal(msg)
 		if err != nil {
 			return err
 		}
-		os.Stdout.Write(protoBytes)
+		_, _ = os.Stdout.Write(protoBytes)
 	case "grpc":
 		protoBytes, err := proto.Marshal(msg)
 		if err != nil {

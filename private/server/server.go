@@ -82,17 +82,17 @@ func (s *server) Reset() error {
 	return s.rebuildHandlers()
 }
 
-func (s *server) RegisterFile(fd protoreflect.FileDescriptor) error {
-	return s.AddFile(fd)
+func (s *server) Rebuild() error {
+	return s.rebuildHandlers()
 }
 
-func (s *server) AddFile(fd protoreflect.FileDescriptor) error {
+func (s *server) RegisterFile(fd protoreflect.FileDescriptor) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	if err := s.ServiceRegistry.RegisterFile(fd); err != nil {
 		return err
 	}
-	return s.rebuildHandlers()
+	return nil
 }
 
 func (s *server) AddFileFromPath(path string) error {
@@ -123,7 +123,7 @@ func (s *server) rebuildHandlers() error {
 
 	faker := fauxrpc.NewMultiFaker(fakers)
 
-	s.ServiceRegistry.ForEachService(func(sd protoreflect.ServiceDescriptor) bool {
+	s.ForEachService(func(sd protoreflect.ServiceDescriptor) bool {
 		vgservice := vanguard.NewServiceWithSchema(
 			sd, NewHandler(sd, faker, validate),
 			vanguard.WithTargetProtocols(vanguard.ProtocolGRPC),
@@ -206,7 +206,7 @@ func (n *staticNames) Names() []string {
 
 func singleFileHandler(content string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprint(w, content)
+		_, _ = fmt.Fprint(w, content)
 	}
 }
 

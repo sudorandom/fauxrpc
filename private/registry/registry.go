@@ -20,6 +20,7 @@ type ServiceRegistry interface {
 	ServiceCount() int
 	Files() *protoregistry.Files
 	NumFiles() int
+	Rebuild() error
 	// Act like protoreflect.Files
 	RegisterFile(file protoreflect.FileDescriptor) error
 	// protoregistry.Resolver
@@ -60,6 +61,10 @@ func (r *serviceRegistry) Get(name string) protoreflect.ServiceDescriptor {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 	return r.services[name]
+}
+
+func (r *serviceRegistry) Rebuild() error {
+	return nil
 }
 
 func (r *serviceRegistry) RegisterFile(fd protoreflect.FileDescriptor) error {
