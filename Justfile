@@ -2,5 +2,5 @@
 generate:
     go generate ./...
 
-run args='': generate
+run *args='': generate
     go run ./cmd/fauxrpc/ run {{ args }}
