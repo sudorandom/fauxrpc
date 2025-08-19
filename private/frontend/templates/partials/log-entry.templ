@@ -24,6 +24,21 @@ func getStatusColor(status int) string {
 	}
 }
 
+func getProtocolColor(protocol string) string {
+	switch protocol {
+	case "gRPC":
+		return "bg-blue-500 text-blue-100"
+	case "gRPC-Web":
+		return "bg-purple-500 text-purple-100"
+	case "ConnectRPC":
+		return "bg-indigo-500 text-indigo-100"
+	case "HTTP":
+		return "bg-sky-500 text-sky-100"
+	default:
+		return "bg-gray-500 text-gray-100"
+	}
+}
+
 func formatHeaders(raw json.RawMessage) string {
     // Gracefully handle nil, empty, or "null" JSON
     if len(raw) == 0 || string(raw) == "null" {
@@ -96,6 +111,7 @@ templ LogEntry(entry *log.LogEntry) {
 		<summary class="w-full p-4 text-left flex items-center justify-between hover:bg-gray-700/50 transition-colors duration-200 cursor-pointer">
 			<div class="flex items-center space-x-4 flex-wrap">
 				<span class={ "px-2 py-1 text-xs font-bold rounded-md", getStatusColor(entry.Status) }>{ fmt.Sprintf("%d", entry.Status) }</span>
+				<span class={ "px-2 py-1 text-xs font-bold rounded-md", getProtocolColor(entry.ClientProtocol) }>{ entry.ClientProtocol }</span>
 				<span class="text-gray-400 font-mono text-sm">{ entry.Timestamp.Format(time.TimeOnly) }</span>
 				<span class="text-white font-medium">{ entry.Service }</span> 
 				<span class="text-gray-400">{ entry.Method }</span>
