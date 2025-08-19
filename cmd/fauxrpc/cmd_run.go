@@ -40,6 +40,7 @@ type RunCmd struct {
 	Empty        bool     `help:"Allows the server to run with no services."`
 	OnlyStubs    bool     `help:"Only use pre-defined stubs and don't make up fake data."`
 	Stubs        []string `help:"Directories or file paths for JSON files."`
+	Dashboard    bool     `help:"Enable the admin dashboard."`
 }
 
 func (c *RunCmd) Run(globals *Globals) error {
@@ -51,6 +52,7 @@ func (c *RunCmd) Run(globals *Globals) error {
 		WithValidate:  !c.NoValidate,
 		OnlyStubs:     c.OnlyStubs,
 		Addr:          c.Addr,
+		WithDashboard: c.Dashboard,
 	})
 	if err != nil {
 		return err
@@ -82,6 +84,9 @@ func (c *RunCmd) Run(globals *Globals) error {
 
 	fmt.Printf("FauxRPC (%s) - %d services loaded, %d stubs loaded\n", fullVersion(), srv.ServiceCount(), srv.NumStubs())
 	fmt.Printf("Listening on http://%s\n", c.Addr)
+	if c.Dashboard {
+		fmt.Printf("Dashboard: http://%s/fauxrpc\n", c.Addr)
+	}
 	if !c.NoDocPage {
 		fmt.Printf("OpenAPI documentation: http://%s/fauxrpc/openapi.html\n", c.Addr)
 	}

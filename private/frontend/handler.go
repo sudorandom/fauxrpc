@@ -68,6 +68,10 @@ func DashboardHandler(p Provider) http.Handler {
 						match = true
 					case strings.Contains(strings.ToLower(string(entry.ResponseBody)), filter):
 						match = true
+					case strings.Contains(strings.ToLower(string(entry.RequestHeaders)), filter):
+						match = true
+					case strings.Contains(strings.ToLower(string(entry.ResponseHeaders)), filter):
+						match = true
 					}
 					if !match {
 						continue // Skip this entry if it doesn't match the filter

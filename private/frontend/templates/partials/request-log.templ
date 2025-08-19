@@ -157,7 +157,10 @@ templ requestLog(history []*log.LogEntry) {
                 filterInput.addEventListener('input', function() {
                     clearTimeout(debounceTimeout);
                     debounceTimeout = setTimeout(() => {
-                        connectSseStream(filterInput.value);
+                        const pauseButton = document.getElementById('pause-button');
+                        if (pauseButton && pauseButton.textContent === 'Pause') {
+                            connectSseStream(filterInput.value);
+                        }
                     }, 300); // 300ms debounce
                 });
 

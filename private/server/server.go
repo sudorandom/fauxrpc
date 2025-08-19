@@ -54,6 +54,7 @@ type ServerOpts struct {
 	OnlyStubs     bool
 	NoCORS        bool
 	Addr          string
+	WithDashboard bool
 }
 
 type server struct {
@@ -247,7 +248,9 @@ func (s *server) Handler() (http.Handler, error) {
 	}
 
 	mux.Mount("/", protocolMiddleware(httplog.Logger(s.handlerTranscoder)))
-	mux.Mount("/fauxrpc", frontend.DashboardHandler(s))
+	if s.opts.WithDashboard {
+		mux.Mount("/fauxrpc", frontend.DashboardHandler(s))
+	}
 
 	if s.opts.UseReflection {
 		mux.Mount("/grpc.reflection.v1.ServerReflection/", s.handlerReflectorV1)
@@ -313,7 +316,7 @@ func protocolMiddleware(next http.Handler) http.Handler {
 		protocol := getClientProtocol(r)
 		ctx := context.WithValue(r.Context(), clientProtocolKey, protocol)
 
-		headers, _ := json.Marshal(r.Header)
+		headers, _ := json.Marshal(maskHeaders(r.Header))
 		ctx = context.WithValue(ctx, requestHeadersKey, headers)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
@@ -322,14 +325,27 @@ func protocolMiddleware(next http.Handler) http.Handler {
 
 func getClientProtocol(r *http.Request) string {
 	contentType := r.Header.Get("Content-Type")
-	if strings.HasPrefix(contentType, "application/grpc-web") {
+	connectVersion := r.Header.Get("Connect-Protocol-Version")
+	// Connect-Protocol-Version
+	switch {
+	case strings.HasPrefix(contentType, "application/grpc-web"):
 		return "gRPC-Web"
-	}
-	if strings.HasPrefix(contentType, "application/grpc") {
+	case strings.HasPrefix(contentType, "application/grpc"):
 		return "gRPC"
-	}
-	if strings.HasPrefix(contentType, "application/connect") {
+	case strings.HasPrefix(contentType, "application/connect"):
+		return "ConnectRPC"
+	case connectVersion != "":
 		return "ConnectRPC"
 	}
 	return "HTTP"
+}
+
+func maskHeaders(headers http.Header) http.Header {
+	maskedHeaders := headers.Clone()
+	for _, h := range []string{"Authorization", "Proxy-Authorization", "Proxy-Authenticate", "WWW-Authenticate", "X-API-Key", "X-Auth-Token"} {
+		if maskedHeaders.Get(h) != "" {
+			maskedHeaders.Set(h, "*****")
+		}
+	}
+	return maskedHeaders
 }
