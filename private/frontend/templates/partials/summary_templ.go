@@ -117,7 +117,7 @@ func summaryContent(stats *metrics.Stats) templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(stats.HTTPHost)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `private/frontend/templates/partials/summary.templ`, Line: 27, Col: 132}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 27, Col: 132}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -130,7 +130,7 @@ func summaryContent(stats *metrics.Stats) templ.Component {
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", stats.TotalRequests))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `private/frontend/templates/partials/summary.templ`, Line: 37, Col: 90}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 37, Col: 90}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -143,7 +143,7 @@ func summaryContent(stats *metrics.Stats) templ.Component {
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", stats.RequestsPerSecond))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `private/frontend/templates/partials/summary.templ`, Line: 41, Col: 94}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 41, Col: 94}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
@@ -156,7 +156,7 @@ func summaryContent(stats *metrics.Stats) templ.Component {
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", stats.Errors))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `private/frontend/templates/partials/summary.templ`, Line: 45, Col: 83}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 45, Col: 83}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
@@ -169,7 +169,7 @@ func summaryContent(stats *metrics.Stats) templ.Component {
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(stats.ErrorRate)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `private/frontend/templates/partials/summary.templ`, Line: 45, Col: 139}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 45, Col: 139}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
@@ -182,7 +182,7 @@ func summaryContent(stats *metrics.Stats) templ.Component {
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", stats.UniqueServices))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `private/frontend/templates/partials/summary.templ`, Line: 49, Col: 91}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 49, Col: 91}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
@@ -195,7 +195,7 @@ func summaryContent(stats *metrics.Stats) templ.Component {
 		var templ_7745c5c3_Var10 string
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", stats.UniqueMethods))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `private/frontend/templates/partials/summary.templ`, Line: 53, Col: 90}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 53, Col: 90}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
@@ -208,7 +208,7 @@ func summaryContent(stats *metrics.Stats) templ.Component {
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(stats.Uptime().Round(time.Second).String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `private/frontend/templates/partials/summary.templ`, Line: 57, Col: 94}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 57, Col: 94}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -221,7 +221,7 @@ func summaryContent(stats *metrics.Stats) templ.Component {
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(stats.GoVersion)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `private/frontend/templates/partials/summary.templ`, Line: 61, Col: 67}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 61, Col: 67}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {
@@ -234,7 +234,7 @@ func summaryContent(stats *metrics.Stats) templ.Component {
 		var templ_7745c5c3_Var13 string
 		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(stats.FauxRpcVersion)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `private/frontend/templates/partials/summary.templ`, Line: 65, Col: 72}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/summary.templ`, Line: 65, Col: 72}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 		if templ_7745c5c3_Err != nil {

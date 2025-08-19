@@ -49,8 +49,6 @@ func DashboardHandler(p Provider) http.Handler {
 
 		filter := strings.ToLower(r.URL.Query().Get("filter"))
 
-		fmt.Println("filter", filter)
-
 		for {
 			select {
 			case <-ctx.Done():
@@ -59,24 +57,18 @@ func DashboardHandler(p Provider) http.Handler {
 				// Apply filter if present
 				if filter != "" {
 					match := false
-					if strings.Contains(strings.ToLower(entry.Service), filter) {
+					switch {
+					case strings.Contains(strings.ToLower(entry.Service), filter):
+						match = true
+					case strings.Contains(strings.ToLower(entry.Method), filter):
+						match = true
+					case strings.Contains(fmt.Sprintf("%d", entry.Status), filter):
+						match = true
+					case strings.Contains(strings.ToLower(string(entry.RequestBody)), filter):
+						match = true
+					case strings.Contains(strings.ToLower(string(entry.ResponseBody)), filter):
 						match = true
 					}
-					if !match && strings.Contains(strings.ToLower(entry.Method), filter) {
-						match = true
-					}
-					if !match && strings.Contains(fmt.Sprintf("%d", entry.Status), filter) {
-						match = true
-					}
-					// You can add more fields to filter here, e.g., headers, body content
-					// For example:
-					// if !match && strings.Contains(strings.ToLower(string(entry.RequestBody)), filter) {
-					// 	match = true
-					// }
-					// if !match && strings.Contains(strings.ToLower(string(entry.ResponseBody)), filter) {
-					// 	match = true
-					// }
-
 					if !match {
 						continue // Skip this entry if it doesn't match the filter
 					}

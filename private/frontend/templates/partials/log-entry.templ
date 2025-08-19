@@ -128,7 +128,12 @@ templ LogEntry(entry *log.LogEntry) {
 							<pre class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto"><code>{ formatHeaders(entry.ResponseHeaders) }</code></pre>
 						</div>
 						<div>
-							<h5 class="text-md font-medium text-gray-400 mb-2">Body</h5>
+							if entry.Status != 0 {
+								<h5 class="text-md font-medium text-red-400 mb-2">Error</h5>
+							}
+							else {
+								<h5 class="text-md font-medium text-gray-400 mb-2">Body</h5>
+							}
 							<pre class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto"><code>{ prettyPrintJSON(entry.ResponseBody) }</code></pre>
 						</div>
 					</div>

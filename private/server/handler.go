@@ -23,6 +23,7 @@ import (
 	"github.com/sudorandom/fauxrpc/private/stubs"
 	"github.com/sudorandom/fauxrpc/protocel"
 	"golang.org/x/sync/errgroup"
+	statuspb "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -71,6 +72,20 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 				code = finalStatus.Code()
 			}
 
+			if code != codes.OK {
+				if statusDetailsBin := w.Header().Get("Grpc-Status-Details-Bin"); statusDetailsBin != "" {
+					decoded, err := base64.StdEncoding.DecodeString(statusDetailsBin)
+					if err == nil {
+						st := &statuspb.Status{}
+						if err := proto.Unmarshal(decoded, st); err == nil {
+							jsonBytes, err := protojson.Marshal(st)
+							if err == nil {
+								resBodyBytes = jsonBytes
+							}
+						}
+					}
+				}
+			}
 			logger.Log(&fauxlog.LogEntry{
 				ID:              uuid.New().String(),
 				Timestamp:       startTime,
