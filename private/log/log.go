@@ -12,6 +12,7 @@ type LogEntry struct {
 	Timestamp       time.Time       `json:"timestamp"`
 	Service         string          `json:"service"`
 	Method          string          `json:"method"`
+	ClientProtocol  string          `json:"clientProtocol"`
 	Status          int             `json:"status"`
 	Duration        time.Duration   `json:"duration"`
 	RequestHeaders  json.RawMessage `json:"requestHeaders"`

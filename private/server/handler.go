@@ -91,6 +91,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 				Timestamp:       startTime,
 				Service:         serviceName,
 				Method:          methodName,
+				ClientProtocol:  getClientProtocol(r),
 				Status:          int(code),
 				Duration:        duration,
 				RequestHeaders:  reqHeaders,
@@ -260,4 +261,18 @@ func grpcStatusFromError(e *stubsv1.Error) *status.Status {
 		}
 	}
 	return status
+}
+
+func getClientProtocol(r *http.Request) string {
+	contentType := r.Header.Get("Content-Type")
+	if strings.HasPrefix(contentType, "application/grpc-web") {
+		return "gRPC-Web"
+	}
+	if strings.HasPrefix(contentType, "application/grpc") {
+		return "gRPC"
+	}
+	if strings.HasPrefix(contentType, "application/connect") {
+		return "ConnectRPC"
+	}
+	return "HTTP"
 }
