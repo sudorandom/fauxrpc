@@ -1,10 +1,13 @@
 package frontend
 
 //go:generate go tool templ generate
+//go:generate bash -c "./generate_assets.sh"
 
 import (
 	"bytes"
+	"embed"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -16,6 +19,9 @@ import (
 	"github.com/sudorandom/fauxrpc/private/log"
 	"github.com/sudorandom/fauxrpc/private/metrics"
 )
+
+//go:embed assets
+var embeddedAssets embed.FS
 
 // Provider defines the interface for providing server statistics and the logger.
 type Provider interface {
@@ -152,5 +158,17 @@ func DashboardHandler(p Provider) http.Handler {
 	mux.Handle("/fauxrpc/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		templ.Handler(templates.Index(partials.SummaryPage(p.GetStats()))).ServeHTTP(w, r)
 	}))
+
+	// Serve static assets from the embedded file system
+	assetFS, err := fs.Sub(embeddedAssets, "assets")
+	if err != nil {
+		slog.Error("failed to create sub-filesystem for assets", "err", err)
+		// Handle error appropriately, perhaps return a handler that always errors
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Error(w, "Internal server error: asset loading failed", http.StatusInternalServerError)
+		})
+	}
+	mux.Handle("/fauxrpc/assets/", http.StripPrefix("/fauxrpc/assets/", http.FileServer(http.FS(assetFS))))
+
 	return mux
 }

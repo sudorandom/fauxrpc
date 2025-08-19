@@ -8,13 +8,12 @@ templ Index(content templ.Component) {
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>FauxRPC Dashboard</title>
 
-			// TODO: CSS should be locally hosted. Tailwind classes should be generated.
-			<script src="https://cdn.tailwindcss.com"></script>
-			<script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.6/dist/htmx.min.js" crossorigin="anonymous"></script>
-			<script src="https://cdn.jsdelivr.net/npm/htmx-ext-sse@2.2.2" crossorigin="anonymous"></script>
-			<script src="https://cdn.jsdelivr.net/npm/hyperscript.org@0.9.12" crossorigin="anonymous"></script>
+			<link href="/fauxrpc/assets/tailwind.css" rel="stylesheet"/>
+			<script src="/fauxrpc/assets/htmx.min.js" crossorigin="anonymous"></script>
+			<script src="/fauxrpc/assets/htmx-ext-sse.min.js" crossorigin="anonymous"></script>
+			<script src="/fauxrpc/assets/hyperscript.min.js" crossorigin="anonymous"></script>
 			
-			<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+			<link href="/fauxrpc/assets/inter.css" rel="stylesheet"/>
 			<style>
         		body { font-family: 'Inter', sans-serif; }
     		</style>

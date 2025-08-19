@@ -15,11 +15,13 @@ require (
 	connectrpc.com/validate v0.2.0
 	connectrpc.com/vanguard v0.3.0
 	github.com/MadAppGang/httplog v1.3.0
+	github.com/a-h/templ v0.3.924
 	github.com/alecthomas/kong v1.10.0
 	github.com/brianvoe/gofakeit/v7 v7.2.1
 	github.com/bufbuild/protocompile v0.14.1
 	github.com/go-chi/chi/v5 v5.2.1
 	github.com/google/cel-go v0.25.0
+	github.com/google/uuid v1.6.0
 	github.com/quic-go/quic-go v0.51.0
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.10.0
@@ -27,6 +29,7 @@ require (
 	github.com/tailscale/hujson v0.0.0-20250226034555-ec1d1c113d33
 	golang.org/x/net v0.39.0
 	golang.org/x/sync v0.13.0
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250818200422-3122310a409c
 	google.golang.org/grpc v1.72.0
 	google.golang.org/protobuf v1.36.7
 	gopkg.in/yaml.v3 v3.0.1
@@ -36,7 +39,6 @@ require (
 	cel.dev/expr v0.23.1 // indirect
 	github.com/TylerBrock/colorjson v0.0.0-20200706003622-8a50f05110d2 // indirect
 	github.com/a-h/parse v0.0.0-20250122154542-74294addb73e // indirect
-	github.com/a-h/templ v0.3.924 // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
@@ -51,7 +53,6 @@ require (
 	github.com/google/gnostic v0.7.0 // indirect
 	github.com/google/gnostic-models v0.6.9 // indirect
 	github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/lmittmann/tint v1.0.7 // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
@@ -72,7 +73,6 @@ require (
 	golang.org/x/text v0.24.0 // indirect
 	golang.org/x/tools v0.32.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250818200422-3122310a409c // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250818200422-3122310a409c // indirect
 )
 
 tool github.com/a-h/templ/cmd/templ
