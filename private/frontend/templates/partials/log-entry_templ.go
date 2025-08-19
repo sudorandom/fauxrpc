@@ -12,7 +12,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"sort"
 	"strings"
 	"time"
@@ -21,16 +20,16 @@ import (
 )
 
 func getStatusColor(status int) string {
-	if status >= 500 {
-		return "bg-red-500 text-red-100"
-	}
-	if status >= 400 {
-		return "bg-yellow-500 text-yellow-100"
-	}
-	if status >= 200 {
+	switch status {
+	case 0: // OK
 		return "bg-green-500 text-green-100"
+	case 1, 3, 5, 6, 9, 10, 11, 15: // Canceled, InvalidArgument, NotFound, AlreadyExists, FailedPrecondition, Aborted, OutOfRange, DataLoss
+		return "bg-yellow-500 text-yellow-100"
+	case 2, 4, 7, 8, 12, 13, 14, 16: // Unknown, DeadlineExceeded, PermissionDenied, ResourceExhausted, Unimplemented, Internal, Unavailable, Unauthenticated
+		return "bg-red-500 text-red-100"
+	default: // Any other status
+		return "bg-gray-500 text-gray-100"
 	}
-	return "bg-gray-500 text-gray-100"
 }
 
 func formatHeaders(raw json.RawMessage) string {
@@ -39,10 +38,12 @@ func formatHeaders(raw json.RawMessage) string {
 		return "n/a"
 	}
 
-	var headers http.Header
+	// Unmarshal into a map where the values are kept as raw JSON.
+	// This allows us to inspect the type of each value individually.
+	var headers map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &headers); err != nil {
-		// If it's not valid JSON for headers, just show the raw string
-		return fmt.Sprintf("Invalid headers JSON: %s\nRaw: %s", err.Error(), string(raw))
+		// If the top-level data isn't a JSON object, just show the raw string.
+		return string(raw)
 	}
 
 	if len(headers) == 0 {
@@ -58,10 +59,28 @@ func formatHeaders(raw json.RawMessage) string {
 
 	var builder strings.Builder
 	for _, k := range keys {
-		for _, v := range headers[k] {
-			builder.WriteString(fmt.Sprintf("%s: %s\n", k, v))
+		vRaw := headers[k]
+
+		// First, try to unmarshal the value as an array of strings
+		var values []string
+		if err := json.Unmarshal(vRaw, &values); err == nil {
+			for _, v := range values {
+				builder.WriteString(fmt.Sprintf("%s: %s\n", k, v))
+			}
+			continue
 		}
+
+		// If that fails, try to unmarshal it as a single string
+		var value string
+		if err := json.Unmarshal(vRaw, &value); err == nil {
+			builder.WriteString(fmt.Sprintf("%s: %s\n", k, value))
+			continue
+		}
+
+		// As a last resort, just show the raw value
+		builder.WriteString(fmt.Sprintf("%s: %s\n", k, string(vRaw)))
 	}
+
 	return strings.TrimSpace(builder.String())
 }
 
@@ -116,7 +135,7 @@ func LogEntry(entry *log.LogEntry) templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(templ.CSSClasses(templ_7745c5c3_Var2).String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/log-entry.templ`, Line: 1, Col: 0}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `private/frontend/templates/partials/log-entry.templ`, Line: 1, Col: 0}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -129,7 +148,7 @@ func LogEntry(entry *log.LogEntry) templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", entry.Status))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/log-entry.templ`, Line: 79, Col: 124}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `private/frontend/templates/partials/log-entry.templ`, Line: 98, Col: 124}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -140,9 +159,9 @@ func LogEntry(entry *log.LogEntry) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var5 string
-		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(entry.Timestamp.Format(time.Kitchen))
+		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(entry.Timestamp.Format(time.TimeOnly))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/log-entry.templ`, Line: 80, Col: 88}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `private/frontend/templates/partials/log-entry.templ`, Line: 99, Col: 89}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -155,7 +174,7 @@ func LogEntry(entry *log.LogEntry) templ.Component {
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(entry.Service)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/log-entry.templ`, Line: 81, Col: 56}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `private/frontend/templates/partials/log-entry.templ`, Line: 100, Col: 56}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
@@ -168,7 +187,7 @@ func LogEntry(entry *log.LogEntry) templ.Component {
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(entry.Method)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/log-entry.templ`, Line: 82, Col: 46}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `private/frontend/templates/partials/log-entry.templ`, Line: 101, Col: 46}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
@@ -179,9 +198,9 @@ func LogEntry(entry *log.LogEntry) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var8 string
-		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%dms", entry.Duration))
+		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(entry.Duration.String())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/log-entry.templ`, Line: 85, Col: 77}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `private/frontend/templates/partials/log-entry.templ`, Line: 104, Col: 65}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
@@ -194,7 +213,7 @@ func LogEntry(entry *log.LogEntry) templ.Component {
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(formatHeaders(entry.RequestHeaders))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/log-entry.templ`, Line: 96, Col: 128}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `private/frontend/templates/partials/log-entry.templ`, Line: 115, Col: 128}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
@@ -207,7 +226,7 @@ func LogEntry(entry *log.LogEntry) templ.Component {
 		var templ_7745c5c3_Var10 string
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(prettyPrintJSON(entry.RequestBody))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/log-entry.templ`, Line: 100, Col: 127}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `private/frontend/templates/partials/log-entry.templ`, Line: 119, Col: 127}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
@@ -220,7 +239,7 @@ func LogEntry(entry *log.LogEntry) templ.Component {
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(formatHeaders(entry.ResponseHeaders))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/log-entry.templ`, Line: 109, Col: 129}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `private/frontend/templates/partials/log-entry.templ`, Line: 128, Col: 129}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -233,7 +252,7 @@ func LogEntry(entry *log.LogEntry) templ.Component {
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(prettyPrintJSON(entry.ResponseBody))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/log-entry.templ`, Line: 113, Col: 128}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `private/frontend/templates/partials/log-entry.templ`, Line: 132, Col: 128}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {

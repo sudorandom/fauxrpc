@@ -77,7 +77,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 				Service:         serviceName,
 				Method:          methodName,
 				Status:          int(code),
-				Duration:        duration.Milliseconds(),
+				Duration:        duration,
 				RequestHeaders:  reqHeaders,
 				ResponseHeaders: resHeaders,
 				RequestBody:     reqBodyBytes,

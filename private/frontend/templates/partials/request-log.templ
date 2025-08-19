@@ -2,18 +2,211 @@ package partials
 
 import "github.com/sudorandom/fauxrpc/private/log"
 
+// in partials/requestlog.templ
 templ RequestLog(history []*log.LogEntry) {
+    <div id="sse-controller" hx-ext="sse">
+        @requestLog(history)
+    </div>
+}
+
+templ requestLog(history []*log.LogEntry) {
     <div>
         <div class="flex justify-between items-center mb-6 flex-shrink-0">
             <h1 class="text-3xl font-bold text-white">Request Log</h1>
+            <div id="sse-status-indicator" class="ml-4 w-4 h-4 rounded-full bg-gray-500 animate-pulse hidden"></div>
             <div class="flex items-center space-x-4">
+                <button
+                    id="pause-button"
+                    class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition-colors w-24"
+                    onclick="toggleSseStream(this)"
+                >
+                    Pause
+                </button>
                 <button onclick="document.getElementById('log-container').innerHTML = ''" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white font-semibold rounded-lg transition-colors">Clear</button>
             </div>
         </div>
-        <div id="log-container" class="overflow-y-auto pr-2 flex-grow" sse-swap="message" hx-swap="afterbegin">
+
+        <input type="text" id="log-filter-input" placeholder="Filter logs..." class="w-full p-2 mb-4 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+
+        <div
+            id="log-container"
+            class="overflow-y-auto pr-2 flex-grow"
+            sse-swap="Request"
+            hx-swap="afterbegin"
+        >
+            if len(history) == 0 {
+                <div id="no-entries-placeholder" class="text-gray-400 text-center py-8">
+                    New requests will appear here...
+                </div>
+            }
             for _, entry := range history {
                 @LogEntry(entry)
             }
         </div>
+
+        <script>
+            let eventSource = null; // Global variable to hold the EventSource
+            let debounceTimeout = null;
+
+            function connectSseStream(filterText = '') {
+                const sseController = document.getElementById('sse-controller');
+                const statusIndicator = document.getElementById('sse-status-indicator');
+                const logContainer = document.getElementById('log-container');
+                const filterInput = document.getElementById('log-filter-input');
+
+                // Close existing connection if any
+                if (eventSource) {
+                    eventSource.close();
+                    eventSource = null;
+                }
+
+                // Clear logs when connecting with a new filter
+                if (logContainer) {
+                    logContainer.innerHTML = '';
+                }
+
+                // Show connecting indicator
+                if (statusIndicator) {
+                    statusIndicator.classList.remove('hidden', 'bg-green-500', 'bg-red-500');
+                    statusIndicator.classList.add('bg-gray-500', 'animate-pulse');
+                }
+
+                const url = `/fauxrpc/sse/logs?filter=${encodeURIComponent(filterText)}`;
+                eventSource = new EventSource(url);
+
+                eventSource.onopen = function() {
+                    console.log('EventSource opened');
+                    if (statusIndicator) {
+                        statusIndicator.classList.remove('bg-gray-500', 'bg-red-500', 'animate-pulse');
+                        statusIndicator.classList.add('bg-green-500');
+                    }
+                };
+
+                eventSource.addEventListener('Request', function(event) {
+                    console.log('Received custom "Request" event:', event);
+                    console.log('Event data:', event.data);
+
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = event.data;
+                    logContainer.insertAdjacentElement('afterbegin', tempDiv.firstChild);
+
+                    // Hide placeholder
+                    const placeholder = document.getElementById('no-entries-placeholder');
+                    if (placeholder) {
+                        placeholder.classList.add('hidden');
+                    }
+
+                    // Trim logs
+                    const maxItems = 20;
+                    while (logContainer.childElementCount > maxItems) {
+                        logContainer.lastElementChild.remove();
+                    }
+                });
+
+                eventSource.onmessage = function(event) {
+                    // This will catch any 'message' events (i.e., events without an 'event:' field)
+                    // For now, we're not expecting any, but it's good to have.
+                    console.log('Received generic message event:', event);
+                };
+
+                eventSource.onerror = function(error) {
+                    console.error('EventSource error:', error);
+                    if (statusIndicator) {
+                        statusIndicator.classList.remove('bg-green-500', 'bg-gray-500', 'animate-pulse');
+                        statusIndicator.classList.add('bg-red-500');
+                    }
+                    eventSource.close(); // Close on error to prevent continuous errors
+                };
+            }
+
+            // --- Global function for the 'Pause'/'Resume' button ---
+            function toggleSseStream(button) {
+                const filterInput = document.getElementById('log-filter-input');
+                if (button.textContent === 'Pause') {
+                    button.textContent = 'Resume';
+                    if (eventSource) {
+                        eventSource.close();
+                        eventSource = null;
+                    }
+                    // Set status to disconnected (gray)
+                    const statusIndicator = document.getElementById('sse-status-indicator');
+                    if (statusIndicator) {
+                        statusIndicator.classList.remove('hidden', 'bg-green-500', 'bg-red-500', 'animate-pulse');
+                        statusIndicator.classList.add('bg-gray-500');
+                    }
+                } else {
+                    button.textContent = 'Pause';
+                    connectSseStream(filterInput.value); // Reconnect with current filter
+                }
+            }
+
+            // --- Component-specific logic, runs immediately on load/swap ---
+            (function() {
+                const sseController = document.getElementById('sse-controller');
+                const logContainer = document.getElementById('log-container');
+                const statusIndicator = document.getElementById('sse-status-indicator');
+                const clearButton = document.querySelector('button[onclick*="log-container"]');
+                const filterInput = document.getElementById('log-filter-input');
+
+                if (!sseController || !logContainer || !statusIndicator || !filterInput) {
+                    console.error("Missing required elements for SSE control.");
+                    return;
+                }
+
+                // Initial connection on page load
+                connectSseStream(filterInput.value);
+
+                // Debounce for filter input
+                filterInput.addEventListener('input', function() {
+                    clearTimeout(debounceTimeout);
+                    debounceTimeout = setTimeout(() => {
+                        connectSseStream(filterInput.value);
+                    }, 300); // 300ms debounce
+                });
+
+                // Clear button logic
+                if (clearButton) {
+                    clearButton.removeAttribute('onclick'); // Remove old onclick
+                    clearButton.addEventListener('click', function() {
+                        logContainer.innerHTML = `
+                            <div id="no-entries-placeholder" class="text-gray-400 text-center py-8">
+                                New requests will appear here...
+                            </div>
+                        `;
+                    });
+                }
+
+                // HTMX SSE event listeners (these are now mostly for debugging/observing)
+                // The actual connection management is done via EventSource directly
+                sseController.addEventListener('htmx:sseOpen', function() {
+                    console.log('htmx:sseOpen event fired on sseController via addEventListener');
+                });
+                sseController.addEventListener('htmx:sseClose', function() {
+                    console.log('htmx:sseClose event fired on sseController via addEventListener');
+                });
+                sseController.addEventListener('htmx:sseError', function() {
+                    console.log('htmx:sseError event fired on sseController via addEventListener');
+                });
+
+                // Log Container Management (trimming)
+                htmx.on(logContainer, 'htmx:afterSwap', function() {
+                    // This listener is still useful if htmx swaps content for other reasons
+                    // or if we decide to re-introduce htmx-driven swaps for SSE messages.
+                    // For now, the onmessage handler directly inserts.
+                    const maxItems = 20;
+                    while (logContainer.childElementCount > maxItems) {
+                        logContainer.lastElementChild.remove();
+                    }
+                });
+
+                // Placeholder management on htmx:sseMessage (now handled in onmessage directly)
+                // htmx.on(controller, 'htmx:sseMessage', function() {
+                //     const placeholder = document.getElementById('no-entries-placeholder');
+                //     if (placeholder) {
+                //         placeholder.classList.add('hidden');
+                //     }
+                // });
+            })();
+        </script>
     </div>
 }

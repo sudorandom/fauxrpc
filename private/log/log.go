@@ -13,7 +13,7 @@ type LogEntry struct {
 	Service         string          `json:"service"`
 	Method          string          `json:"method"`
 	Status          int             `json:"status"`
-	Duration        int64           `json:"duration"`
+	Duration        time.Duration   `json:"duration"`
 	RequestHeaders  json.RawMessage `json:"requestHeaders"`
 	ResponseHeaders json.RawMessage `json:"responseHeaders"`
 	RequestBody     json.RawMessage `json:"requestBody"`

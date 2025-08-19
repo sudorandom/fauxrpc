@@ -3,7 +3,6 @@ package partials
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"sort"
 	"strings"
 	"time"
@@ -13,16 +12,16 @@ import (
 )
 
 func getStatusColor(status int) string {
-	if status >= 500 {
-		return "bg-red-500 text-red-100"
-	}
-	if status >= 400 {
-		return "bg-yellow-500 text-yellow-100"
-	}
-	if status >= 200 {
+	switch status {
+	case 0: // OK
 		return "bg-green-500 text-green-100"
+	case 1, 3, 5, 6, 9, 10, 11, 15: // Canceled, InvalidArgument, NotFound, AlreadyExists, FailedPrecondition, Aborted, OutOfRange, DataLoss
+		return "bg-yellow-500 text-yellow-100"
+	case 2, 4, 7, 8, 12, 13, 14, 16: // Unknown, DeadlineExceeded, PermissionDenied, ResourceExhausted, Unimplemented, Internal, Unavailable, Unauthenticated
+		return "bg-red-500 text-red-100"
+	default: // Any other status
+		return "bg-gray-500 text-gray-100"
 	}
-	return "bg-gray-500 text-gray-100"
 }
 
 func formatHeaders(raw json.RawMessage) string {
@@ -31,10 +30,12 @@ func formatHeaders(raw json.RawMessage) string {
         return "n/a"
     }
 
-    var headers http.Header
+    // Unmarshal into a map where the values are kept as raw JSON.
+    // This allows us to inspect the type of each value individually.
+    var headers map[string]json.RawMessage
     if err := json.Unmarshal(raw, &headers); err != nil {
-        // If it's not valid JSON for headers, just show the raw string
-        return fmt.Sprintf("Invalid headers JSON: %s\nRaw: %s", err.Error(), string(raw))
+        // If the top-level data isn't a JSON object, just show the raw string.
+        return string(raw)
     }
 
     if len(headers) == 0 {
@@ -50,10 +51,28 @@ func formatHeaders(raw json.RawMessage) string {
 
     var builder strings.Builder
     for _, k := range keys {
-        for _, v := range headers[k] {
-            builder.WriteString(fmt.Sprintf("%s: %s\n", k, v))
+        vRaw := headers[k]
+
+        // First, try to unmarshal the value as an array of strings
+        var values []string
+        if err := json.Unmarshal(vRaw, &values); err == nil {
+            for _, v := range values {
+                builder.WriteString(fmt.Sprintf("%s: %s\n", k, v))
+            }
+            continue
         }
+
+        // If that fails, try to unmarshal it as a single string
+        var value string
+        if err := json.Unmarshal(vRaw, &value); err == nil {
+            builder.WriteString(fmt.Sprintf("%s: %s\n", k, value))
+            continue
+        }
+        
+        // As a last resort, just show the raw value
+        builder.WriteString(fmt.Sprintf("%s: %s\n", k, string(vRaw)))
     }
+
     return strings.TrimSpace(builder.String())
 }
 
@@ -77,12 +96,12 @@ templ LogEntry(entry *log.LogEntry) {
 		<summary class="w-full p-4 text-left flex items-center justify-between hover:bg-gray-700/50 transition-colors duration-200 cursor-pointer">
 			<div class="flex items-center space-x-4 flex-wrap">
 				<span class={ "px-2 py-1 text-xs font-bold rounded-md", getStatusColor(entry.Status) }>{ fmt.Sprintf("%d", entry.Status) }</span>
-				<span class="text-gray-400 font-mono text-sm">{ entry.Timestamp.Format(time.Kitchen) }</span>
+				<span class="text-gray-400 font-mono text-sm">{ entry.Timestamp.Format(time.TimeOnly) }</span>
 				<span class="text-white font-medium">{ entry.Service }</span> 
 				<span class="text-gray-400">{ entry.Method }</span>
 			</div>
 			<div class="flex items-center space-x-2 flex-shrink-0 ml-4">
-				<span class="text-sm text-gray-500">{ fmt.Sprintf("%dms", entry.Duration) }</span>
+				<span class="text-sm text-gray-500">{ entry.Duration.String() }</span>
 				<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 text-gray-400 transition-transform duration-300 group-open:rotate-180"><path d="m6 9 6 6 6-6"></path></svg>
 			</div>
 		</summary>

@@ -44,7 +44,7 @@ type RunCmd struct {
 
 func (c *RunCmd) Run(globals *Globals) error {
 	srv, err := server.NewServer(server.ServerOpts{
-		Version:       version,
+		Version:       fullVersion(),
 		RenderDocPage: !c.NoDocPage,
 		UseReflection: !c.NoReflection,
 		WithHTTPLog:   !c.NoHTTPLog,

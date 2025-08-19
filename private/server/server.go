@@ -5,6 +5,7 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+	"runtime"
 	"sync"
 	"time"
 
@@ -82,9 +83,12 @@ func NewServer(opts ServerOpts) (*server, error) {
 		handlerTranscoder:       NewWrappedHandler(),
 		opts:                    opts,
 		stats: &metrics.Stats{
-			StartedAt:     time.Now(),
-			LastReset:     time.Now(),
-			RequestCounts: make(map[time.Time]int64),
+			StartedAt:      time.Now(),
+			LastReset:      time.Now(),
+			HTTPHost:       opts.Addr,
+			GoVersion:      runtime.Version(),
+			FauxRpcVersion: opts.Version,
+			RequestCounts:  make(map[time.Time]int64),
 		},
 		logger: fauxlog.NewLogger(),
 	}
@@ -125,27 +129,27 @@ func (s *server) GetLogger() *fauxlog.Logger {
 func (s *server) GetStats() *metrics.Stats {
 	stats := s.stats.Copy()
 
-	stats.Uptime = time.Since(stats.StartedAt)
 	stats.UniqueServices = s.ServiceRegistry.ServiceCount()
-	// TODO: Implement UniqueMethods by iterating through all services and counting unique methods
-	// stats.UniqueMethods = s.ServiceRegistry
+	uniqueMethods := make(map[string]struct{})
+	s.ServiceRegistry.ForEachService(func(sd protoreflect.ServiceDescriptor) bool {
+		methods := sd.Methods()
+		for i := 0; i < methods.Len(); i++ {
+			method := methods.Get(i)
+			uniqueMethods[string(method.FullName())] = struct{}{}
+		}
+		return true
+	})
+	stats.UniqueMethods = int(len(uniqueMethods))
 	stats.HTTPHost = s.opts.Addr
 	stats.FauxRpcVersion = s.opts.Version
 	// Calculate requests per second for the last second
 	now := time.Now().Truncate(time.Second)
-	oneSecondAgo := now.Add(-time.Second)
-
-	var requestsInLastSecond int64
-	for t, count := range stats.RequestCounts {
-		if t.After(oneSecondAgo) || t.Equal(oneSecondAgo) {
-			requestsInLastSecond += count
-		}
-	}
-	stats.RequestsPerSecond = float64(requestsInLastSecond)
+	lastSecond := now.Add(-time.Second)
+	stats.RequestsPerSecond = stats.RequestCounts[lastSecond]
 
 	// Clean up old entries
 	for t := range stats.RequestCounts {
-		if t.Before(oneSecondAgo) {
+		if t.Before(lastSecond) { // Clean up anything older than the last full second
 			delete(stats.RequestCounts, t)
 		}
 	}
@@ -156,7 +160,7 @@ func (s *server) GetStats() *metrics.Stats {
 		stats.ErrorRate = "0.000%"
 	}
 
-	return s.stats
+	return stats
 }
 
 func (s *server) IncrementTotalRequests() {

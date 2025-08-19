@@ -6,9 +6,9 @@ import (
 )
 
 func TestLogger(t *testing.T) {
-	l := NewLogger(10)
+	l := NewLogger()
 
-	_, ch, unsubscribe := l.Subscribe()
+	ch, unsubscribe := l.Subscribe()
 	defer unsubscribe()
 
 	entry := &LogEntry{

@@ -7,7 +7,7 @@ import (
 
 type Stats struct {
 	TotalRequests     int64
-	RequestsPerSecond float64
+	RequestsPerSecond int64
 	Errors            int64
 	ErrorRate         string
 	UniqueServices    int
@@ -15,7 +15,6 @@ type Stats struct {
 	HTTPHost          string
 	GoVersion         string
 	FauxRpcVersion    string
-	Uptime            time.Duration
 	StartedAt         time.Time
 	LastReset         time.Time
 	RequestCounts     map[time.Time]int64
@@ -49,7 +48,6 @@ func (s *Stats) Copy() *Stats {
 		HTTPHost:          s.HTTPHost,
 		GoVersion:         s.GoVersion,
 		FauxRpcVersion:    s.FauxRpcVersion,
-		Uptime:            s.Uptime,
 		StartedAt:         s.StartedAt,
 		LastReset:         s.LastReset,
 		RequestCounts:     make(map[time.Time]int64),
@@ -68,4 +66,8 @@ func (s *Stats) Reset() {
 	s.RequestCounts = make(map[time.Time]int64)
 	s.LastReset = time.Now()
 	s.mu.Unlock()
+}
+
+func (s *Stats) Uptime() time.Duration {
+	return time.Since(s.StartedAt)
 }

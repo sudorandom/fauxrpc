@@ -10,6 +10,7 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import "github.com/sudorandom/fauxrpc/private/log"
 
+// in partials/requestlog.templ
 func RequestLog(history []*log.LogEntry) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -31,9 +32,52 @@ func RequestLog(history []*log.LogEntry) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div><div class=\"flex justify-between items-center mb-6 flex-shrink-0\"><h1 class=\"text-3xl font-bold text-white\">Request Log</h1><div class=\"flex items-center space-x-4\"><button onclick=\"document.getElementById('log-container').innerHTML = ''\" class=\"px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white font-semibold rounded-lg transition-colors\">Clear</button></div></div><div id=\"log-container\" class=\"overflow-y-auto pr-2 flex-grow\" sse-swap=\"message\" hx-swap=\"afterbegin\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div id=\"sse-controller\" hx-ext=\"sse\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = requestLog(history).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+func requestLog(history []*log.LogEntry) templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var2 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var2 == nil {
+			templ_7745c5c3_Var2 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<div><div class=\"flex justify-between items-center mb-6 flex-shrink-0\"><h1 class=\"text-3xl font-bold text-white\">Request Log</h1><div id=\"sse-status-indicator\" class=\"ml-4 w-4 h-4 rounded-full bg-gray-500 animate-pulse hidden\"></div><div class=\"flex items-center space-x-4\"><button id=\"pause-button\" class=\"px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg transition-colors w-24\" onclick=\"toggleSseStream(this)\">Pause</button> <button onclick=\"document.getElementById('log-container').innerHTML = ''\" class=\"px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white font-semibold rounded-lg transition-colors\">Clear</button></div></div><input type=\"text\" id=\"log-filter-input\" placeholder=\"Filter logs...\" class=\"w-full p-2 mb-4 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500\"><div id=\"log-container\" class=\"overflow-y-auto pr-2 flex-grow\" sse-swap=\"Request\" hx-swap=\"afterbegin\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if len(history) == 0 {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div id=\"no-entries-placeholder\" class=\"text-gray-400 text-center py-8\">New requests will appear here...</div>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
 		}
 		for _, entry := range history {
 			templ_7745c5c3_Err = LogEntry(entry).Render(ctx, templ_7745c5c3_Buffer)
@@ -41,7 +85,7 @@ func RequestLog(history []*log.LogEntry) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</div><script>\n            let eventSource = null; // Global variable to hold the EventSource\n            let debounceTimeout = null;\n\n            function connectSseStream(filterText = '') {\n                const sseController = document.getElementById('sse-controller');\n                const statusIndicator = document.getElementById('sse-status-indicator');\n                const logContainer = document.getElementById('log-container');\n                const filterInput = document.getElementById('log-filter-input');\n\n                // Close existing connection if any\n                if (eventSource) {\n                    eventSource.close();\n                    eventSource = null;\n                }\n\n                // Clear logs when connecting with a new filter\n                if (logContainer) {\n                    logContainer.innerHTML = '';\n                }\n\n                // Show connecting indicator\n                if (statusIndicator) {\n                    statusIndicator.classList.remove('hidden', 'bg-green-500', 'bg-red-500');\n                    statusIndicator.classList.add('bg-gray-500', 'animate-pulse');\n                }\n\n                const url = `/fauxrpc/sse/logs?filter=${encodeURIComponent(filterText)}`;\n                eventSource = new EventSource(url);\n\n                eventSource.onopen = function() {\n                    console.log('EventSource opened');\n                    if (statusIndicator) {\n                        statusIndicator.classList.remove('bg-gray-500', 'bg-red-500', 'animate-pulse');\n                        statusIndicator.classList.add('bg-green-500');\n                    }\n                };\n\n                eventSource.addEventListener('Request', function(event) {\n                    console.log('Received custom \"Request\" event:', event);\n                    console.log('Event data:', event.data);\n\n                    const tempDiv = document.createElement('div');\n                    tempDiv.innerHTML = event.data;\n                    logContainer.insertAdjacentElement('afterbegin', tempDiv.firstChild);\n\n                    // Hide placeholder\n                    const placeholder = document.getElementById('no-entries-placeholder');\n                    if (placeholder) {\n                        placeholder.classList.add('hidden');\n                    }\n\n                    // Trim logs\n                    const maxItems = 20;\n                    while (logContainer.childElementCount > maxItems) {\n                        logContainer.lastElementChild.remove();\n                    }\n                });\n\n                eventSource.onmessage = function(event) {\n                    // This will catch any 'message' events (i.e., events without an 'event:' field)\n                    // For now, we're not expecting any, but it's good to have.\n                    console.log('Received generic message event:', event);\n                };\n\n                eventSource.onerror = function(error) {\n                    console.error('EventSource error:', error);\n                    if (statusIndicator) {\n                        statusIndicator.classList.remove('bg-green-500', 'bg-gray-500', 'animate-pulse');\n                        statusIndicator.classList.add('bg-red-500');\n                    }\n                    eventSource.close(); // Close on error to prevent continuous errors\n                };\n            }\n\n            // --- Global function for the 'Pause'/'Resume' button ---\n            function toggleSseStream(button) {\n                const filterInput = document.getElementById('log-filter-input');\n                if (button.textContent === 'Pause') {\n                    button.textContent = 'Resume';\n                    if (eventSource) {\n                        eventSource.close();\n                        eventSource = null;\n                    }\n                    // Set status to disconnected (gray)\n                    const statusIndicator = document.getElementById('sse-status-indicator');\n                    if (statusIndicator) {\n                        statusIndicator.classList.remove('hidden', 'bg-green-500', 'bg-red-500', 'animate-pulse');\n                        statusIndicator.classList.add('bg-gray-500');\n                    }\n                } else {\n                    button.textContent = 'Pause';\n                    connectSseStream(filterInput.value); // Reconnect with current filter\n                }\n            }\n\n            // --- Component-specific logic, runs immediately on load/swap ---\n            (function() {\n                const sseController = document.getElementById('sse-controller');\n                const logContainer = document.getElementById('log-container');\n                const statusIndicator = document.getElementById('sse-status-indicator');\n                const clearButton = document.querySelector('button[onclick*=\"log-container\"]');\n                const filterInput = document.getElementById('log-filter-input');\n\n                if (!sseController || !logContainer || !statusIndicator || !filterInput) {\n                    console.error(\"Missing required elements for SSE control.\");\n                    return;\n                }\n\n                // Initial connection on page load\n                connectSseStream(filterInput.value);\n\n                // Debounce for filter input\n                filterInput.addEventListener('input', function() {\n                    clearTimeout(debounceTimeout);\n                    debounceTimeout = setTimeout(() => {\n                        connectSseStream(filterInput.value);\n                    }, 300); // 300ms debounce\n                });\n\n                // Clear button logic\n                if (clearButton) {\n                    clearButton.removeAttribute('onclick'); // Remove old onclick\n                    clearButton.addEventListener('click', function() {\n                        logContainer.innerHTML = `\n                            <div id=\"no-entries-placeholder\" class=\"text-gray-400 text-center py-8\">\n                                New requests will appear here...\n                            </div>\n                        `;\n                    });\n                }\n\n                // HTMX SSE event listeners (these are now mostly for debugging/observing)\n                // The actual connection management is done via EventSource directly\n                sseController.addEventListener('htmx:sseOpen', function() {\n                    console.log('htmx:sseOpen event fired on sseController via addEventListener');\n                });\n                sseController.addEventListener('htmx:sseClose', function() {\n                    console.log('htmx:sseClose event fired on sseController via addEventListener');\n                });\n                sseController.addEventListener('htmx:sseError', function() {\n                    console.log('htmx:sseError event fired on sseController via addEventListener');\n                });\n\n                // Log Container Management (trimming)\n                htmx.on(logContainer, 'htmx:afterSwap', function() {\n                    // This listener is still useful if htmx swaps content for other reasons\n                    // or if we decide to re-introduce htmx-driven swaps for SSE messages.\n                    // For now, the onmessage handler directly inserts.\n                    const maxItems = 20;\n                    while (logContainer.childElementCount > maxItems) {\n                        logContainer.lastElementChild.remove();\n                    }\n                });\n\n                // Placeholder management on htmx:sseMessage (now handled in onmessage directly)\n                // htmx.on(controller, 'htmx:sseMessage', function() {\n                //     const placeholder = document.getElementById('no-entries-placeholder');\n                //     if (placeholder) {\n                //         placeholder.classList.add('hidden');\n                //     }\n                // });\n            })();\n        </script></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
