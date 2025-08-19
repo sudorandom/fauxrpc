@@ -249,6 +249,7 @@ func (s *server) Handler() (http.Handler, error) {
 
 	mux.Mount("/", protocolMiddleware(httplog.Logger(s.handlerTranscoder)))
 	if s.opts.WithDashboard {
+		mux.Handle("/", http.RedirectHandler("/fauxrpc", http.StatusFound))
 		mux.Mount("/fauxrpc", frontend.DashboardHandler(s))
 	}
 
