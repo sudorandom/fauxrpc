@@ -46,7 +46,16 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 		defer func() {
 			duration := time.Since(startTime)
 
-			reqHeaders, _ := json.Marshal(r.Header)
+			clientProtocol := "unknown"
+			if protocol, ok := r.Context().Value(clientProtocolKey).(string); ok {
+				clientProtocol = protocol
+			}
+
+			var reqHeaders json.RawMessage
+			if headers, ok := r.Context().Value(requestHeadersKey).([]byte); ok {
+				reqHeaders = headers
+			}
+
 			resHeaders, _ := json.Marshal(w.Header())
 
 			var reqBodyBytes []byte
@@ -91,7 +100,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 				Timestamp:       startTime,
 				Service:         serviceName,
 				Method:          methodName,
-				ClientProtocol:  getClientProtocol(r),
+				ClientProtocol:  clientProtocol,
 				Status:          int(code),
 				Duration:        duration,
 				RequestHeaders:  reqHeaders,
@@ -261,18 +270,4 @@ func grpcStatusFromError(e *stubsv1.Error) *status.Status {
 		}
 	}
 	return status
-}
-
-func getClientProtocol(r *http.Request) string {
-	contentType := r.Header.Get("Content-Type")
-	if strings.HasPrefix(contentType, "application/grpc-web") {
-		return "gRPC-Web"
-	}
-	if strings.HasPrefix(contentType, "application/grpc") {
-		return "gRPC"
-	}
-	if strings.HasPrefix(contentType, "application/connect") {
-		return "ConnectRPC"
-	}
-	return "HTTP"
 }

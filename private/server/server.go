@@ -1,11 +1,14 @@
 package server
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -243,7 +246,7 @@ func (s *server) Handler() (http.Handler, error) {
 		}).Handler)
 	}
 
-	mux.Mount("/", httplog.Logger(s.handlerTranscoder))
+	mux.Mount("/", protocolMiddleware(httplog.Logger(s.handlerTranscoder)))
 	mux.Mount("/fauxrpc", frontend.DashboardHandler(s))
 
 	if s.opts.UseReflection {
@@ -303,4 +306,30 @@ func (h *wrappedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.lock.RLock()
 	defer h.lock.RUnlock()
 	h.handler.ServeHTTP(w, r)
+}
+
+func protocolMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		protocol := getClientProtocol(r)
+		ctx := context.WithValue(r.Context(), clientProtocolKey, protocol)
+
+		headers, _ := json.Marshal(r.Header)
+		ctx = context.WithValue(ctx, requestHeadersKey, headers)
+
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func getClientProtocol(r *http.Request) string {
+	contentType := r.Header.Get("Content-Type")
+	if strings.HasPrefix(contentType, "application/grpc-web") {
+		return "gRPC-Web"
+	}
+	if strings.HasPrefix(contentType, "application/grpc") {
+		return "gRPC"
+	}
+	if strings.HasPrefix(contentType, "application/connect") {
+		return "ConnectRPC"
+	}
+	return "HTTP"
 }
