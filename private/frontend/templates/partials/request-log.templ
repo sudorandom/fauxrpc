@@ -45,8 +45,8 @@ templ requestLog(history []*log.LogEntry) {
         </div>
 
         <script>
-            let eventSource = null; // Global variable to hold the EventSource
-            let debounceTimeout = null;
+            var eventSource = null; // Global variable to hold the EventSource
+            var debounceTimeout = null;
 
             function connectSseStream(filterText = '') {
                 const sseController = document.getElementById('sse-controller');
