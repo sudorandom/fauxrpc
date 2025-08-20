@@ -1,0 +1,254 @@
+package partials
+
+import "github.com/sudorandom/fauxrpc/private/log"
+
+// in partials/requestlog.templ
+templ RequestLog(history []*log.LogEntry) {
+    <div id="sse-controller" hx-ext="sse">
+        @requestLog(history)
+    </div>
+}
+
+templ requestLog(history []*log.LogEntry) {
+    <div>
+        <div class="flex justify-between items-center mb-6 flex-shrink-0">
+            <h1 class="text-3xl font-bold text-white">Request Log</h1>
+            <div class="flex items-center space-x-2 ml-auto"> <!-- Status indicators wrapper -->
+                <div id="sse-status-connected" class="px-3 py-1 rounded-full text-sm font-semibold bg-green-500 text-green-100 hidden">Connected</div>
+                <div id="sse-status-waiting" class="px-3 py-1 rounded-full text-sm font-semibold bg-gray-500 text-gray-100 animate-pulse hidden">Waiting...</div>
+                <div id="sse-status-disconnected" class="px-3 py-1 rounded-full text-sm font-semibold bg-red-500 text-red-100 hidden">Disconnected</div>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-4 mb-4">
+            <input type="text" id="log-filter-input" placeholder="Filter logs..." class="w-full p-2 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 flex-grow">
+            <div class="flex items-center space-x-4 flex-shrink-0">
+                <div class="relative w-32 h-10"> <!-- Set a fixed height (h-10) to match the clear button's py-2 padding -->
+                    <button
+                        id="pause-btn"
+                        class="w-full h-full bg-blue-600 hover:bg-blue-500 text-white font-semibold transition-colors flex items-center justify-center whitespace-nowrap absolute inset-0 rounded-lg"
+                        onclick="toggleSseStream(this)"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="h-5 w-5 inline-block mr-2">
+                            <path d="M5.75 3a.75.75 0 0 0-.75.75v12.5c0 .414.336.75.75.75h1.5a.75.75 0 0 0 .75-.75V3.75A.75.75 0 0 0 7.25 3h-1.5ZM12.75 3a.75.75 0 0 0-.75.75v12.5c0 .414.336.75.75.75h1.5a.75.75 0 0 0 .75-.75V3.75a.75.75 0 0 0-.75-.75h-1.5Z" />
+                        </svg>
+                        Pause
+                    </button>
+                    <button
+                        id="resume-btn"
+                        class="w-full h-full bg-blue-600 hover:bg-blue-500 text-white font-semibold transition-colors flex items-center justify-center whitespace-nowrap absolute inset-0 hidden rounded-lg"
+                        onclick="toggleSseStream(this)"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="h-5 w-5 inline-block mr-2">
+                            <path d="M5.25 5.653c0-1.085 1.172-1.786 2.15-1.142l8.25 4.75a1.125 1.125 0 0 1 0 1.984l-8.25 4.75a1.125 1.125 0 0 1-2.15-1.142V5.653Z" />
+                        </svg>
+                        Resume
+                    </button>
+                </div>
+                <button id="clear-btn" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white font-semibold rounded-lg transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true" class="h-5 w-5 inline-block mr-2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                    Clear
+                </button>
+            </div>
+        </div>
+
+        <div
+            id="log-container"
+            class="overflow-y-auto pr-2 flex-grow"
+            sse-swap="Request"
+            hx-swap="afterbegin"
+        >
+            if len(history) == 0 {
+                <div id="no-entries-placeholder" class="text-gray-400 text-center py-8">
+                    New requests will appear here...
+                </div>
+            }
+            for _, entry := range history {
+                @LogEntry(entry)
+            }
+        </div>
+
+        <script>
+            var eventSource = null; // Global variable to hold the EventSource
+            var debounceTimeout = null;
+
+            function connectSseStream(filterText = '') {
+                const sseController = document.getElementById('sse-controller');
+                const statusConnected = document.getElementById('sse-status-connected');
+                const statusWaiting = document.getElementById('sse-status-waiting');
+                const statusDisconnected = document.getElementById('sse-status-disconnected');
+                const logContainer = document.getElementById('log-container');
+                const filterInput = document.getElementById('log-filter-input');
+
+                // Close existing connection if any
+                if (eventSource) {
+                    eventSource.close();
+                    eventSource = null;
+                }
+
+                // Clear logs when connecting with a new filter
+                if (logContainer) {
+                    logContainer.innerHTML = '';
+                }
+
+                const url = `/fauxrpc/sse/logs?filter=${encodeURIComponent(filterText)}`;
+
+                // Show connecting indicator
+                if (statusConnected && statusWaiting && statusDisconnected) {
+                    statusConnected.classList.add('hidden');
+                    statusDisconnected.classList.add('hidden');
+                    statusWaiting.classList.remove('hidden');
+                }
+                eventSource = new EventSource(url);
+
+                eventSource.onopen = function() {
+                    console.log('EventSource opened');
+                    if (statusConnected && statusWaiting && statusDisconnected) {
+                        statusWaiting.classList.add('hidden');
+                        statusDisconnected.classList.add('hidden');
+                        statusConnected.classList.remove('hidden');
+                    }
+                };
+
+                eventSource.addEventListener('Request', function(event) {
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = event.data;
+                    logContainer.insertAdjacentElement('afterbegin', tempDiv.firstChild);
+
+                    // Hide placeholder
+                    const placeholder = document.getElementById('no-entries-placeholder');
+                    if (placeholder) {
+                        placeholder.classList.add('hidden');
+                    }
+
+                    // Trim logs
+                    const maxItems = 20;
+                    while (logContainer.childElementCount > maxItems) {
+                        logContainer.lastElementChild.remove();
+                    }
+                });
+
+                eventSource.onmessage = function(event) {
+                    // This will catch any 'message' events (i.e., events without an 'event:' field)
+                    // For now, we're not expecting any, but it's good to have.
+                    console.log('Received generic message event:', event);
+                };
+
+                eventSource.onerror = function(error) {
+                    console.error('EventSource error:', error);
+                    if (statusConnected && statusWaiting && statusDisconnected) {
+                        statusWaiting.classList.add('hidden');
+                        statusConnected.classList.add('hidden');
+                        statusDisconnected.classList.remove('hidden');
+                    }
+                    eventSource.close(); // Close on error to prevent continuous errors
+                };
+            }
+
+            // --- Global function for the 'Pause'/'Resume' button ---
+            function toggleSseStream(button) {
+                const filterInput = document.getElementById('log-filter-input');
+                const pauseBtn = document.getElementById('pause-btn');
+                const resumeBtn = document.getElementById('resume-btn');
+                const statusConnected = document.getElementById('sse-status-connected');
+                const statusWaiting = document.getElementById('sse-status-waiting');
+                const statusDisconnected = document.getElementById('sse-status-disconnected');
+
+                if (button.id === 'pause-btn') { // Check button ID instead of textContent
+                    pauseBtn.classList.add('hidden');
+                    resumeBtn.classList.remove('hidden');
+                    if (eventSource) {
+                        eventSource.close();
+                        eventSource = null;
+                    }
+                    // Set status to disconnected
+                    if (statusConnected && statusWaiting && statusDisconnected) {
+                        statusConnected.classList.add('hidden');
+                        statusWaiting.classList.add('hidden');
+                        statusDisconnected.classList.remove('hidden');
+                    }
+                } else { // This is the 'Resume' part (button.id === 'resume-btn')
+                    resumeBtn.classList.add('hidden');
+                    pauseBtn.classList.remove('hidden');
+                    if (statusConnected && statusWaiting && statusDisconnected) {
+                        statusConnected.classList.add('hidden');
+                        statusWaiting.classList.add('hidden');
+                        statusDisconnected.classList.add('hidden');
+                    }
+                    connectSseStream(filterInput.value); // Reconnect with current filter
+                }
+            }
+
+            // --- Component-specific logic, runs immediately on load/swap ---
+            (function() {
+                const sseController = document.getElementById('sse-controller');
+                const logContainer = document.getElementById('log-container');
+                const filterInput = document.getElementById('log-filter-input');
+                const pauseBtn = document.getElementById('pause-btn');
+                const resumeBtn = document.getElementById('resume-btn');
+                const clearBtn = document.getElementById('clear-btn'); // New reference
+                const statusConnected = document.getElementById('sse-status-connected');
+                const statusWaiting = document.getElementById('sse-status-waiting');
+                const statusDisconnected = document.getElementById('sse-status-disconnected');
+
+
+                if (!sseController || !logContainer || !filterInput || !pauseBtn || !resumeBtn || !clearBtn || !statusConnected || !statusWaiting || !statusDisconnected) {
+                    console.error("Missing required elements for SSE control.");
+                    return;
+                }
+
+                // Initial button state
+                pauseBtn.classList.remove('hidden');
+                resumeBtn.classList.add('hidden');
+
+                // Initial connection on page load
+                connectSseStream(filterInput.value);
+
+                // Debounce for filter input
+                filterInput.addEventListener('input', function() {
+                    clearTimeout(debounceTimeout);
+                    debounceTimeout = setTimeout(() => {
+                        // Check if currently paused before reconnecting on filter change
+                        if (pauseBtn.classList.contains('hidden')) { // If pauseBtn is hidden, it means resumeBtn is visible, so it's paused
+                            // Do nothing, stream is paused
+                        } else {
+                            connectSseStream(filterInput.value);
+                        }
+                    }, 300); // 300ms debounce
+                });
+
+                // Clear button logic
+                if (clearBtn) {
+                    clearBtn.addEventListener('click', function() {
+                        logContainer.innerHTML = `
+                            <div id="no-entries-placeholder" class="text-gray-400 text-center py-8">
+                                New requests will appear here...
+                            </div>
+                        `;
+                    });
+                }
+
+                // Log Container Management (trimming)
+                htmx.on(logContainer, 'htmx:afterSwap', function() {
+                    // This listener is still useful if htmx swaps content for other reasons
+                    // or if we decide to re-introduce htmx-driven swaps for SSE messages.
+                    // For now, the onmessage handler directly inserts.
+                    const maxItems = 20;
+                    while (logContainer.childElementCount > maxItems) {
+                        logContainer.lastElementChild.remove();
+                    }
+                });
+
+                // Placeholder management on htmx:sseMessage (now handled in onmessage directly)
+                // htmx.on(controller, 'htmx:sseMessage', function() {
+                //     const placeholder = document.getElementById('no-entries-placeholder');
+                //     if (placeholder) {
+                //         placeholder.classList.add('hidden');
+                //     }
+                // });
+            })();
+        </script>
+    </div>
+}

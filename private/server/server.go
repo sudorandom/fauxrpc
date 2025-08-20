@@ -1,11 +1,16 @@
 package server
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
+	"runtime"
+	"strings"
 	"sync"
+	"time"
 
 	"buf.build/go/protovalidate"
 	"connectrpc.com/connect"
@@ -18,10 +23,13 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/cors"
 	"github.com/sudorandom/fauxrpc"
+	"github.com/sudorandom/fauxrpc/private/frontend"
+	"github.com/sudorandom/fauxrpc/private/gen/registry/v1/registryv1connect"
+	"github.com/sudorandom/fauxrpc/private/gen/stubs/v1/stubsv1connect"
+	fauxlog "github.com/sudorandom/fauxrpc/private/log"
+	"github.com/sudorandom/fauxrpc/private/metrics"
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/private/stubs"
-	"github.com/sudorandom/fauxrpc/proto/gen/registry/v1/registryv1connect"
-	"github.com/sudorandom/fauxrpc/proto/gen/stubs/v1/stubsv1connect"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -31,6 +39,10 @@ var _ stubs.StubDatabase = (*server)(nil)
 type Server interface {
 	registry.ServiceRegistry
 	stubs.StubDatabase
+	GetStats() *metrics.Stats
+	IncrementTotalRequests()
+	IncrementErrors()
+	GetLogger() *fauxlog.Logger
 }
 
 type ServerOpts struct {
@@ -41,6 +53,8 @@ type ServerOpts struct {
 	WithValidate  bool
 	OnlyStubs     bool
 	NoCORS        bool
+	Addr          string
+	WithDashboard bool
 }
 
 type server struct {
@@ -53,7 +67,9 @@ type server struct {
 	handlerReflectorV1Alpha *wrappedHandler
 	handlerTranscoder       *wrappedHandler
 
-	opts ServerOpts
+	opts   ServerOpts
+	stats  *metrics.Stats
+	logger *fauxlog.Logger
 }
 
 func NewServer(opts ServerOpts) (*server, error) {
@@ -61,7 +77,7 @@ func NewServer(opts ServerOpts) (*server, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &server{
+	s := &server{
 		lock:                    &sync.Mutex{},
 		ServiceRegistry:         serviceRegistry,
 		StubDatabase:            stubs.NewStubDatabase(),
@@ -70,7 +86,17 @@ func NewServer(opts ServerOpts) (*server, error) {
 		handlerReflectorV1Alpha: NewWrappedHandler(),
 		handlerTranscoder:       NewWrappedHandler(),
 		opts:                    opts,
-	}, nil
+		stats: &metrics.Stats{
+			StartedAt:      time.Now(),
+			LastReset:      time.Now(),
+			HTTPHost:       opts.Addr,
+			GoVersion:      runtime.Version(),
+			FauxRpcVersion: opts.Version,
+			RequestCounts:  make(map[time.Time]int64),
+		},
+		logger: fauxlog.NewLogger(),
+	}
+	return s, nil
 }
 
 func (s *server) Reset() error {
@@ -79,6 +105,7 @@ func (s *server) Reset() error {
 	if err := s.ServiceRegistry.Reset(); err != nil {
 		return err
 	}
+	s.stats.Reset()
 	return s.rebuildHandlers()
 }
 
@@ -97,6 +124,55 @@ func (s *server) RegisterFile(fd protoreflect.FileDescriptor) error {
 
 func (s *server) AddFileFromPath(path string) error {
 	return registry.AddServicesFromPath(s.ServiceRegistry, path)
+}
+
+func (s *server) GetLogger() *fauxlog.Logger {
+	return s.logger
+}
+
+func (s *server) GetStats() *metrics.Stats {
+	stats := s.stats.Copy()
+
+	stats.UniqueServices = s.ServiceRegistry.ServiceCount()
+	uniqueMethods := make(map[string]struct{})
+	s.ServiceRegistry.ForEachService(func(sd protoreflect.ServiceDescriptor) bool {
+		methods := sd.Methods()
+		for i := 0; i < methods.Len(); i++ {
+			method := methods.Get(i)
+			uniqueMethods[string(method.FullName())] = struct{}{}
+		}
+		return true
+	})
+	stats.UniqueMethods = int(len(uniqueMethods))
+	stats.HTTPHost = s.opts.Addr
+	stats.FauxRpcVersion = s.opts.Version
+	// Calculate requests per second for the last second
+	now := time.Now().Truncate(time.Second)
+	lastSecond := now.Add(-time.Second)
+	stats.RequestsPerSecond = stats.RequestCounts[lastSecond]
+
+	// Clean up old entries
+	for t := range stats.RequestCounts {
+		if t.Before(lastSecond) { // Clean up anything older than the last full second
+			delete(stats.RequestCounts, t)
+		}
+	}
+
+	if stats.TotalRequests > 0 {
+		stats.ErrorRate = fmt.Sprintf("%.3f%%", float64(stats.Errors)/float64(stats.TotalRequests)*100)
+	} else {
+		stats.ErrorRate = "0.000%"
+	}
+
+	return stats
+}
+
+func (s *server) IncrementTotalRequests() {
+	s.stats.IncrementTotalRequests()
+}
+
+func (s *server) IncrementErrors() {
+	s.stats.IncrementErrors()
 }
 
 func (s *server) rebuildHandlers() error {
@@ -125,7 +201,7 @@ func (s *server) rebuildHandlers() error {
 
 	s.ForEachService(func(sd protoreflect.ServiceDescriptor) bool {
 		vgservice := vanguard.NewServiceWithSchema(
-			sd, NewHandler(sd, faker, validate),
+			sd, NewHandler(sd, faker, validate, s, s.logger), // Pass the server instance here
 			vanguard.WithTargetProtocols(vanguard.ProtocolGRPC),
 			vanguard.WithTargetCodecs(vanguard.CodecProto))
 		vgservices = append(vgservices, vgservice)
@@ -173,7 +249,12 @@ func (s *server) Handler() (http.Handler, error) {
 		}).Handler)
 	}
 
-	mux.Mount("/", httplog.Logger(s.handlerTranscoder))
+	mux.Mount("/", protocolMiddleware(httplog.Logger(s.handlerTranscoder)))
+	if s.opts.WithDashboard {
+		mux.Handle("/", http.RedirectHandler("/fauxrpc", http.StatusFound))
+		mux.Handle("/fauxrpc/assets/", http.StripPrefix("/fauxrpc/assets/", http.FileServer(http.Dir("private/frontend/assets"))))
+		mux.Mount("/fauxrpc", frontend.DashboardHandler(s))
+	}
 
 	if s.opts.UseReflection {
 		mux.Mount("/grpc.reflection.v1.ServerReflection/", s.handlerReflectorV1)
@@ -232,4 +313,43 @@ func (h *wrappedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.lock.RLock()
 	defer h.lock.RUnlock()
 	h.handler.ServeHTTP(w, r)
+}
+
+func protocolMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		protocol := getClientProtocol(r)
+		ctx := context.WithValue(r.Context(), clientProtocolKey, protocol)
+
+		headers, _ := json.Marshal(maskHeaders(r.Header))
+		ctx = context.WithValue(ctx, requestHeadersKey, headers)
+
+		next.ServeHTTP(w, r.WithContext(ctx))
+	})
+}
+
+func getClientProtocol(r *http.Request) string {
+	contentType := r.Header.Get("Content-Type")
+	connectVersion := r.Header.Get("Connect-Protocol-Version")
+	// Connect-Protocol-Version
+	switch {
+	case strings.HasPrefix(contentType, "application/grpc-web"):
+		return "gRPC-Web"
+	case strings.HasPrefix(contentType, "application/grpc"):
+		return "gRPC"
+	case strings.HasPrefix(contentType, "application/connect"):
+		return "ConnectRPC"
+	case connectVersion != "":
+		return "ConnectRPC"
+	}
+	return "HTTP"
+}
+
+func maskHeaders(headers http.Header) http.Header {
+	maskedHeaders := headers.Clone()
+	for _, h := range []string{"Authorization", "Proxy-Authorization", "Proxy-Authenticate", "WWW-Authenticate", "X-API-Key", "X-Auth-Token"} {
+		if maskedHeaders.Get(h) != "" {
+			maskedHeaders.Set(h, "*****")
+		}
+	}
+	return maskedHeaders
 }

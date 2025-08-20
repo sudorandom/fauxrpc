@@ -7,7 +7,7 @@ import (
 	elizav1 "buf.build/gen/go/connectrpc/eliza/protocolbuffers/go/connectrpc/eliza/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	testv1 "github.com/sudorandom/fauxrpc/proto/gen/test/v1"
+	testv1 "github.com/sudorandom/fauxrpc/private/gen/test/v1"
 	"github.com/sudorandom/fauxrpc/protocel"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"

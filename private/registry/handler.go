@@ -6,8 +6,8 @@ import (
 	"log/slog"
 
 	"connectrpc.com/connect"
-	registryv1 "github.com/sudorandom/fauxrpc/proto/gen/registry/v1"
-	"github.com/sudorandom/fauxrpc/proto/gen/registry/v1/registryv1connect"
+	registryv1 "github.com/sudorandom/fauxrpc/private/gen/registry/v1"
+	"github.com/sudorandom/fauxrpc/private/gen/registry/v1/registryv1connect"
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"

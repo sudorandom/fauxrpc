@@ -13,7 +13,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/dynamicpb"
 
-	testv1 "github.com/sudorandom/fauxrpc/proto/gen/test/v1"
+	testv1 "github.com/sudorandom/fauxrpc/private/gen/test/v1"
 )
 
 var AllTypes = testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")

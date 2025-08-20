@@ -3,15 +3,10 @@ package main
 import (
 	"fmt"
 	"log/slog"
-	"runtime"
+	"runtime/debug"
+	"strings"
 
 	"github.com/alecthomas/kong"
-)
-
-var (
-	version = "dev"
-	commit  = "none"
-	date    = "unknown"
 )
 
 type Globals struct {
@@ -72,5 +67,41 @@ func main() {
 }
 
 func fullVersion() string {
-	return fmt.Sprintf("%s (%s) @ %s; %s", version, commit, date, runtime.Version())
+	var b strings.Builder
+	version, commit, date := getVersionInfo()
+	b.WriteString(version)
+	if commit != "" {
+		b.WriteString(fmt.Sprintf(" (%s)", commit))
+	}
+	if date != "" {
+		b.WriteString(fmt.Sprintf(" @%s", commit))
+	}
+	return b.String()
+}
+
+func getVersionInfo() (version, commit, date string) {
+	version = "dev"
+	commit = ""
+	date = ""
+
+	if info, ok := debug.ReadBuildInfo(); ok {
+		if info.Main.Version != "(devel)" && info.Main.Version != "" {
+			version = info.Main.Version
+		}
+
+		for _, setting := range info.Settings {
+			switch setting.Key {
+			case "vcs.revision":
+				if len(setting.Value) >= 7 {
+					commit = setting.Value[:7] // Short commit hash
+				} else {
+					commit = setting.Value
+				}
+			case "vcs.time":
+				date = setting.Value
+			}
+		}
+	}
+
+	return version, commit, date
 }

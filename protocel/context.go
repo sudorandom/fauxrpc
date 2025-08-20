@@ -3,7 +3,7 @@ package protocel
 import (
 	"context"
 
-	stubsv1 "github.com/sudorandom/fauxrpc/proto/gen/stubs/v1"
+	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
