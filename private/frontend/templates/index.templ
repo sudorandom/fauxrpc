@@ -19,9 +19,22 @@ templ Index(content templ.Component) {
         		body { font-family: 'Inter', sans-serif; }
     		</style>
 		</head>
-		<body class="bg-gray-900 text-white h-screen font-sans flex">
-			<aside class="w-64 bg-gray-900 border-r border-gray-800 p-6 flex-col flex-shrink-0 hidden md:flex">
-				<div class="flex items-center mb-10">
+		<body class="bg-gray-900 text-white h-screen font-sans flex flex-col md:flex-row">
+			<header class="bg-gray-900 border-b border-gray-800 p-6 flex items-center justify-between md:hidden">
+				<div class="flex items-center">
+					<div class="bg-blue-500 p-2 rounded-lg mr-3">
+						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 text-white"><rect width="20" height="8" x="2" y="2" rx="2" ry="2"></rect><rect width="20" height="8" x="2" y="14" rx="2" ry="2"></rect><line x1="6" x2="6.01" y1="6" y2="6"></line><line x1="6" x2="6.01" y1="18" y2="18"></line></svg>
+					</div>
+					<h2 class="text-2xl font-bold text-white">FauxRPC</h2>
+				</div>
+				<button _="on click toggle .hidden on #mobile-menu" class="text-gray-300 hover:text-white focus:outline-none">
+					<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+					</svg>
+				</button>
+			</header>
+			<aside id="mobile-menu" class="w-full md:w-64 bg-gray-900 md:border-r border-gray-800 p-6 flex-col flex-shrink-0 md:flex hidden md:!flex">
+				<div class="flex items-center mb-10 hidden md:flex">
 					<div class="bg-blue-500 p-2 rounded-lg mr-3">
 						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 text-white"><rect width="20" height="8" x="2" y="2" rx="2" ry="2"></rect><rect width="20" height="8" x="2" y="14" rx="2" ry="2"></rect><line x1="6" x2="6.01" y1="6" y2="6"></line><line x1="6" x2="6.01" y1="18" y2="18"></line></svg>
 					</div>
