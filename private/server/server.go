@@ -130,6 +130,10 @@ func (s *server) GetLogger() *fauxlog.Logger {
 	return s.logger
 }
 
+func (s *server) GetStubDB() stubs.StubDatabase {
+	return s.StubDatabase
+}
+
 func (s *server) GetStats() *metrics.Stats {
 	stats := s.stats.Copy()
 

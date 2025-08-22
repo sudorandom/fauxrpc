@@ -14,12 +14,13 @@ type StubKey struct {
 }
 
 type StubEntry struct {
-	Key        StubKey
-	Message    protoreflect.ProtoMessage
-	CELMessage protocel.CELMessage
-	Error      *StatusError
-	ActiveIf   *ActiveIf
-	Priority   int
+	Key              StubKey
+	Message          protoreflect.ProtoMessage
+	CELMessage       protocel.CELMessage
+	CELContentString string // Added
+	Error            *StatusError
+	ActiveIf         *ActiveIf
+	Priority         int
 }
 
 type PriorityStubEntries struct {
