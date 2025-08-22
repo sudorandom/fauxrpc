@@ -1,0 +1,12 @@
+
+package browser
+
+templ FileContent(path string, fileName string, content string) {
+    <div>
+        <h1 class="text-3xl font-bold text-white mb-6">Schema</h1>
+        <div id="browser-content" class="bg-gray-900 rounded-lg shadow-lg">
+            @breadcrumbs(path, fileName)
+            <pre class="p-4 bg-gray-800 rounded-lg overflow-auto text-gray-200 text-sm"><code>{ content }</code></pre>
+        </div>
+    </div>
+}
