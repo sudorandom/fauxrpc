@@ -9,6 +9,12 @@ import (
 	"github.com/alecthomas/kong"
 )
 
+var (
+	version = "dev"
+	commit  = ""
+	date    = ""
+)
+
 type Globals struct {
 	LogLevel string      `short:"l" help:"Set the logging level (debug|info|warn|error)" default:"info"`
 	Version  VersionFlag `name:"version" help:"Print version information and quit"`
@@ -79,29 +85,29 @@ func fullVersion() string {
 	return b.String()
 }
 
-func getVersionInfo() (version, commit, date string) {
-	version = "dev"
-	commit = ""
-	date = ""
+func getVersionInfo() (string, string, string) {
+	currnetVersion := version
+	currentCommit := commit
+	currentDate := date
 
 	if info, ok := debug.ReadBuildInfo(); ok {
 		if info.Main.Version != "(devel)" && info.Main.Version != "" {
-			version = info.Main.Version
+			currnetVersion = info.Main.Version
 		}
 
 		for _, setting := range info.Settings {
 			switch setting.Key {
 			case "vcs.revision":
 				if len(setting.Value) >= 7 {
-					commit = setting.Value[:7] // Short commit hash
+					currentCommit = setting.Value[:7] // Short commit hash
 				} else {
-					commit = setting.Value
+					currentCommit = setting.Value
 				}
 			case "vcs.time":
-				date = setting.Value
+				currentDate = setting.Value
 			}
 		}
 	}
 
-	return version, commit, date
+	return currnetVersion, currentCommit, currentDate
 }

@@ -10,14 +10,20 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/a-h/templ"
+	"github.com/jhump/protoreflect/desc"
+	"github.com/jhump/protoreflect/desc/protoprint"
 	"github.com/sudorandom/fauxrpc/private/frontend/templates"
+	"github.com/sudorandom/fauxrpc/private/frontend/templates/browser"
 	"github.com/sudorandom/fauxrpc/private/frontend/templates/partials"
 	"github.com/sudorandom/fauxrpc/private/log"
 	"github.com/sudorandom/fauxrpc/private/metrics"
+	"github.com/sudorandom/fauxrpc/private/registry"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 //go:embed assets
@@ -27,6 +33,7 @@ var embeddedAssets embed.FS
 type Provider interface {
 	GetStats() *metrics.Stats
 	GetLogger() *log.Logger
+	registry.ServiceRegistry
 }
 
 func DashboardHandler(p Provider) http.Handler {
@@ -146,6 +153,84 @@ func DashboardHandler(p Provider) http.Handler {
 			templ.Handler(templates.Index(partials.RequestLog(nil))).ServeHTTP(w, r)
 		}
 	}))
+
+	mux.Handle("/fauxrpc/browser/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, "/fauxrpc/browser")
+		if after, ok := strings.CutPrefix(path, "/"); ok {
+			path = after
+		}
+		files := p.Files()
+
+		var foundFd protoreflect.FileDescriptor
+		files.RangeFiles(func(fd protoreflect.FileDescriptor) bool {
+			if fd.Path() == path {
+				foundFd = fd
+				return false
+			}
+			return true
+		})
+
+		if foundFd != nil {
+			fd, err := desc.WrapFile(foundFd)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			printer := protoprint.Printer{}
+			content, err := printer.PrintProtoToString(fd)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			lastSlash := strings.LastIndex(path, "/")
+			var dirPath, fileName string
+			if lastSlash != -1 {
+				dirPath = path[:lastSlash+1]
+				fileName = path[lastSlash+1:]
+			} else {
+				dirPath = ""
+				fileName = path
+			}
+
+			if r.Header.Get("HX-Request") == "true" {
+				templ.Handler(browser.FileContent(dirPath, fileName, content)).ServeHTTP(w, r)
+			} else {
+				templ.Handler(templates.Index(browser.FileContent(dirPath, fileName, content))).ServeHTTP(w, r)
+			}
+			return
+		}
+
+		// It's a directory
+		dirEntries := make(map[string]bool)
+		files.RangeFiles(func(fd protoreflect.FileDescriptor) bool {
+			if after, ok := strings.CutPrefix(fd.Path(), path); ok {
+				rest := after
+				if rest == "" {
+					return true
+				}
+				parts := strings.Split(rest, "/")
+				if len(parts) == 1 {
+					dirEntries[parts[0]] = true
+				} else {
+					dirEntries[parts[0]+"/"] = true
+				}
+			}
+			return true
+		})
+
+		var entries []string
+		for entry := range dirEntries {
+			entries = append(entries, entry)
+		}
+		sort.Strings(entries)
+
+		if r.Header.Get("HX-Request") == "true" {
+			templ.Handler(browser.Browser(path, entries)).ServeHTTP(w, r)
+		} else {
+			templ.Handler(templates.Index(browser.Browser(path, entries))).ServeHTTP(w, r)
+		}
+	}))
+
 	mux.Handle("/fauxrpc/summary", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("HX-Request") == "true" {
 			// HTMX request, return only the partial
@@ -155,6 +240,7 @@ func DashboardHandler(p Provider) http.Handler {
 			templ.Handler(templates.Index(partials.SummaryPage(p.GetStats()))).ServeHTTP(w, r)
 		}
 	}))
+
 	mux.Handle("/fauxrpc/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		templ.Handler(templates.Index(partials.SummaryPage(p.GetStats()))).ServeHTTP(w, r)
 	}))

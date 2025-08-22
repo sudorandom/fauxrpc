@@ -1,0 +1,42 @@
+package browser
+
+import (
+    "fmt"
+    "strings"
+
+    "github.com/sudorandom/fauxrpc/private/frontend/templates/browser/partials"
+)
+
+templ Browser(path string, files []string) {
+    <div>
+        <h1 class="text-3xl font-bold text-white mb-6">Schema</h1>
+        <div id="browser-content" class="bg-gray-900 rounded-lg shadow-lg">
+            @breadcrumbs(path, "")
+            <ul class="list-none">
+                for _, file := range files {
+                    if strings.HasSuffix(file, "/") {
+                        @partials.Dir(path + file, fmt.Sprintf("/fauxrpc/browser/%s", path + file))
+                    } else {
+                        @partials.File(path + file, fmt.Sprintf("/fauxrpc/browser/%s", path + file))
+                    }
+                }
+            </ul>
+        </div>
+    </div>
+}
+
+templ breadcrumbs(path string, fileName string) {
+    <div class="text-sm breadcrumbs mb-4 p-2 bg-gray-800 rounded-lg shadow-md">
+        <ul class="flex items-center">
+            <li><b class="mr-3">Path:</b> <a hx-get={ templ.URL(fmt.Sprintf("/fauxrpc/browser/")) } hx-target="#main-content" hx-push-url="true" class="text-blue-400 hover:text-blue-200 transition-colors duration-200 cursor-pointer">(root)</a></li>
+            for i, part := range strings.Split(path, "/") {
+                if part != "" {
+                    <li class="flex items-center before:content-['/'] before:px-2 before:text-gray-500"><a hx-get={ templ.URL(fmt.Sprintf("/fauxrpc/browser/%s/", strings.Join(strings.Split(path, "/")[:i+1], "/"))) } hx-target="#main-content" hx-push-url="true" class="text-blue-400 hover:text-blue-200 transition-colors duration-200 cursor-pointer">{ part }</a></li>
+                }
+            }
+            if fileName != "" {
+                <li class="flex items-center before:content-['/'] before:px-2 before:text-gray-500"><span>{ fileName }</span></li>
+            }
+        </ul>
+    </div>
+}
