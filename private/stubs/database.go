@@ -25,7 +25,7 @@ type StubEntry struct {
 	Key              StubKey
 	Message          protoreflect.ProtoMessage
 	CELMessage       protocel.CELMessage
-	CELContentString string // Added
+	CELContentString string
 	Error            *StatusError
 	ActiveIf         *ActiveIf
 	Priority         int

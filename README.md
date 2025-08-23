@@ -45,3 +45,23 @@ $ buf curl --http2-prior-knowledge http://127.0.0.1:6660/my.own.v1.service/Hello
 ```
 
 Go to [the documentation website](https://fauxrpc.com) for more!
+
+## Dashboard
+Enhance your FauxRPC experience with the interactive dashboard, providing real-time insights into your server's operations.
+
+To enable the dashboard, simply start FauxRPC with the `--dashboard` option:
+
+```
+fauxrpc run --schema=service.binpb --dashboard
+```
+
+Access the dashboard in your browser at `http://127.0.0.1:6660/fauxrpc`.
+
+![](<assets/dashboard.png>)
+
+The dashboard provides:
+*   📊 **Summary:** View overall server statistics.
+*   📜 **Request Log:** Live stream of all incoming requests.
+*   📁 **Schema Browser:** Explore all Protobuf schemas loaded into the server.
+*   🔌 **Stubs:** Manage and view details of registered stubs.
+*   📚 **API Documentation:** Access auto-generated API documentation.
