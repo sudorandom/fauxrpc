@@ -1,0 +1,37 @@
+package stubs
+
+import (
+	"fmt"
+	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
+)
+
+templ List(groupedStubs map[string][]*stubsv1.Stub) {
+	<div>
+		<h1 class="text-3xl font-bold text-white">Stubs</h1>
+		<p class="text-gray-400 mb-6">Stubs are pre-configured responses that FauxRPC will return when it receives a matching request. They allow you to simulate API behavior without needing a real backend service.</p>
+		<div id="stubs-content" class="bg-gray-900">
+			for target, stubs := range groupedStubs {
+				<div class="mb-6 last:mb-0">
+					<h2 class="text-xl font-bold text-white mb-3">{ target }</h2>
+					<ul class="list-none space-y-3">
+						for _, stub := range stubs {
+							<li class="bg-gray-800 rounded-lg shadow hover:bg-gray-700/50 transition-colors duration-200">
+								<a hx-get={ templ.URL(fmt.Sprintf("/fauxrpc/stubs/%s/%s", stub.GetRef().GetTarget(), stub.GetRef().GetId())) }
+									hx-target="#main-content"
+									hx-push-url="true"
+									class="flex items-center space-x-3 p-4 text-blue-400 hover:text-blue-200 cursor-pointer">
+									// Document Icon
+									<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 text-gray-400 flex-shrink-0"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+									<span class="font-mono">{ stub.GetRef().GetId() }</span>
+								</a>
+							</li>
+						}
+					</ul>
+				</div>
+			}
+			if len(groupedStubs) == 0 {
+				<p class="text-gray-400">No stubs registered.</p>
+			}
+		</div>
+	</div>
+}

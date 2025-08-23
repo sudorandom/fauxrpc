@@ -5,12 +5,19 @@ import (
 
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	"github.com/brianvoe/gofakeit/v7"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
+type StubEntry interface {
+	GetName() protoreflect.FullName
+	GetID() string
+}
+
 type GenOptions struct {
-	MaxDepth int
-	Faker    *gofakeit.Faker
-	Context  context.Context
+	MaxDepth     int
+	Faker        *gofakeit.Faker
+	Context      context.Context
+	StubRecorder func(StubEntry)
 
 	extraFieldConstraints *validate.FieldRules
 }

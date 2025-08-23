@@ -1,0 +1,83 @@
+package stubs
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"log/slog"
+
+	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
+)
+
+// StubForOutput is a helper struct to match the output format of cmd_stub.go
+// This is used for marshalling the content field to JSON
+type StubForOutput struct {
+	Content any `json:"content,omitempty"`
+}
+
+// formatJSON indents a JSON string.
+func formatJSON(jsonStr string) string {
+	var prettyJSON bytes.Buffer
+	if err := json.Indent(&prettyJSON, []byte(jsonStr), "", "  "); err != nil {
+		slog.Error("error indenting JSON", slog.Any("error", err))
+		return jsonStr // Return original if formatting fails
+	}
+	return prettyJSON.String()
+}
+
+templ Single(stub *stubsv1.Stub) {
+    <div>
+        <h1 class="text-3xl font-bold text-white mb-6">Stub Details</h1>
+        <div id="stub-details-content" class="bg-gray-900 py-6 rounded-lg shadow-lg">
+            <a hx-get="/fauxrpc/stubs" hx-target="#main-content" hx-push-url="true" class="text-blue-400 hover:text-blue-200 transition-colors duration-200 cursor-pointer mb-4 block">← Back to Stub List</a>
+            <table class="min-w-full bg-gray-800 rounded-lg overflow-hidden">
+                <tbody>
+                    <tr>
+                        <td class="px-4 py-2 font-semibold text-gray-300">ID:</td>
+                        <td class="px-4 py-2 text-gray-200">{ stub.GetRef().GetId() }</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-2 font-semibold text-gray-300">Target:</td>
+                        <td class="px-4 py-2 text-gray-200">{ stub.GetRef().GetTarget() }</td>
+                    </tr>
+                    <tr>
+                        <td class="px-4 py-2 font-semibold text-gray-300">Priority:</td>
+                        <td class="px-4 py-2 text-gray-200">{ fmt.Sprintf("%d", stub.GetPriority()) }</td>
+                    </tr>
+                    if stub.GetActiveIf() != "" {
+                        <tr>
+                            <td class="px-4 py-2 font-semibold text-gray-300">ActiveIf:</td>
+                            <td class="px-4 py-2 text-gray-200"><pre class="p-2 bg-gray-700 rounded-md overflow-auto text-gray-200 text-sm"><code>{ stub.GetActiveIf() }</code></pre></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+
+            if stub.HasCelContent() {
+                <h2 class="text-xl font-bold text-white mt-6 mb-2">CEL Content:</h2>
+                <pre class="p-4 bg-gray-800 rounded-lg overflow-auto text-gray-200 text-sm"><code>{ stub.GetCelContent() }</code></pre>
+            }
+
+            if stub.WhichContent() == stubsv1.Stub_Json_case {
+                if stub.HasContent() {
+                    <h2 class="text-xl font-bold text-white mt-6 mb-2">Content:</h2>
+                    <pre class="p-4 bg-gray-800 rounded-lg overflow-auto text-gray-200 text-sm"><code>{ formatJSON(stub.GetJson()) }</code></pre>
+                }
+            } else if stub.WhichContent() == stubsv1.Stub_Error_case {
+                <h2 class="text-xl font-bold text-white mt-6 mb-2">Error Details:</h2>
+                <table class="min-w-full bg-gray-800 rounded-lg overflow-hidden mb-4">
+                    <tbody>
+                        <tr>
+                            <td class="px-4 py-2 font-semibold text-gray-300">Error Code:</td>
+                            <td class="px-4 py-2 text-gray-200">{ fmt.Sprintf("%d", stub.GetError().GetCode()) }</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-2 font-semibold text-gray-300">Error Message:</td>
+                            <td class="px-4 py-2 text-gray-200">{ stub.GetError().GetMessage() }</td>
+                        </tr>
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+}

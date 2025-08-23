@@ -109,6 +109,7 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 				return nil, err
 			}
 			entry.CELMessage = celmsg
+			entry.CELContentString = stub.GetCelContent()
 		}
 
 		entries[i] = entry
@@ -143,7 +144,7 @@ func (h *handler) ListStubs(ctx context.Context, req *connect.Request[stubsv1.Li
 		filtered = append(filtered, stub)
 	}
 
-	pbstubs, err := stubsToProto(filtered)
+	pbstubs, err := StubsToProto(filtered)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +179,7 @@ func (h *handler) RemoveStubs(ctx context.Context, msg *connect.Request[stubsv1.
 	return connect.NewResponse(&stubsv1.RemoveStubsResponse{}), nil
 }
 
-func stubsToProto(stubs []StubEntry) ([]*stubsv1.Stub, error) {
+func StubsToProto(stubs []StubEntry) ([]*stubsv1.Stub, error) {
 	pbStubs := []*stubsv1.Stub{}
 	for _, stub := range stubs {
 		pbStub := &stubsv1.Stub{}
@@ -198,6 +199,9 @@ func stubsToProto(stubs []StubEntry) ([]*stubsv1.Stub, error) {
 				return nil, err
 			}
 			pbStub.SetJson(string(content))
+		}
+		if stub.CELMessage != nil {
+			pbStub.SetCelContent(stub.CELContentString)
 		}
 		pbStubs = append(pbStubs, pbStub)
 	}

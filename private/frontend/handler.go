@@ -20,10 +20,14 @@ import (
 	"github.com/sudorandom/fauxrpc/private/frontend/templates"
 	"github.com/sudorandom/fauxrpc/private/frontend/templates/browser"
 	"github.com/sudorandom/fauxrpc/private/frontend/templates/partials"
+	templates_stubs "github.com/sudorandom/fauxrpc/private/frontend/templates/stubs"
 	"github.com/sudorandom/fauxrpc/private/log"
 	"github.com/sudorandom/fauxrpc/private/metrics"
 	"github.com/sudorandom/fauxrpc/private/registry"
+	"github.com/sudorandom/fauxrpc/private/stubs"
 	"google.golang.org/protobuf/reflect/protoreflect"
+
+	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
 )
 
 //go:embed assets
@@ -34,6 +38,7 @@ type Provider interface {
 	GetStats() *metrics.Stats
 	GetLogger() *log.Logger
 	registry.ServiceRegistry
+	GetStubDB() stubs.StubDatabase
 }
 
 func DashboardHandler(p Provider) http.Handler {
@@ -231,6 +236,81 @@ func DashboardHandler(p Provider) http.Handler {
 		}
 	}))
 
+	mux.Handle("/fauxrpc/stubs/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, "/fauxrpc/stubs")
+		if after, ok := strings.CutPrefix(path, "/"); ok {
+			path = after
+		}
+
+		// Handle single stub view
+		if path != "" {
+			parts := strings.Split(path, "/")
+			if len(parts) == 2 {
+				target := parts[0]
+				id := parts[1]
+
+				stubEntry, ok := p.GetStubDB().GetStub(stubs.StubKey{Name: protoreflect.FullName(target), ID: id})
+				if !ok {
+					http.Error(w, "Stub not found", http.StatusNotFound)
+					return
+				}
+
+				pbStubs, err := stubs.StubsToProto([]stubs.StubEntry{stubEntry})
+				if err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					return
+				}
+				if len(pbStubs) == 0 {
+					http.Error(w, "Stub not found after conversion", http.StatusNotFound)
+					return
+				}
+
+				if r.Header.Get("HX-Request") == "true" {
+					templ.Handler(templates_stubs.Single(pbStubs[0])).ServeHTTP(w, r)
+				} else {
+					templ.Handler(templates.Index(templates_stubs.Single(pbStubs[0]))).ServeHTTP(w, r)
+				}
+				return
+			}
+		}
+
+		// Handle list all stubs
+		allStubEntries := p.GetStubDB().GetStubs()
+		pbStubs, err := stubs.StubsToProto(allStubEntries)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		groupedStubs := make(map[string][]*stubsv1.Stub)
+		for _, stub := range pbStubs {
+			groupedStubs[stub.GetRef().GetTarget()] = append(groupedStubs[stub.GetRef().GetTarget()], stub)
+		}
+
+		// Sort targets
+		var targets []string
+		for target := range groupedStubs {
+			targets = append(targets, target)
+		}
+		sort.Strings(targets)
+
+		// Sort stubs within each target and create an ordered map
+		orderedGroupedStubs := make(map[string][]*stubsv1.Stub)
+		for _, target := range targets {
+			stubs := groupedStubs[target]
+			sort.Slice(stubs, func(i, j int) bool {
+				return stubs[i].GetRef().GetId() < stubs[j].GetRef().GetId()
+			})
+			orderedGroupedStubs[target] = stubs
+		}
+
+		if r.Header.Get("HX-Request") == "true" {
+			templ.Handler(templates_stubs.List(orderedGroupedStubs)).ServeHTTP(w, r)
+		} else {
+			templ.Handler(templates.Index(templates_stubs.List(orderedGroupedStubs))).ServeHTTP(w, r)
+		}
+	}))
+
 	mux.Handle("/fauxrpc/summary", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("HX-Request") == "true" {
 			// HTMX request, return only the partial
@@ -238,6 +318,14 @@ func DashboardHandler(p Provider) http.Handler {
 		} else {
 			// Direct navigation, return full page with partial embedded
 			templ.Handler(templates.Index(partials.SummaryPage(p.GetStats()))).ServeHTTP(w, r)
+		}
+	}))
+
+	mux.Handle("/fauxrpc/about", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("HX-Request") == "true" {
+			templ.Handler(templates.About()).ServeHTTP(w, r)
+		} else {
+			templ.Handler(templates.Index(templates.About())).ServeHTTP(w, r)
 		}
 	}))
 

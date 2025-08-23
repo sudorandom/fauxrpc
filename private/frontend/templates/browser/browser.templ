@@ -9,7 +9,9 @@ import (
 
 templ Browser(path string, files []string) {
     <div>
-        <h1 class="text-3xl font-bold text-white mb-6">Schema</h1>
+        <h1 class="text-3xl font-bold text-white">Schema</h1>
+        <p class="text-gray-400 mb-6">This section displays the Protobuf (Protocol Buffers) schemas registered with FauxRPC. Protobufs define the structure for data, allowing for efficient and language-agnostic communication.</p>
+
         <div id="browser-content" class="bg-gray-900 rounded-lg shadow-lg">
             @breadcrumbs(path, "")
             <ul class="list-none">
@@ -26,7 +28,7 @@ templ Browser(path string, files []string) {
 }
 
 templ breadcrumbs(path string, fileName string) {
-    <div class="text-sm breadcrumbs mb-4 p-2 bg-gray-800 rounded-lg shadow-md">
+    <div class="text-sm breadcrumbs p-2 bg-gray-800 rounded-lg shadow-md mb-6">
         <ul class="flex items-center">
             <li><b class="mr-3">Path:</b> <a hx-get={ templ.URL(fmt.Sprintf("/fauxrpc/browser/")) } hx-target="#main-content" hx-push-url="true" class="text-blue-400 hover:text-blue-200 transition-colors duration-200 cursor-pointer">(root)</a></li>
             for i, part := range strings.Split(path, "/") {
