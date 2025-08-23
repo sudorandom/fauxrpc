@@ -65,3 +65,5 @@ The dashboard provides:
 *   📁 **Schema Browser:** Explore all Protobuf schemas loaded into the server.
 *   🔌 **Stubs:** Manage and view details of registered stubs.
 *   📚 **API Documentation:** Access auto-generated API documentation.
+
+![](<assets/dashboard-event-log.gif>)

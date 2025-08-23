@@ -152,13 +152,27 @@ func (f StubFile) ToRequest() (*stubsv1.AddStubsRequest, error) {
 			}
 			contentsJSON = string(b)
 		}
-		stubs[i] = stubsv1.Stub_builder{
-			Ref:        stubsv1.StubRef_builder{Id: proto.String(stub.ID), Target: proto.String(stub.Target)}.Build(),
-			Json:       proto.String(contentsJSON),
-			CelContent: proto.String(stub.CelContent),
-			ActiveIf:   proto.String(stub.ActiveIf),
-			Priority:   proto.Int32(stub.Priority),
-		}.Build()
+		builder := stubsv1.Stub_builder{
+			Ref:      stubsv1.StubRef_builder{Id: proto.String(stub.ID), Target: proto.String(stub.Target)}.Build(),
+			Priority: proto.Int32(stub.Priority),
+		}
+		if contentsJSON != "" {
+			builder.Json = proto.String(contentsJSON)
+		}
+		if stub.CelContent != "" {
+			builder.CelContent = proto.String(stub.CelContent)
+		}
+		if stub.ActiveIf != "" {
+			builder.ActiveIf = proto.String(stub.ActiveIf)
+		}
+		if stub.ErrorCode != 0 {
+			code := stubsv1.ErrorCode(int32(stub.ErrorCode))
+			builder.Error = stubsv1.Error_builder{
+				Code:    &code,
+				Message: proto.String(stub.ErrorMessage),
+			}.Build()
+		}
+		stubs[i] = builder.Build()
 	}
 
 	return stubsv1.AddStubsRequest_builder{Stubs: stubs}.Build(), nil
