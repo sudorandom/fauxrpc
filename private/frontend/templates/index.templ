@@ -62,6 +62,10 @@ templ Index(content templ.Component) {
 						<span class="ml-4 flex-grow">Docs</span>
 						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 text-gray-400"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
 					</a>
+					<button hx-get="/fauxrpc/about" hx-target="#main-content" hx-push-url="/fauxrpc/about" class="flex items-center w-full px-4 py-3 rounded-lg transition-colors duration-200 text-gray-300 hover:bg-gray-700">
+						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+						<span class="ml-4">About</span>
+					</button>
 				</nav>
 			</aside>
 			<main class="flex-1 p-8 overflow-auto">

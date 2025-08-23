@@ -54,7 +54,7 @@ func Single(stub *stubsv1.Stub) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div><h1 class=\"text-3xl font-bold text-white mb-6\">Stub Details</h1><div id=\"stub-details-content\" class=\"bg-gray-900 py-6 rounded-lg shadow-lg\"><a hx-get=\"/fauxrpc/stubs\" hx-target=\"#main-content\" hx-push-url=\"true\" class=\"text-blue-400 hover:text-blue-200 transition-colors duration-200 cursor-pointer mb-4 block\">← Back to Stub List</a><table class=\"min-w-full bg-gray-800 rounded-lg overflow-hidden\"><tbody><tr><td class=\"px-4 py-2 font-semibold text-gray-300\">Ref.ID:</td><td class=\"px-4 py-2 text-gray-200\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div><h1 class=\"text-3xl font-bold text-white mb-6\">Stub Details</h1><div id=\"stub-details-content\" class=\"bg-gray-900 py-6 rounded-lg shadow-lg\"><a hx-get=\"/fauxrpc/stubs\" hx-target=\"#main-content\" hx-push-url=\"true\" class=\"text-blue-400 hover:text-blue-200 transition-colors duration-200 cursor-pointer mb-4 block\">← Back to Stub List</a><table class=\"min-w-full bg-gray-800 rounded-lg overflow-hidden\"><tbody><tr><td class=\"px-4 py-2 font-semibold text-gray-300\">ID:</td><td class=\"px-4 py-2 text-gray-200\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -67,7 +67,7 @@ func Single(stub *stubsv1.Stub) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</td></tr><tr><td class=\"px-4 py-2 font-semibold text-gray-300\">Ref.Target:</td><td class=\"px-4 py-2 text-gray-200\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</td></tr><tr><td class=\"px-4 py-2 font-semibold text-gray-300\">Target:</td><td class=\"px-4 py-2 text-gray-200\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -321,6 +321,14 @@ func DashboardHandler(p Provider) http.Handler {
 		}
 	}))
 
+	mux.Handle("/fauxrpc/about", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("HX-Request") == "true" {
+			templ.Handler(templates.About()).ServeHTTP(w, r)
+		} else {
+			templ.Handler(templates.Index(templates.About())).ServeHTTP(w, r)
+		}
+	}))
+
 	mux.Handle("/fauxrpc/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		templ.Handler(templates.Index(partials.SummaryPage(p.GetStats()))).ServeHTTP(w, r)
 	}))
