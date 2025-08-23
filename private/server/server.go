@@ -253,7 +253,7 @@ func (s *server) Handler() (http.Handler, error) {
 		}).Handler)
 	}
 
-	mux.Mount("/", protocolMiddleware(httplog.Logger(s.handlerTranscoder)))
+	mux.Mount("/", protocolMiddleware(s.handlerTranscoder))
 	if s.opts.WithDashboard {
 		mux.Handle("/", http.RedirectHandler("/fauxrpc", http.StatusFound))
 		mux.Handle("/fauxrpc/assets/", http.StripPrefix("/fauxrpc/assets/", http.FileServer(http.Dir("private/frontend/assets"))))
