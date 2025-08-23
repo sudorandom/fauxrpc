@@ -36,7 +36,7 @@ func Browser(path string, files []string) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div><h1 class=\"text-3xl font-bold text-white mb-6\">Schema</h1><div id=\"browser-content\" class=\"bg-gray-900 rounded-lg shadow-lg\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div><h1 class=\"text-3xl font-bold text-white\">Schema</h1><p class=\"text-gray-400 mb-6\">This section displays the Protobuf (Protocol Buffers) schemas registered with FauxRPC. Protobufs define the structure for data, allowing for efficient and language-agnostic communication.</p><div id=\"browser-content\" class=\"bg-gray-900 rounded-lg shadow-lg\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -90,14 +90,14 @@ func breadcrumbs(path string, fileName string) templ.Component {
 			templ_7745c5c3_Var2 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div class=\"text-sm breadcrumbs mb-4 p-2 bg-gray-800 rounded-lg shadow-md\"><ul class=\"flex items-center\"><li><b class=\"mr-3\">Path:</b> <a hx-get=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div class=\"text-sm breadcrumbs p-2 bg-gray-800 rounded-lg shadow-md mb-6\"><ul class=\"flex items-center\"><li><b class=\"mr-3\">Path:</b> <a hx-get=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(templ.URL(fmt.Sprintf("/fauxrpc/browser/")))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/browser/browser.templ`, Line: 31, Col: 97}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/browser/browser.templ`, Line: 33, Col: 97}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -116,7 +116,7 @@ func breadcrumbs(path string, fileName string) templ.Component {
 				var templ_7745c5c3_Var4 string
 				templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(templ.URL(fmt.Sprintf("/fauxrpc/browser/%s/", strings.Join(strings.Split(path, "/")[:i+1], "/"))))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/browser/browser.templ`, Line: 34, Col: 213}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/browser/browser.templ`, Line: 36, Col: 213}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 				if templ_7745c5c3_Err != nil {
@@ -129,7 +129,7 @@ func breadcrumbs(path string, fileName string) templ.Component {
 				var templ_7745c5c3_Var5 string
 				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(part)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/browser/browser.templ`, Line: 34, Col: 355}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/browser/browser.templ`, Line: 36, Col: 355}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 				if templ_7745c5c3_Err != nil {
@@ -149,7 +149,7 @@ func breadcrumbs(path string, fileName string) templ.Component {
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(fileName)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/browser/browser.templ`, Line: 38, Col: 116}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/browser/browser.templ`, Line: 40, Col: 116}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 			if templ_7745c5c3_Err != nil {

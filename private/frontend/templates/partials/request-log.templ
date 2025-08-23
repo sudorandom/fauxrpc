@@ -11,7 +11,7 @@ templ RequestLog(history []*log.LogEntry) {
 
 templ requestLog(history []*log.LogEntry) {
     <div>
-        <div class="flex justify-between items-center mb-6 flex-shrink-0">
+        <div class="flex justify-between items-center flex-shrink-0">
             <h1 class="text-3xl font-bold text-white">Request Log</h1>
             <div class="flex items-center space-x-2 ml-auto"> <!-- Status indicators wrapper -->
                 <div id="sse-status-connected" class="px-3 py-1 rounded-full text-sm font-semibold bg-green-500 text-green-100 hidden">Connected</div>
@@ -19,6 +19,7 @@ templ requestLog(history []*log.LogEntry) {
                 <div id="sse-status-disconnected" class="px-3 py-1 rounded-full text-sm font-semibold bg-red-500 text-red-100 hidden">Disconnected</div>
             </div>
         </div>
+        <p class="text-gray-400 mb-6">This section displays a real-time stream of incoming requests to FauxRPC. New requests will appear here as they happen.</p>
 
         <div class="flex items-center space-x-4 mb-4">
             <input type="text" id="log-filter-input" placeholder="Filter logs..." class="w-full p-2 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 flex-grow">

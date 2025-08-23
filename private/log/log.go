@@ -4,21 +4,24 @@ import (
 	"encoding/json"
 	"sync"
 	"time"
+
+	"github.com/sudorandom/fauxrpc"
 )
 
 // LogEntry represents a single log entry for a request.
 type LogEntry struct {
-	ID              string          `json:"id"`
-	Timestamp       time.Time       `json:"timestamp"`
-	Service         string          `json:"service"`
-	Method          string          `json:"method"`
-	ClientProtocol  string          `json:"clientProtocol"`
-	Status          int             `json:"status"`
-	Duration        time.Duration   `json:"duration"`
-	RequestHeaders  json.RawMessage `json:"requestHeaders"`
-	ResponseHeaders json.RawMessage `json:"responseHeaders"`
-	RequestBody     json.RawMessage `json:"requestBody"`
-	ResponseBody    json.RawMessage `json:"responseBody"`
+	ID              string              `json:"id"`
+	Timestamp       time.Time           `json:"timestamp"`
+	Service         string              `json:"service"`
+	Method          string              `json:"method"`
+	ClientProtocol  string              `json:"clientProtocol"`
+	Status          int                 `json:"status"`
+	Duration        time.Duration       `json:"duration"`
+	RequestHeaders  json.RawMessage     `json:"requestHeaders"`
+	ResponseHeaders json.RawMessage     `json:"responseHeaders"`
+	RequestBody     json.RawMessage     `json:"requestBody"`
+	ResponseBody    json.RawMessage     `json:"responseBody"`
+	StubsUsed       []fauxrpc.StubEntry `json:"stubsUsed,omitempty"`
 }
 
 // Logger manages the log entries and subscriptions.

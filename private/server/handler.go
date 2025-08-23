@@ -42,6 +42,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 		var finalStatus *status.Status
 		var requestBody proto.Message
 		var responseBody proto.Message
+		var stubsUsed []fauxrpc.StubEntry
 
 		defer func() {
 			duration := time.Since(startTime)
@@ -107,6 +108,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 				ResponseHeaders: resHeaders,
 				RequestBody:     reqBodyBytes,
 				ResponseBody:    resBodyBytes,
+				StubsUsed:       stubsUsed,
 			})
 		}()
 
@@ -198,14 +200,18 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 		var msg []byte
 		eg.Go(func() error {
 			out := registry.NewMessage(method.Output()).Interface()
-			if err := faker.SetDataOnMessage(out, fauxrpc.GenOptions{
+			genOpts := fauxrpc.GenOptions{
 				MaxDepth: 20,
 				Faker:    gofakeit.New(0),
 				Context: protocel.WithCELContext(ctx, &protocel.CELContext{
 					MethodDescriptor: method,
 					Req:              input,
 				}),
-			}); err != nil {
+				StubRecorder: func(stub fauxrpc.StubEntry) {
+					stubsUsed = append(stubsUsed, stub)
+				},
+			}
+			if err := faker.SetDataOnMessage(out, genOpts); err != nil {
 				var stubErr *stubs.StatusError
 				s.IncrementErrors()
 				switch {

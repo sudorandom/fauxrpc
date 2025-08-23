@@ -1,12 +1,12 @@
 package partials
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
 	"time"
-	"bytes"
 
 	"github.com/sudorandom/fauxrpc/private/log"
 )
@@ -40,70 +40,69 @@ func getProtocolColor(protocol string) string {
 }
 
 func formatHeaders(raw json.RawMessage) string {
-    // Gracefully handle nil, empty, or "null" JSON
-    if len(raw) == 0 || string(raw) == "null" {
-        return "n/a"
-    }
+	// Gracefully handle nil, empty, or "null" JSON
+	if len(raw) == 0 || string(raw) == "null" {
+		return "n/a"
+	}
 
-    // Unmarshal into a map where the values are kept as raw JSON.
-    // This allows us to inspect the type of each value individually.
-    var headers map[string]json.RawMessage
-    if err := json.Unmarshal(raw, &headers); err != nil {
-        // If the top-level data isn't a JSON object, just show the raw string.
-        return string(raw)
-    }
+	// Unmarshal into a map where the values are kept as raw JSON.
+	// This allows us to inspect the type of each value individually.
+	var headers map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &headers); err != nil {
+		// If the top-level data isn't a JSON object, just show the raw string.
+		return string(raw)
+	}
 
-    if len(headers) == 0 {
-        return "n/a"
-    }
+	if len(headers) == 0 {
+		return "n/a"
+	}
 
-    // Sort keys for consistent order
-    keys := make([]string, 0, len(headers))
-    for k := range headers {
-        keys = append(keys, k)
-    }
-    sort.Strings(keys)
+	// Sort keys for consistent order
+	keys := make([]string, 0, len(headers))
+	for k := range headers {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
 
-    var builder strings.Builder
-    for _, k := range keys {
-        vRaw := headers[k]
+	var builder strings.Builder
+	for _, k := range keys {
+		vRaw := headers[k]
 
-        // First, try to unmarshal the value as an array of strings
-        var values []string
-        if err := json.Unmarshal(vRaw, &values); err == nil {
-            for _, v := range values {
-                builder.WriteString(fmt.Sprintf("%s: %s\n", k, v))
-            }
-            continue
-        }
+		// First, try to unmarshal the value as an array of strings
+		var values []string
+		if err := json.Unmarshal(vRaw, &values); err == nil {
+			for _, v := range values {
+				builder.WriteString(fmt.Sprintf("%s: %s\n", k, v))
+			}
+			continue
+		}
 
-        // If that fails, try to unmarshal it as a single string
-        var value string
-        if err := json.Unmarshal(vRaw, &value); err == nil {
-            builder.WriteString(fmt.Sprintf("%s: %s\n", k, value))
-            continue
-        }
-        
-        // As a last resort, just show the raw value
-        builder.WriteString(fmt.Sprintf("%s: %s\n", k, string(vRaw)))
-    }
+		// If that fails, try to unmarshal it as a single string
+		var value string
+		if err := json.Unmarshal(vRaw, &value); err == nil {
+			builder.WriteString(fmt.Sprintf("%s: %s\n", k, value))
+			continue
+		}
 
-    return strings.TrimSpace(builder.String())
+		// As a last resort, just show the raw value
+		builder.WriteString(fmt.Sprintf("%s: %s\n", k, string(vRaw)))
+	}
+
+	return strings.TrimSpace(builder.String())
 }
 
-
 func prettyPrintJSON(data json.RawMessage) string {
-    // Gracefully handle nil, empty, or "null" JSON
-    if len(data) == 0 || string(data) == "null" {
-        return "n/a"
-    }
+	// Gracefully handle nil, empty, or "null" JSON
+	if len(data) == 0 || string(data) == "null" {
+		return "n/a"
+	}
 
-    var indentedJSON bytes.Buffer
-    if err := json.Indent(&indentedJSON, data, "", "  "); err != nil {
-        // If it can't be indented, it might not be JSON. Show the raw string.
-        return string(data)
-    }
-    return indentedJSON.String()
+	var indentedJSON bytes.Buffer
+	if err := json.Indent(&indentedJSON, data, "", "  "); err != nil {
+		// If it can't be indented, it might not be JSON. Show the raw string.
+		return string(data)
+	}
+	return indentedJSON.String()
 }
 
 templ LogEntry(entry *log.LogEntry) {
@@ -113,7 +112,7 @@ templ LogEntry(entry *log.LogEntry) {
 				<span class={ "px-2 py-1 text-xs font-bold rounded-md", getStatusColor(entry.Status) }>{ fmt.Sprintf("%d", entry.Status) }</span>
 				<span class={ "px-2 py-1 text-xs font-bold rounded-md", getProtocolColor(entry.ClientProtocol) }>{ entry.ClientProtocol }</span>
 				<span class="text-gray-400 font-mono text-sm">{ entry.Timestamp.Format(time.TimeOnly) }</span>
-				<span class="text-white font-medium">{ entry.Service }</span> 
+				<span class="text-white font-medium">{ entry.Service }</span>
 				<span class="text-gray-400">{ entry.Method }</span>
 			</div>
 			<div class="flex items-center space-x-2 flex-shrink-0 ml-4">
@@ -146,14 +145,39 @@ templ LogEntry(entry *log.LogEntry) {
 						<div>
 							if entry.Status != 0 {
 								<h5 class="text-md font-medium text-red-400 mb-2">Error</h5>
-							}
-							else {
+							} else {
 								<h5 class="text-md font-medium text-gray-400 mb-2">Body</h5>
 							}
 							<pre class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto"><code>{ prettyPrintJSON(entry.ResponseBody) }</code></pre>
 						</div>
 					</div>
 				</div>
+				// New section for Stubs Used
+				if len(entry.StubsUsed) > 0 {
+					<div>
+						<h4 class="text-lg font-semibold text-gray-300 mb-3">Stubs Used</h4>
+						<div class="overflow-hidden rounded-md border border-gray-700">
+							<table class="w-full text-sm text-left text-gray-400">
+								<thead class="text-xs text-gray-300 uppercase bg-gray-700/50">
+									<tr>
+										<th scope="col" class="px-4 py-2">Target</th>
+										<th scope="col" class="px-4 py-2">ID</th>
+									</tr>
+								</thead>
+								<tbody>
+									for _, stub := range entry.StubsUsed {
+										<tr class="border-b border-gray-700 last:border-b-0 hover:bg-gray-800/50">
+											<td class="px-4 py-2 font-mono">{ stub.GetName() }</td>
+											<td class="px-4 py-2 font-mono">
+												<a href={ templ.URL(fmt.Sprintf("/fauxrpc/stubs/%s/%s", stub.GetName(), stub.GetID())) } class="text-blue-400 hover:text-blue-200 transition-colors duration-200">{ stub.GetID() }</a>
+											</td>
+										</tr>
+									}
+								</tbody>
+							</table>
+						</div>
+					</div>
+				}
 			</div>
 		</div>
 	</details>

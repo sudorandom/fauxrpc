@@ -37,6 +37,9 @@ func (f *stubFaker) SetDataOnMessage(pm protoreflect.ProtoMessage, opts fauxrpc.
 						continue
 					}
 				}
+				if opts.StubRecorder != nil {
+					opts.StubRecorder(stub.Key)
+				}
 				if stub.Error != nil {
 					return stub.Error
 				}
