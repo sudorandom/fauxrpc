@@ -37,6 +37,7 @@ type CLI struct {
 	Stub     StubCmd     `cmd:"" help:"Contains stub commands"`
 	Generate GenerateCmd `cmd:"generate" help:"Generate fake data"`
 	Registry RegistryCmd `cmd:"" help:"Contains registry commands"`
+	Curl     CurlCmd     `cmd:"" help:"Make requests with fake data"`
 }
 
 func main() {
