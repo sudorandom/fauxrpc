@@ -7,7 +7,7 @@ import (
 func enumSimple(fd protoreflect.FieldDescriptor, opts GenOptions) protoreflect.EnumNumber {
 	values := fd.Enum().Values()
 	idx := opts.fake().IntRange(0, values.Len()-1)
-	return protoreflect.EnumNumber(idx)
+	return protoreflect.EnumNumber(values.Get(idx).Number())
 }
 
 // Enum returns a fake enum value given a field descriptor.
@@ -30,6 +30,27 @@ func Enum(fd protoreflect.FieldDescriptor, opts GenOptions) protoreflect.EnumNum
 
 	if len(rules.In) > 0 {
 		return protoreflect.EnumNumber(rules.In[opts.fake().IntRange(0, len(rules.In)-1)])
+	}
+
+	if len(rules.NotIn) > 0 {
+		allowed := []int32{}
+		allValues := fd.Enum().Values()
+		for i := 0; i < allValues.Len(); i++ {
+			val := allValues.Get(i).Number()
+			isAllowed := true
+			for _, notInVal := range rules.NotIn {
+				if int32(val) == notInVal {
+					isAllowed = false
+					break
+				}
+			}
+			if isAllowed {
+				allowed = append(allowed, int32(val))
+			}
+		}
+		if len(allowed) > 0 {
+			return protoreflect.EnumNumber(allowed[opts.fake().IntRange(0, len(allowed)-1)])
+		}
 	}
 
 	return enumSimple(fd, opts)

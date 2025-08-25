@@ -2,6 +2,7 @@ edition = "2023";
 
 package test.v1;
 
+import "buf/validate/validate.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/field_mask.proto";
 import "google/protobuf/go_features.proto";
@@ -171,7 +172,7 @@ message AllTypes {
     ENUM_TWO = 2;
   }
   AllTypes msg_value = 73;
-  Enum enum_value = 74;
+  Enum enum_value = 74 [(buf.validate.field).enum = { not_in: [1, 2] }];
   AllTypes opt_msg_value = 75 [features.field_presence = EXPLICIT];
   Enum opt_enum_value = 76 [features.field_presence = EXPLICIT];
   repeated AllTypes msg_list = 77;

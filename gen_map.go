@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"buf.build/go/protovalidate/resolve"
+	"buf.build/go/protovalidate"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -26,8 +26,8 @@ func Map(msg protoreflect.Message, fd protoreflect.FieldDescriptor, opts GenOpti
 	if opts.MaxDepth <= 0 {
 		return nil
 	}
-	constraints := resolve.FieldRules(fd)
-	if constraints == nil {
+	constraints, err := protovalidate.ResolveFieldRules(fd)
+	if err != nil || constraints == nil {
 		return mapSimple(msg, fd, opts)
 	}
 	rules := constraints.GetEnum()

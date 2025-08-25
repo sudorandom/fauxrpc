@@ -70,8 +70,6 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 				}
 				entry.ActiveIf = r
 			}
-
-			// name = t.Output().FullName()
 			md = t.Output()
 		case protoreflect.MessageDescriptor:
 			md = t

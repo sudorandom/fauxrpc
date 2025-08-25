@@ -14,10 +14,10 @@ import (
 	"connectrpc.com/connect"
 	"github.com/quic-go/quic-go/http3"
 	"github.com/tailscale/hujson"
+	"go.yaml.in/yaml/v3"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"golang.org/x/sync/errgroup"
-	"gopkg.in/yaml.v3"
 
 	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
 	"github.com/sudorandom/fauxrpc/private/server"

@@ -13,11 +13,16 @@ type StubEntry interface {
 	GetID() string
 }
 
+type FieldGenOptions struct {
+	Message *validate.FieldRules
+}
+
 type GenOptions struct {
-	MaxDepth     int
-	Faker        *gofakeit.Faker
-	Context      context.Context
-	StubRecorder func(StubEntry)
+	MaxDepth      int
+	Faker         *gofakeit.Faker
+	Context       context.Context
+	StubRecorder  func(StubEntry)
+	FieldOptions  map[string]FieldGenOptions
 
 	extraFieldConstraints *validate.FieldRules
 }

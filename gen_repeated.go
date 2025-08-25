@@ -1,14 +1,14 @@
 package fauxrpc
 
 import (
-	"buf.build/go/protovalidate/resolve"
+	"buf.build/go/protovalidate"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 func repeatedSimple(msg protoreflect.Message, fd protoreflect.FieldDescriptor, opts GenOptions) *protoreflect.Value {
 	listVal := msg.NewField(fd)
 	itemCount := opts.fake().IntRange(0, 4)
-	for i := 0; i < itemCount; i++ {
+	for range itemCount {
 		if v := FieldValue(fd, opts.nested()); v != nil {
 			listVal.List().Append(*v)
 		}
@@ -18,8 +18,8 @@ func repeatedSimple(msg protoreflect.Message, fd protoreflect.FieldDescriptor, o
 
 // Repeated returns a fake repeated value given a field descriptor.
 func Repeated(msg protoreflect.Message, fd protoreflect.FieldDescriptor, opts GenOptions) *protoreflect.Value {
-	constraints := resolve.FieldRules(fd)
-	if constraints == nil {
+	constraints, err := protovalidate.ResolveFieldRules(fd)
+	if err != nil || constraints == nil {
 		return repeatedSimple(msg, fd, opts)
 	}
 	rules := constraints.GetEnum()
@@ -36,9 +36,12 @@ func Repeated(msg protoreflect.Message, fd protoreflect.FieldDescriptor, opts Ge
 
 	listVal := msg.NewField(fd)
 	itemCount := opts.fake().IntRange(int(min), int(max))
-	for i := 0; i < itemCount; i++ {
-		if v := FieldValue(fd, opts.nested().withExtraFieldConstraints(constraints.GetRepeated().Items)); v != nil {
-			listVal.List().Append(*v)
+	for range itemCount {
+		for range 20 {
+			if v := FieldValue(fd, opts.nested().withExtraFieldConstraints(constraints.GetRepeated().Items)); v != nil {
+				listVal.List().Append(*v)
+				continue
+			}
 		}
 	}
 	return &listVal

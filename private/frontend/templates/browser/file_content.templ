@@ -1,11 +1,19 @@
 
 package browser
 
-templ FileContent(path string, fileName string, content string) {
+import "fmt"
+
+templ FileContent(packageName string, fileName string, content string) {
     <div>
         <h1 class="text-3xl font-bold text-white mb-6">Schema</h1>
         <div id="browser-content" class="bg-gray-900 rounded-lg shadow-lg">
-            @breadcrumbs(path, fileName)
+            <div class="text-sm breadcrumbs p-2 bg-gray-800 rounded-lg shadow-md mb-6">
+                <ul class="flex items-center">
+                    <li><b class="mr-3">Path:</b> <a hx-get={ templ.URL(fmt.Sprintf("/fauxrpc/browser/")) } hx-target="#main-content" hx-push-url="true" class="text-blue-400 hover:text-blue-200 transition-colors duration-200 cursor-pointer">(root)</a></li>
+                    <li class="flex items-center before:content-['/'] before:px-2 before:text-gray-500"><a hx-get={ templ.URL(fmt.Sprintf("/fauxrpc/browser/%s", packageName)) } hx-target="#main-content" hx-push-url="true" class="text-blue-400 hover:text-blue-200 transition-colors duration-200 cursor-pointer">{ packageName }</a></li>
+                    <li class="flex items-center before:content-['/'] before:px-2 before:text-gray-500"><span>{ fileName }</span></li>
+                </ul>
+            </div>
             <pre class="p-4 bg-gray-800 rounded-lg overflow-auto text-gray-200 text-sm"><code>{ content }</code></pre>
         </div>
     </div>

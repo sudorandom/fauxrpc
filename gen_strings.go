@@ -13,29 +13,36 @@ func randInt64GeometricDist(p float64, opts GenOptions) int64 {
 	return int64(math.Floor(math.Log(opts.fake().Float64()) / math.Log(1.0-p)))
 }
 
-func stringSimple(fd protoreflect.FieldDescriptor, opts GenOptions) string {
+func stringByHeuristics(fd protoreflect.FieldDescriptor, opts GenOptions) (string, bool) {
 	lowerName := strings.ToLower(string(fd.Name()))
 	switch {
 	case strings.Contains(lowerName, "firstname"):
-		return opts.fake().FirstName()
+		return opts.fake().FirstName(), true
 	case strings.Contains(lowerName, "lastname"):
-		return opts.fake().LastName()
+		return opts.fake().LastName(), true
 	case strings.Contains(lowerName, "name"):
-		return opts.fake().FirstName()
+		return opts.fake().FirstName(), true
 	case strings.Contains(lowerName, "fullname"):
-		return opts.fake().Name()
+		return opts.fake().Name(), true
 	case strings.Contains(lowerName, "id"):
-		return opts.fake().UUID()
+		return opts.fake().UUID(), true
 	case strings.Contains(lowerName, "token"):
-		return opts.fake().UUID()
+		return opts.fake().UUID(), true
 	case strings.Contains(lowerName, "photo") && strings.Contains(lowerName, "url"):
-		return "https://picsum.photos/400"
+		return "https://picsum.photos/400", true
 	case strings.Contains(lowerName, "url"):
-		return opts.fake().URL()
+		return opts.fake().URL(), true
 	case strings.Contains(lowerName, "version"):
-		return opts.fake().AppVersion()
+		return opts.fake().AppVersion(), true
 	case strings.Contains(lowerName, "status"):
-		return opts.fake().RandomString([]string{"active", "inactive", "hidden", "archived", "deleted", "pending"})
+		return opts.fake().RandomString([]string{"active", "inactive", "hidden", "archived", "deleted", "pending"}), true
+	}
+	return "", false
+}
+
+func stringSimple(fd protoreflect.FieldDescriptor, opts GenOptions) string {
+	if s, ok := stringByHeuristics(fd, opts); ok {
+		return s
 	}
 
 	return opts.fake().HipsterSentence(int(randInt64GeometricDist(0.5, opts) + 1))
@@ -48,10 +55,6 @@ func String(fd protoreflect.FieldDescriptor, opts GenOptions) string {
 		return stringSimple(fd, opts)
 	}
 	rules := constraints.GetString()
-	if rules == nil {
-		return stringSimple(fd, opts)
-	}
-
 	if rules == nil {
 		return stringSimple(fd, opts)
 	}
@@ -118,6 +121,10 @@ func String(fd protoreflect.FieldDescriptor, opts GenOptions) string {
 			return strings.ToLower(opts.fake().JobDescriptor()) + ":" + strconv.FormatInt(int64(opts.fake().IntRange(443, 9000)), 10)
 		case *validate.StringRules_WellKnownRegex:
 		}
+	}
+
+	if s, ok := stringByHeuristics(fd, opts); ok {
+		return s
 	}
 
 	return generateHipsterText(minLen, maxLen, opts)

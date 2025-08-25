@@ -97,7 +97,7 @@ func (c *CurlCmd) Run(globals *Globals) error {
 			if !methodDesc.IsStreamingClient() && !methodDesc.IsStreamingServer() {
 				methodsToCall[c.Method] = methodDesc
 			} else {
-				slog.Warn("Skipping streaming method", "method", c.Method)
+				slog.Debug("Skipping streaming method", "method", c.Method)
 			}
 		} else {
 			// Service name provided, call all non-streaming methods in that service
@@ -112,7 +112,7 @@ func (c *CurlCmd) Run(globals *Globals) error {
 					fullMethodName := fmt.Sprintf("%s/%s", serviceDesc.FullName(), methodDesc.Name())
 					methodsToCall[fullMethodName] = methodDesc
 				} else {
-					slog.Warn("Skipping streaming method", "method", methodDesc.FullName())
+					slog.Debug("Skipping streaming method", "method", methodDesc.FullName())
 				}
 			}
 		}
@@ -125,7 +125,7 @@ func (c *CurlCmd) Run(globals *Globals) error {
 					fullMethodName := fmt.Sprintf("%s/%s", serviceDesc.FullName(), methodDesc.Name())
 					methodsToCall[fullMethodName] = methodDesc
 				} else {
-					slog.Warn("Skipping streaming method", "method", methodDesc.FullName())
+					slog.Debug("Skipping streaming method", "method", methodDesc.FullName())
 				}
 			}
 			return true
@@ -146,57 +146,91 @@ func (c *CurlCmd) Run(globals *Globals) error {
 
 	// 4. Make RPC calls
 	for fullMethodName, methodDesc := range methodsToCall {
-		slog.Info("Calling RPC", "method", fullMethodName)
-		req := dynamicpb.NewMessage(methodDesc.Input()).New().Interface().(*dynamicpb.Message)
-		opts := fauxrpc.GenOptions{
-			MaxDepth: 20,
-			Faker:    gofakeit.New(0),
-			Context: protocel.WithCELContext(ctx, &protocel.CELContext{
-				MethodDescriptor: methodDesc,
-				Req:              req,
-			}),
-		}
-		if err := faker.SetDataOnMessage(req, opts); err != nil {
+		if err := callRPC(ctx, httpClient, baseURL, fullMethodName, methodDesc, faker); err != nil {
 			return err
 		}
-
-		// Create a new client for each method with a custom codec
-		// that can handle dynamic responses.
-		codec := &dynamicCodec{
-			methodDesc: methodDesc,
-		}
-		client := connect.NewClient[
-			*dynamicpb.Message,
-			*dynamicpb.Message,
-		](
-			httpClient,
-			baseURL+"/"+fullMethodName,
-			connect.WithGRPC(),
-			connect.WithCodec(codec),
-		)
-
-		// Make the call
-		resp, err := client.CallUnary(context.Background(), connect.NewRequest(&req))
-		if err != nil {
-			slog.Error("RPC call failed", "method", fullMethodName, "error", err)
-			continue
-		}
-
-		if resp.Msg == nil {
-			slog.Error("RPC call failed - empty message", "method", fullMethodName)
-			continue
-		}
-
-		// Print the response
-		slog.Info("RPC call successful", "method", fullMethodName, "msg", resp.Msg)
-		jsonBytes, err := protojson.Marshal(*resp.Msg)
-		if err != nil {
-			slog.Error("Failed to marshal response to JSON", "error", err)
-			continue
-		}
-		fmt.Printf(`Response for %s:\n%s\n\n`, fullMethodName, string(jsonBytes))
 	}
 
+	return nil
+}
+
+func callRPC(
+	ctx context.Context,
+	httpClient *http.Client,
+	baseURL string,
+	fullMethodName string,
+	methodDesc protoreflect.MethodDescriptor,
+	faker fauxrpc.ProtoFaker,
+) error {
+	slog.Debug("Calling RPC", "method", fullMethodName)
+	req := dynamicpb.NewMessage(methodDesc.Input()).New().Interface().(*dynamicpb.Message)
+	opts := fauxrpc.GenOptions{
+		MaxDepth: 20,
+		Faker:    gofakeit.New(0),
+		Context: protocel.WithCELContext(ctx, &protocel.CELContext{
+			MethodDescriptor: methodDesc,
+			Req:              req,
+		}),
+	}
+	if err := faker.SetDataOnMessage(req, opts); err != nil {
+		return err
+	}
+	requestJsonBytes, err := protojson.MarshalOptions{
+		Multiline: true,
+		Indent:    "  ",
+	}.Marshal(req)
+	if err != nil {
+		slog.Error("Failed to marshal response to JSON", "error", err)
+		return nil
+	}
+
+	fmt.Printf(`-> [%s]:
+%s
+
+`, fullMethodName, string(requestJsonBytes))
+
+	// Create a new client for each method with a custom codec
+	// that can handle dynamic responses.
+	codec := &dynamicCodec{
+		methodDesc: methodDesc,
+	}
+	client := connect.NewClient[
+		*dynamicpb.Message,
+		*dynamicpb.Message,
+	](
+		httpClient,
+		baseURL+"/"+fullMethodName,
+		connect.WithGRPC(),
+		connect.WithCodec(codec),
+	)
+
+	// Make the call
+	resp, err := client.CallUnary(ctx, connect.NewRequest(&req))
+	if err != nil {
+		slog.Error("RPC call failed", "method", fullMethodName, "error", err)
+		return nil
+	}
+
+	if resp.Msg == nil || *resp.Msg == nil {
+		m := dynamicpb.NewMessage(methodDesc.Output()).New().Interface().(*dynamicpb.Message)
+		resp.Msg = &m
+		return nil
+	}
+
+	// Print the response
+	slog.Debug("RPC call successful", "method", fullMethodName, "msg", resp.Msg)
+	jsonBytes, err := protojson.MarshalOptions{
+		Multiline: true,
+		Indent:    "  ",
+	}.Marshal(*resp.Msg)
+	if err != nil {
+		slog.Error("Failed to marshal response to JSON", "error", err)
+		return nil
+	}
+	fmt.Printf(`<- [%s]:
+%s
+
+`, fullMethodName, string(jsonBytes))
 	return nil
 }
 

@@ -49,19 +49,34 @@ func Browser(path string, files []string) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		for _, file := range files {
-			if strings.HasSuffix(file, "/") {
-				templ_7745c5c3_Err = partials.Dir(path+file, fmt.Sprintf("/fauxrpc/browser/%s", path+file)).Render(ctx, templ_7745c5c3_Buffer)
+			if path == "" {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, " ")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = partials.Dir(file, fmt.Sprintf("/fauxrpc/browser/%s", file)).Render(ctx, templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			} else {
-				templ_7745c5c3_Err = partials.File(path+file, fmt.Sprintf("/fauxrpc/browser/%s", path+file)).Render(ctx, templ_7745c5c3_Buffer)
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, " ")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
+				if strings.HasSuffix(file, "/") {
+					templ_7745c5c3_Err = partials.Dir(path+file, fmt.Sprintf("/fauxrpc/browser/%s", path+file)).Render(ctx, templ_7745c5c3_Buffer)
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+				} else {
+					templ_7745c5c3_Err = partials.File(strings.Split(file, "/")[len(strings.Split(file, "/"))-1], fmt.Sprintf("/fauxrpc/browser/%s", file)).Render(ctx, templ_7745c5c3_Buffer)
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+				}
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</ul></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</ul></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -69,7 +84,7 @@ func Browser(path string, files []string) templ.Component {
 	})
 }
 
-func breadcrumbs(path string, fileName string) templ.Component {
+func breadcrumbs(path string, currentFileName string) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -90,77 +105,77 @@ func breadcrumbs(path string, fileName string) templ.Component {
 			templ_7745c5c3_Var2 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<div class=\"text-sm breadcrumbs p-2 bg-gray-800 rounded-lg shadow-md mb-6\"><ul class=\"flex items-center\"><li><b class=\"mr-3\">Path:</b> <a hx-get=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"text-sm breadcrumbs p-2 bg-gray-800 rounded-lg shadow-md mb-6\"><ul class=\"flex items-center\"><li><b class=\"mr-3\">Path:</b> <a hx-get=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(templ.URL(fmt.Sprintf("/fauxrpc/browser/")))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/browser/browser.templ`, Line: 33, Col: 97}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/browser/browser.templ`, Line: 39, Col: 97}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\" hx-target=\"#main-content\" hx-push-url=\"true\" class=\"text-blue-400 hover:text-blue-200 transition-colors duration-200 cursor-pointer\">(root)</a></li>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\" hx-target=\"#main-content\" hx-push-url=\"true\" class=\"text-blue-400 hover:text-blue-200 transition-colors duration-200 cursor-pointer\">(root)</a></li>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		for i, part := range strings.Split(path, "/") {
 			if part != "" {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<li class=\"flex items-center before:content-['/'] before:px-2 before:text-gray-500\"><a hx-get=\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<li class=\"flex items-center before:content-['/'] before:px-2 before:text-gray-500\"><a hx-get=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var4 string
 				templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(templ.URL(fmt.Sprintf("/fauxrpc/browser/%s/", strings.Join(strings.Split(path, "/")[:i+1], "/"))))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/browser/browser.templ`, Line: 36, Col: 213}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/browser/browser.templ`, Line: 42, Col: 213}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\" hx-target=\"#main-content\" hx-push-url=\"true\" class=\"text-blue-400 hover:text-blue-200 transition-colors duration-200 cursor-pointer\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\" hx-target=\"#main-content\" hx-push-url=\"true\" class=\"text-blue-400 hover:text-blue-200 transition-colors duration-200 cursor-pointer\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var5 string
 				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(part)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/browser/browser.templ`, Line: 36, Col: 355}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/browser/browser.templ`, Line: 42, Col: 355}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</a></li>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</a></li>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			}
 		}
-		if fileName != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "<li class=\"flex items-center before:content-['/'] before:px-2 before:text-gray-500\"><span>")
+		if currentFileName != "" {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "<li class=\"flex items-center before:content-['/'] before:px-2 before:text-gray-500\"><span>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var6 string
-			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(fileName)
+			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(currentFileName)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/browser/browser.templ`, Line: 40, Col: 116}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/browser/browser.templ`, Line: 46, Col: 123}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</span></li>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</span></li>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</ul></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</ul></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

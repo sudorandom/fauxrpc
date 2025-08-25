@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
-	"buf.build/go/protovalidate/resolve"
+	"buf.build/go/protovalidate"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -52,7 +52,10 @@ func (st GenOptions) withExtraFieldConstraints(constraints *validate.FieldRules)
 }
 
 func getFieldConstraints(fd protoreflect.FieldDescriptor, opts GenOptions) *validate.FieldRules {
-	if constraints := resolve.FieldRules(fd); constraints != nil {
+	if fieldOpts, ok := opts.FieldOptions[string(fd.Name())]; ok {
+		return fieldOpts.Message
+	}
+	if constraints, err := protovalidate.ResolveFieldRules(fd); err == nil && constraints != nil {
 		return constraints
 	}
 	return opts.extraFieldConstraints

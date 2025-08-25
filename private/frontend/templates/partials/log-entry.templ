@@ -11,6 +11,34 @@ import (
 	"github.com/sudorandom/fauxrpc/private/log"
 )
 
+// grpcStatusNames maps gRPC status codes to their string names.
+var grpcStatusNames = map[int]string{
+	0:  "OK",
+	1:  "Canceled",
+	2:  "Unknown",
+	3:  "InvalidArgument",
+	4:  "DeadlineExceeded",
+	5:  "NotFound",
+	6:  "AlreadyExists",
+	7:  "PermissionDenied",
+	8:  "ResourceExhausted",
+	9:  "FailedPrecondition",
+	10: "Aborted",
+	11: "OutOfRange",
+	12: "Unimplemented",
+	13: "Internal",
+	14: "Unavailable",
+	15: "DataLoss",
+	16: "Unauthenticated",
+}
+
+func getStatusName(status int) string {
+	if name, ok := grpcStatusNames[status]; ok {
+		return name
+	}
+	return fmt.Sprintf("UNKNOWN[%d]", status)
+}
+
 func getStatusColor(status int) string {
 	switch status {
 	case 0: // OK
@@ -109,7 +137,7 @@ templ LogEntry(entry *log.LogEntry) {
 	<details class="bg-gray-800/60 border border-gray-700 rounded-lg mb-3 overflow-hidden">
 		<summary class="w-full p-4 text-left flex items-center justify-between hover:bg-gray-700/50 transition-colors duration-200 cursor-pointer">
 			<div class="flex items-center space-x-4 flex-wrap">
-				<span class={ "px-2 py-1 text-xs font-bold rounded-md", getStatusColor(entry.Status) }>{ fmt.Sprintf("%d", entry.Status) }</span>
+				<span class={ "px-2 py-1 text-xs font-bold rounded-md", getStatusColor(entry.Status) }>{ entry.Status }</span>
 				<span class="text-gray-400 font-mono text-sm">{ entry.Timestamp.Format(time.TimeOnly) }</span>
 				<span class="text-white font-medium">{ entry.Service }</span>
 				<span class="text-gray-400">{ entry.Method }</span>
@@ -120,7 +148,25 @@ templ LogEntry(entry *log.LogEntry) {
 				<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 text-gray-400 transition-transform duration-300 group-open:rotate-180"><path d="m6 9 6 6 6-6"></path></svg>
 			</div>
 		</summary>
-		<div class="p-4 border-t border-gray-700 bg-gray-900/50">
+		<div class="p-6 border-t border-gray-700 bg-gray-900/50">
+			<div class="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2 text-sm mb-8">
+				<div class="font-semibold text-gray-400 text-right">gRPC Status</div>
+				<div class="font-mono">
+					<span class={ "px-2 py-1 text-xs font-bold rounded-md", getStatusColor(entry.Status) }>{ getStatusName(entry.Status) } [{ entry.Status }]</span>
+				</div>
+				<div class="font-semibold text-gray-400 text-right">Path</div>
+				<div class="font-mono text-gray-200">{ fmt.Sprintf("%s/%s", entry.Service, entry.Method) }</div>
+				<div class="font-semibold text-gray-400 text-right">Time</div>
+				<div class="font-mono text-gray-200">{ entry.Timestamp.Format("2006-01-02 15:04:05.999 Z07:00") }</div>
+				<div class="font-semibold text-gray-400 text-right">Latency</div>
+				<div class="font-mono text-gray-200">{ entry.Duration.String() }</div>
+				<div class="font-semibold text-gray-400 text-right">Mocks Used</div>
+				if len(entry.StubsUsed) > 0 {
+					<div class="font-mono text-gray-200">{ fmt.Sprintf("%d", len(entry.StubsUsed)) }</div>
+				} else {
+					<div class="font-mono text-gray-400">None</div>
+				}
+			</div>
 			<div class="space-y-8">
 				<div>
 					<h4 class="text-lg font-semibold text-gray-300 mb-3">Request</h4>
@@ -152,10 +198,9 @@ templ LogEntry(entry *log.LogEntry) {
 						</div>
 					</div>
 				</div>
-				// New section for Stubs Used
 				if len(entry.StubsUsed) > 0 {
 					<div>
-						<h4 class="text-lg font-semibold text-gray-300 mb-3">Stubs Used</h4>
+						<h4 class="text-lg font-semibold text-gray-300 mb-3">Mocks Used (Details)</h4>
 						<div class="overflow-hidden rounded-md border border-gray-700">
 							<table class="w-full text-sm text-left text-gray-400">
 								<thead class="text-xs text-gray-300 uppercase bg-gray-700/50">

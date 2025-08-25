@@ -16,10 +16,16 @@ templ Browser(path string, files []string) {
             @breadcrumbs(path, "")
             <ul class="list-none">
                 for _, file := range files {
-                    if strings.HasSuffix(file, "/") {
-                        @partials.Dir(path + file, fmt.Sprintf("/fauxrpc/browser/%s", path + file))
+                    if path == "" {
+                        // We are listing packages
+                        @partials.Dir(file, fmt.Sprintf("/fauxrpc/browser/%s", file))
                     } else {
-                        @partials.File(path + file, fmt.Sprintf("/fauxrpc/browser/%s", path + file))
+						// We are listing files in a package
+						if strings.HasSuffix(file, "/") {
+							@partials.Dir(path+file, fmt.Sprintf("/fauxrpc/browser/%s", path+file))
+						} else {
+							@partials.File(strings.Split(file, "/")[len(strings.Split(file, "/"))-1], fmt.Sprintf("/fauxrpc/browser/%s", file))
+						}
                     }
                 }
             </ul>
@@ -27,7 +33,7 @@ templ Browser(path string, files []string) {
     </div>
 }
 
-templ breadcrumbs(path string, fileName string) {
+templ breadcrumbs(path string, currentFileName string) {
     <div class="text-sm breadcrumbs p-2 bg-gray-800 rounded-lg shadow-md mb-6">
         <ul class="flex items-center">
             <li><b class="mr-3">Path:</b> <a hx-get={ templ.URL(fmt.Sprintf("/fauxrpc/browser/")) } hx-target="#main-content" hx-push-url="true" class="text-blue-400 hover:text-blue-200 transition-colors duration-200 cursor-pointer">(root)</a></li>
@@ -36,8 +42,8 @@ templ breadcrumbs(path string, fileName string) {
                     <li class="flex items-center before:content-['/'] before:px-2 before:text-gray-500"><a hx-get={ templ.URL(fmt.Sprintf("/fauxrpc/browser/%s/", strings.Join(strings.Split(path, "/")[:i+1], "/"))) } hx-target="#main-content" hx-push-url="true" class="text-blue-400 hover:text-blue-200 transition-colors duration-200 cursor-pointer">{ part }</a></li>
                 }
             }
-            if fileName != "" {
-                <li class="flex items-center before:content-['/'] before:px-2 before:text-gray-500"><span>{ fileName }</span></li>
+            if currentFileName != "" {
+                <li class="flex items-center before:content-['/'] before:px-2 before:text-gray-500"><span>{ currentFileName }</span></li>
             }
         </ul>
     </div>
