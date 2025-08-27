@@ -125,7 +125,7 @@ templ requestLog(history []*log.LogEntry) {
                     }
 
                     // Trim logs
-                    const maxItems = 20;
+                    const maxItems = 200;
                     while (logContainer.childElementCount > maxItems) {
                         logContainer.lastElementChild.remove();
                     }
