@@ -7,6 +7,7 @@ import (
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	"buf.build/go/protovalidate"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -139,4 +140,29 @@ func GoogleValue(fd protoreflect.FieldDescriptor, opts GenOptions) *structpb.Val
 	}
 	fn := options[opts.fake().IntRange(0, len(options)-1)]
 	return fn()
+}
+
+// UninterpretedOption generates a random google.protobuf.UninterpretedOption value.
+func UninterpretedOption(opts GenOptions) *descriptorpb.UninterpretedOption {
+	word := opts.fake().Word()
+	boolean := opts.fake().Bool()
+	uint64Val := opts.fake().Uint64()
+	int64Val := opts.fake().Int64()
+	float64Val := opts.fake().Float64()
+	sentence := opts.fake().Sentence(10)
+
+	return &descriptorpb.UninterpretedOption{
+		Name: []*descriptorpb.UninterpretedOption_NamePart{
+			{
+				NamePart:    &word,
+				IsExtension: &boolean,
+			},
+		},
+		IdentifierValue:  &word,
+		PositiveIntValue: &uint64Val,
+		NegativeIntValue: &int64Val,
+		DoubleValue:      &float64Val,
+		StringValue:      []byte(sentence),
+		AggregateValue:   &sentence,
+	}
 }

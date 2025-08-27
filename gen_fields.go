@@ -96,6 +96,11 @@ func FieldValue(fd protoreflect.FieldDescriptor, opts GenOptions) *protoreflect.
 				v := protoreflect.ValueOf(val.ProtoReflect())
 				return &v
 			}
+		case "google.protobuf.UninterpretedOption":
+			if val := UninterpretedOption(opts); val != nil {
+				v := protoreflect.ValueOf(val.ProtoReflect())
+				return &v
+			}
 		}
 
 		nested := registry.NewMessage(fd.Message())
