@@ -100,7 +100,12 @@ func String(fd protoreflect.FieldDescriptor, opts GenOptions) string {
 	var generatedString string
 
 	if rules.Pattern != nil {
-		generatedString = opts.fake().Regex(*rules.Pattern)
+		for i := 0; i < 5; i++ {
+			generatedString = opts.fake().Regex(*rules.Pattern)
+			if uint64(len(generatedString)) >= minLen && uint64(len(generatedString)) <= maxLen {
+				break
+			}
+		}
 	} else if rules.WellKnown != nil {
 		switch rules.WellKnown.(type) {
 		case *validate.StringRules_Email:
