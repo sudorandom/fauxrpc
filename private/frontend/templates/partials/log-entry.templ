@@ -137,7 +137,7 @@ templ LogEntry(entry *log.LogEntry) {
 	<details class="bg-gray-800/60 border border-gray-700 rounded-lg mb-3 overflow-hidden">
 		<summary class="w-full p-4 text-left flex items-center justify-between hover:bg-gray-700/50 transition-colors duration-200 cursor-pointer">
 			<div class="flex items-center space-x-4 flex-wrap">
-				<span class={ "px-2 py-1 text-xs font-bold rounded-md", getStatusColor(entry.Status) }>{ entry.Status }</span>
+				<span class={ "px-2 py-1 text-xs font-bold rounded-md", getStatusColor(entry.Status) }>{ getStatusName(entry.Status) }</span>
 				<span class="text-gray-400 font-mono text-sm">{ entry.Timestamp.Format(time.TimeOnly) }</span>
 				<span class="text-white font-medium">{ entry.Service }</span>
 				<span class="text-gray-400">{ entry.Method }</span>
@@ -200,7 +200,7 @@ templ LogEntry(entry *log.LogEntry) {
 				</div>
 				if len(entry.StubsUsed) > 0 {
 					<div>
-						<h4 class="text-lg font-semibold text-gray-300 mb-3">Mocks Used (Details)</h4>
+						<h4 class="text-lg font-semibold text-gray-300 mb-3">Mocks Used</h4>
 						<div class="overflow-hidden rounded-md border border-gray-700">
 							<table class="w-full text-sm text-left text-gray-400">
 								<thead class="text-xs text-gray-300 uppercase bg-gray-700/50">

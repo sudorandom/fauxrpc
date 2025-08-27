@@ -47,14 +47,6 @@ func NewServiceRegistry() (*serviceRegistry, error) {
 	return r, AddServicesFromGlobal(r)
 }
 
-func (r *serviceRegistry) FindExtensionByName(field protoreflect.FullName) (protoreflect.ExtensionType, error) {
-	return nil, nil
-}
-
-func (r *serviceRegistry) FindExtensionByNumber(message protoreflect.FullName, field protoreflect.FieldNumber) (protoreflect.ExtensionType, error) {
-	return nil, nil
-}
-
 func (r *serviceRegistry) Reset() error {
 	slog.Debug("serviceRegistry.Reset()")
 	defer slog.Debug("serviceRegistry.Reset() complete")

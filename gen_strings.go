@@ -9,6 +9,8 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
+const maxPatternRetryAttempts = 5
+
 func randInt64GeometricDist(p float64, opts GenOptions) int64 {
 	return int64(math.Floor(math.Log(opts.fake().Float64()) / math.Log(1.0-p)))
 }
@@ -100,7 +102,7 @@ func String(fd protoreflect.FieldDescriptor, opts GenOptions) string {
 	var generatedString string
 
 	if rules.Pattern != nil {
-		for i := 0; i < 5; i++ {
+		for range maxPatternRetryAttempts {
 			generatedString = opts.fake().Regex(*rules.Pattern)
 			if uint64(len(generatedString)) >= minLen && uint64(len(generatedString)) <= maxLen {
 				break

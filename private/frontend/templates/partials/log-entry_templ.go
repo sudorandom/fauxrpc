@@ -189,9 +189,9 @@ func LogEntry(entry *log.LogEntry) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var4 string
-		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(entry.Status)
+		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(getStatusName(entry.Status))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/log-entry.templ`, Line: 140, Col: 105}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/partials/log-entry.templ`, Line: 140, Col: 120}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -471,7 +471,7 @@ func LogEntry(entry *log.LogEntry) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		if len(entry.StubsUsed) > 0 {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "<div><h4 class=\"text-lg font-semibold text-gray-300 mb-3\">Mocks Used (Details)</h4><div class=\"overflow-hidden rounded-md border border-gray-700\"><table class=\"w-full text-sm text-left text-gray-400\"><thead class=\"text-xs text-gray-300 uppercase bg-gray-700/50\"><tr><th scope=\"col\" class=\"px-4 py-2\">Target</th><th scope=\"col\" class=\"px-4 py-2\">ID</th></tr></thead> <tbody>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "<div><h4 class=\"text-lg font-semibold text-gray-300 mb-3\">Mocks Used</h4><div class=\"overflow-hidden rounded-md border border-gray-700\"><table class=\"w-full text-sm text-left text-gray-400\"><thead class=\"text-xs text-gray-300 uppercase bg-gray-700/50\"><tr><th scope=\"col\" class=\"px-4 py-2\">Target</th><th scope=\"col\" class=\"px-4 py-2\">ID</th></tr></thead> <tbody>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
