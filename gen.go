@@ -52,8 +52,14 @@ func (st GenOptions) withExtraFieldConstraints(constraints *validate.FieldRules)
 	return st
 }
 
-func getFieldConstraints(fd protoreflect.FieldDescriptor, opts GenOptions) *validate.FieldRules {
-	constraints, _ := protovalidate.ResolveFieldRules(fd)
+func getFieldConstraints(fd protoreflect.FieldDescriptor, opts GenOptions) (constraints *validate.FieldRules) {
+	defer func() {
+		if r := recover(); r != nil {
+			constraints = nil // Ensure constraints is nil on panic
+		}
+	}()
+
+	constraints, _ = protovalidate.ResolveFieldRules(fd)
 
 	if opts.extraFieldConstraints != nil {
 		if constraints == nil {

@@ -1,6 +1,8 @@
 package fauxrpc
 
 import (
+	"fmt"
+
 	"buf.build/go/protovalidate"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -35,14 +37,20 @@ func Repeated(msg protoreflect.Message, fd protoreflect.FieldDescriptor, opts Ge
 		max = rules.GetMaxItems()
 	}
 
+	// Ensure max is at least min, especially if min was set by rules and is > default max
+	if min > max {
+		max = min
+	}
+
 	listVal := msg.NewField(fd)
 	itemCount := opts.fake().IntRange(int(min), int(max))
 
 ItemLoop:
 	for range itemCount {
 		// Retry up to 20 times to generate a valid item.
-		for retry := 0; retry < 20; retry++ { // Existing retry for valid item
+		for range 20 { // Existing retry for valid item
 			if v := FieldValue(fd, opts.nested().withExtraFieldConstraints(rules.GetItems())); v != nil {
+				fmt.Println("v", v)
 				if rules.GetUnique() { // Check for uniqueness rule
 					isUnique := true
 					for j := 0; j < listVal.List().Len(); j++ {
@@ -73,6 +81,7 @@ ItemLoop:
 						continue // Not unique, try generating another value
 					}
 				}
+				fmt.Println("APPEND")
 				listVal.List().Append(*v)
 				continue ItemLoop // Success, move to the next item.
 			}

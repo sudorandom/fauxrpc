@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/a-h/templ"
-	"github.com/jhump/protoreflect/desc"
+	"github.com/jhump/protoreflect/desc" //nolint:staticcheck
 	"github.com/jhump/protoreflect/desc/protoprint"
 	"github.com/sudorandom/fauxrpc/private/frontend/templates"
 	"github.com/sudorandom/fauxrpc/private/frontend/templates/browser"

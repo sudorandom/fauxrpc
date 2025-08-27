@@ -33,12 +33,6 @@ func ExampleNewMessage() {
 	fmt.Println(string(b))
 }
 
-func requireFieldByName(t *testing.T, md protoreflect.MessageDescriptor, msg protoreflect.Message, fieldName string) protoreflect.Value {
-	fd := md.Fields().ByName(protoreflect.Name(fieldName))
-	require.NotNil(t, fd, "field %s does not exist", fieldName)
-	return msg.Get(fd)
-}
-
 func assertFieldIsSet(t *testing.T, md protoreflect.MessageDescriptor, msg protoreflect.Message, fieldName string) {
 	fd := md.Fields().ByName(protoreflect.Name(fieldName))
 	require.NotNil(t, fd, "field %s does not exist", fieldName)

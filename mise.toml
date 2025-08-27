@@ -1,5 +1,6 @@
 [tools]
 go = "1.25.0"
-buf = "1.56.0"
+buf = "latest"
 just = "1.42.4"
 "go:github.com/a-h/templ/cmd/templ" = "v0.3.937"
+golangci-lint = "latest"
