@@ -47,7 +47,7 @@ type LoaderTarget interface {
 // BSR repo, server address for server reflection.
 func AddServicesFromPath(registry LoaderTarget, path string) error {
 	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
-		return AddServicesFromReflection(registry, path)
+		return AddServicesFromReflection(registry, http.DefaultClient, path)
 	}
 	stat, err := os.Stat(path)
 	if err != nil && errors.Is(err, os.ErrNotExist) && looksLikeBSR(path) {
@@ -134,7 +134,7 @@ func AddServicesFromDescriptorsFilePB(registry LoaderTarget, filepath string) er
 		return fmt.Errorf("unmarshal: %w", err)
 	}
 	for _, fdp := range dss.File {
-		if err := addServicesFromDescriptorsBytes(registry, fdp); err != nil {
+		if err := addServicesFromFileDescriptorProto(registry, fdp); err != nil {
 			return err
 		}
 	}
@@ -155,7 +155,7 @@ func AddServicesFromDescriptorsFileJSON(registry LoaderTarget, filepath string) 
 		return fmt.Errorf("unmarshal: %w", err)
 	}
 	for _, fdp := range dss.File {
-		if err := addServicesFromDescriptorsBytes(registry, fdp); err != nil {
+		if err := addServicesFromFileDescriptorProto(registry, fdp); err != nil {
 			return err
 		}
 	}
@@ -176,7 +176,7 @@ func AddServicesFromDescriptorsFileYAML(registry LoaderTarget, filepath string) 
 		return fmt.Errorf("unmarshal: %w", err)
 	}
 	for _, fdp := range dss.File {
-		if err := addServicesFromDescriptorsBytes(registry, fdp); err != nil {
+		if err := addServicesFromFileDescriptorProto(registry, fdp); err != nil {
 			return err
 		}
 	}
@@ -197,7 +197,7 @@ func AddServicesFromDescriptorsFileTXTPB(registry LoaderTarget, filepath string)
 		return fmt.Errorf("unmarshal: %w", err)
 	}
 	for _, fdp := range dss.File {
-		if err := addServicesFromDescriptorsBytes(registry, fdp); err != nil {
+		if err := addServicesFromFileDescriptorProto(registry, fdp); err != nil {
 			return err
 		}
 	}
@@ -206,9 +206,9 @@ func AddServicesFromDescriptorsFileTXTPB(registry LoaderTarget, filepath string)
 
 // AddServicesFromReflection uses the given address to connect to a gRPC server that has Server Reflection. The
 // services are imported from the file descriptors advertised there.
-func AddServicesFromReflection(registry LoaderTarget, addr string) error {
+func AddServicesFromReflection(registry LoaderTarget, httpClient *http.Client, addr string) error {
 	slog.Debug("AddServicesFromReflection", slog.String("addr", addr))
-	reflectClient := reflectionv1connect.NewServerReflectionClient(http.DefaultClient, addr, connect.WithGRPC())
+	reflectClient := reflectionv1connect.NewServerReflectionClient(httpClient, addr, connect.WithGRPC())
 	reflectReq := reflectClient.ServerReflectionInfo(context.Background())
 	if err := reflectReq.Send(&reflectionv1.ServerReflectionRequest{
 		MessageRequest: &reflectionv1.ServerReflectionRequest_ListServices{
@@ -222,6 +222,7 @@ func AddServicesFromReflection(registry LoaderTarget, addr string) error {
 		return err
 	}
 
+	var allFdps []*descriptorpb.FileDescriptorProto
 	for _, svc := range resp.GetListServicesResponse().GetService() {
 		if err := reflectReq.Send(&reflectionv1.ServerReflectionRequest{
 			MessageRequest: &reflectionv1.ServerReflectionRequest_FileContainingSymbol{
@@ -239,16 +240,33 @@ func AddServicesFromReflection(registry LoaderTarget, addr string) error {
 			if err := proto.Unmarshal(descBytes, fdp); err != nil {
 				return fmt.Errorf("unmarshal: %w", err)
 			}
-
-			if err := addServicesFromDescriptorsBytes(registry, fdp); err != nil {
-				return err
-			}
+			allFdps = append(allFdps, fdp)
 		}
 	}
+
+	fds := &descriptorpb.FileDescriptorSet{
+		File: allFdps,
+	}
+	files, err := protodesc.NewFiles(fds)
+	if err != nil {
+		return fmt.Errorf("protodesc.NewFiles: %w", err)
+	}
+
+	sortedFiles, err := sortFilesByDependency(files)
+	if err != nil {
+		return fmt.Errorf("sortFilesByDependency: %w", err)
+	}
+
+	for _, fd := range sortedFiles {
+		if err := registry.RegisterFile(fd); err != nil {
+			return fmt.Errorf("RegisterFile: %w", err)
+		}
+	}
+
 	return nil
 }
 
-func addServicesFromDescriptorsBytes(registry LoaderTarget, fdp *descriptorpb.FileDescriptorProto) error {
+func addServicesFromFileDescriptorProto(registry LoaderTarget, fdp *descriptorpb.FileDescriptorProto) error {
 	fd, err := protodesc.NewFile(fdp, registry)
 	if err != nil {
 		return fmt.Errorf("protodesc.NewFile: %w", err)

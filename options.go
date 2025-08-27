@@ -18,11 +18,10 @@ type FieldGenOptions struct {
 }
 
 type GenOptions struct {
-	MaxDepth      int
-	Faker         *gofakeit.Faker
-	Context       context.Context
-	StubRecorder  func(StubEntry)
-	FieldOptions  map[string]FieldGenOptions
+	MaxDepth     int
+	Faker        *gofakeit.Faker
+	Context      context.Context
+	StubRecorder func(StubEntry)
 
 	extraFieldConstraints *validate.FieldRules
 }

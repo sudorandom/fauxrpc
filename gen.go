@@ -5,6 +5,7 @@ import (
 
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	"buf.build/go/protovalidate"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -52,11 +53,19 @@ func (st GenOptions) withExtraFieldConstraints(constraints *validate.FieldRules)
 }
 
 func getFieldConstraints(fd protoreflect.FieldDescriptor, opts GenOptions) *validate.FieldRules {
-	if fieldOpts, ok := opts.FieldOptions[string(fd.Name())]; ok {
-		return fieldOpts.Message
+	constraints, _ := protovalidate.ResolveFieldRules(fd)
+
+	if opts.extraFieldConstraints != nil {
+		if constraints == nil {
+			constraints = opts.extraFieldConstraints
+		} else {
+			// proto.Merge merges the second argument into the first.
+			// This means extraFieldConstraints will overwrite base rules where they conflict.
+			merged := proto.Clone(constraints).(*validate.FieldRules)
+			proto.Merge(merged, opts.extraFieldConstraints)
+			constraints = merged
+		}
 	}
-	if constraints, err := protovalidate.ResolveFieldRules(fd); err == nil && constraints != nil {
-		return constraints
-	}
-	return opts.extraFieldConstraints
+
+	return constraints
 }

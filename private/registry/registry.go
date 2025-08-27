@@ -32,6 +32,7 @@ type serviceRegistry struct {
 	services     map[string]protoreflect.ServiceDescriptor
 	filesOrdered []protoreflect.FileDescriptor
 	files        *protoregistry.Files
+	types        *protoregistry.Types
 	lock         *sync.RWMutex
 }
 
@@ -39,10 +40,19 @@ func NewServiceRegistry() (*serviceRegistry, error) {
 	r := &serviceRegistry{
 		services:     map[string]protoreflect.ServiceDescriptor{},
 		files:        new(protoregistry.Files),
+		types:        new(protoregistry.Types),
 		filesOrdered: []protoreflect.FileDescriptor{},
 		lock:         &sync.RWMutex{},
 	}
 	return r, AddServicesFromGlobal(r)
+}
+
+func (r *serviceRegistry) FindExtensionByName(field protoreflect.FullName) (protoreflect.ExtensionType, error) {
+	return nil, nil
+}
+
+func (r *serviceRegistry) FindExtensionByNumber(message protoreflect.FullName, field protoreflect.FieldNumber) (protoreflect.ExtensionType, error) {
+	return nil, nil
 }
 
 func (r *serviceRegistry) Reset() error {

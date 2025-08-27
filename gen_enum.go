@@ -1,6 +1,8 @@
 package fauxrpc
 
 import (
+	"slices"
+
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -28,30 +30,47 @@ func Enum(fd protoreflect.FieldDescriptor, opts GenOptions) protoreflect.EnumNum
 		return protoreflect.EnumNumber(rules.Example[opts.fake().IntRange(0, len(rules.Example)-1)])
 	}
 
+	// Collect all allowed enum values based on 'In' and 'NotIn' rules
+	var allowedValues []protoreflect.EnumNumber
+	allEnumValues := fd.Enum().Values()
+
+	// If 'In' rule is present, only consider values in 'In' list
 	if len(rules.In) > 0 {
-		return protoreflect.EnumNumber(rules.In[opts.fake().IntRange(0, len(rules.In)-1)])
-	}
-
-	if len(rules.NotIn) > 0 {
-		allowed := []int32{}
-		allValues := fd.Enum().Values()
-		for i := 0; i < allValues.Len(); i++ {
-			val := allValues.Get(i).Number()
-			isAllowed := true
-			for _, notInVal := range rules.NotIn {
-				if int32(val) == notInVal {
-					isAllowed = false
-					break
-				}
-			}
-			if isAllowed {
-				allowed = append(allowed, int32(val))
+		for _, val := range rules.In {
+			// Check if this value is also forbidden by NotIn
+			if !slices.Contains(rules.NotIn, val) {
+				allowedValues = append(allowedValues, protoreflect.EnumNumber(val))
 			}
 		}
-		if len(allowed) > 0 {
-			return protoreflect.EnumNumber(allowed[opts.fake().IntRange(0, len(allowed)-1)])
+	} else {
+		// If no 'In' rule, consider all enum values and filter out 'NotIn' values
+		for i := 0; i < allEnumValues.Len(); i++ {
+			val := allEnumValues.Get(i).Number()
+			if !slices.Contains(rules.NotIn, int32(val)) {
+				allowedValues = append(allowedValues, val)
+			}
 		}
 	}
 
-	return enumSimple(fd, opts)
+	if constraints.GetRequired() {
+		allowedValues = slices.DeleteFunc(allowedValues, func(v protoreflect.EnumNumber) bool {
+			return v == 0
+		})
+	}
+
+	if len(allowedValues) > 0 {
+		// Pick a random value from the allowed list
+		return allowedValues[opts.fake().IntRange(0, len(allowedValues)-1)]
+	} else {
+		// This is an impossible scenario: no valid enum value can be generated.
+		// This indicates a misconfigured validation rule in the proto definition.
+		// For now, we will return the first enum value, which might still be invalid
+		// according to the rules, but prevents a crash.
+		// A proper fix would involve reporting this as an error upstream or
+		// having the validation library prevent such impossible rules.
+		if allEnumValues.Len() > 0 {
+			return allEnumValues.Get(0).Number()
+		}
+		return 0 // Default to 0 if no enum values exist at all
+	}
 }
