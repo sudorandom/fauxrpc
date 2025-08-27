@@ -2,6 +2,7 @@ edition = "2023";
 
 package test.v1;
 
+import "buf/validate/validate.proto";
 import "google/protobuf/duration.proto";
 import "google/protobuf/field_mask.proto";
 import "google/protobuf/go_features.proto";
@@ -171,7 +172,7 @@ message AllTypes {
     ENUM_TWO = 2;
   }
   AllTypes msg_value = 73;
-  Enum enum_value = 74;
+  Enum enum_value = 74 [(buf.validate.field).enum = { not_in: [1, 2] }];
   AllTypes opt_msg_value = 75 [features.field_presence = EXPLICIT];
   Enum opt_enum_value = 76 [features.field_presence = EXPLICIT];
   repeated AllTypes msg_list = 77;
@@ -199,4 +200,28 @@ message AllTypes {
     AllTypes msg_option = 96;
     Enum enum_option = 97;
   }
+}
+
+message EnumTest {
+  enum TestEnum {
+    TEST_ENUM_UNSPECIFIED = 0;
+    TEST_ENUM_ONE = 1;
+    TEST_ENUM_TWO = 2;
+    TEST_ENUM_THREE = 3;
+  }
+  TestEnum enum_in = 1 [(buf.validate.field).enum = { in: [2, 3] }];
+  TestEnum enum_not_in = 2 [(buf.validate.field).enum = { not_in: [0, 1] }];
+  TestEnum enum_in_and_not_in = 3 [(buf.validate.field).enum = { in: [1, 2], not_in: [2] }];
+  TestEnum enum_const = 4 [(buf.validate.field).enum = { const: 3 }];
+  TestEnum enum_required = 5 [(buf.validate.field).required = true];
+}
+
+message RepeatedEnumTest {
+  enum TestEnum {
+    TEST_ENUM_UNSPECIFIED = 0;
+    TEST_ENUM_ONE = 1;
+    TEST_ENUM_TWO = 2;
+    TEST_ENUM_THREE = 3;
+  }
+  repeated TestEnum repeated_enum_in = 1 [(buf.validate.field).repeated.items.enum = { in: [2, 3] }];
 }

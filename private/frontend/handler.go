@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/a-h/templ"
-	"github.com/jhump/protoreflect/desc"
+	"github.com/jhump/protoreflect/desc" //nolint:staticcheck
 	"github.com/jhump/protoreflect/desc/protoprint"
 	"github.com/sudorandom/fauxrpc/private/frontend/templates"
 	"github.com/sudorandom/fauxrpc/private/frontend/templates/browser"
@@ -166,6 +166,7 @@ func DashboardHandler(p Provider) http.Handler {
 		}
 		files := p.Files()
 
+		// Check if it's a file
 		var foundFd protoreflect.FileDescriptor
 		files.RangeFiles(func(fd protoreflect.FileDescriptor) bool {
 			if fd.Path() == path {
@@ -187,52 +188,67 @@ func DashboardHandler(p Provider) http.Handler {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			lastSlash := strings.LastIndex(path, "/")
-			var dirPath, fileName string
+
+			pkgName := string(foundFd.Package())
+			lastSlash := strings.LastIndex(foundFd.Path(), "/")
+			var fileName string
 			if lastSlash != -1 {
-				dirPath = path[:lastSlash+1]
-				fileName = path[lastSlash+1:]
+				fileName = foundFd.Path()[lastSlash+1:]
 			} else {
-				dirPath = ""
-				fileName = path
+				fileName = foundFd.Path()
 			}
 
 			if r.Header.Get("HX-Request") == "true" {
-				templ.Handler(browser.FileContent(dirPath, fileName, content)).ServeHTTP(w, r)
+				templ.Handler(browser.FileContent(pkgName, fileName, content)).ServeHTTP(w, r)
 			} else {
-				templ.Handler(templates.Index(browser.FileContent(dirPath, fileName, content))).ServeHTTP(w, r)
+				templ.Handler(templates.Index(browser.FileContent(pkgName, fileName, content))).ServeHTTP(w, r)
 			}
 			return
 		}
 
-		// It's a directory
-		dirEntries := make(map[string]bool)
+		// Check if it's a package
+		var fds []protoreflect.FileDescriptor
 		files.RangeFiles(func(fd protoreflect.FileDescriptor) bool {
-			if after, ok := strings.CutPrefix(fd.Path(), path); ok {
-				rest := after
-				if rest == "" {
-					return true
-				}
-				parts := strings.Split(rest, "/")
-				if len(parts) == 1 {
-					dirEntries[parts[0]] = true
-				} else {
-					dirEntries[parts[0]+"/"] = true
-				}
+			if string(fd.Package()) == path {
+				fds = append(fds, fd)
+			}
+			return true
+		})
+
+		if len(fds) > 0 {
+			var entries []string
+			for _, fd := range fds {
+				entries = append(entries, fd.Path())
+			}
+			sort.Strings(entries)
+			if r.Header.Get("HX-Request") == "true" {
+				templ.Handler(browser.Browser(path, entries)).ServeHTTP(w, r)
+			} else {
+				templ.Handler(templates.Index(browser.Browser(path, entries))).ServeHTTP(w, r)
+			}
+			return
+		}
+
+		// It's the root, show packages
+		packages := make(map[string]bool)
+		files.RangeFiles(func(fd protoreflect.FileDescriptor) bool {
+			pkg := string(fd.Package())
+			if pkg != "" {
+				packages[pkg] = true
 			}
 			return true
 		})
 
 		var entries []string
-		for entry := range dirEntries {
-			entries = append(entries, entry)
+		for pkg := range packages {
+			entries = append(entries, pkg)
 		}
 		sort.Strings(entries)
 
 		if r.Header.Get("HX-Request") == "true" {
-			templ.Handler(browser.Browser(path, entries)).ServeHTTP(w, r)
+			templ.Handler(browser.Browser("", entries)).ServeHTTP(w, r)
 		} else {
-			templ.Handler(templates.Index(browser.Browser(path, entries))).ServeHTTP(w, r)
+			templ.Handler(templates.Index(browser.Browser("", entries))).ServeHTTP(w, r)
 		}
 	}))
 

@@ -137,9 +137,9 @@ func (s *server) GetStubDB() stubs.StubDatabase {
 func (s *server) GetStats() *metrics.Stats {
 	stats := s.stats.Copy()
 
-	stats.UniqueServices = s.ServiceRegistry.ServiceCount()
+	stats.UniqueServices = s.ServiceCount()
 	uniqueMethods := make(map[string]struct{})
-	s.ServiceRegistry.ForEachService(func(sd protoreflect.ServiceDescriptor) bool {
+	s.ForEachService(func(sd protoreflect.ServiceDescriptor) bool {
 		methods := sd.Methods()
 		for i := 0; i < methods.Len(); i++ {
 			method := methods.Get(i)

@@ -4,7 +4,8 @@ import (
 	"errors"
 
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
-	"buf.build/go/protovalidate/resolve"
+	"buf.build/go/protovalidate"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -46,14 +47,26 @@ func (f multiFaker) SetDataOnMessage(msg protoreflect.ProtoMessage, opts GenOpti
 	return ErrNotFaked
 }
 
-func (st GenOptions) withExtraFieldConstraints(constraints *validate.FieldRules) GenOptions {
-	st.extraFieldConstraints = constraints
-	return st
-}
+func getFieldConstraints(fd protoreflect.FieldDescriptor, opts GenOptions) (constraints *validate.FieldRules) {
+	defer func() {
+		if r := recover(); r != nil {
+			constraints = nil // Ensure constraints is nil on panic
+		}
+	}()
 
-func getFieldConstraints(fd protoreflect.FieldDescriptor, opts GenOptions) *validate.FieldRules {
-	if constraints := resolve.FieldRules(fd); constraints != nil {
-		return constraints
+	constraints, _ = protovalidate.ResolveFieldRules(fd)
+
+	if opts.extraFieldConstraints != nil {
+		if constraints == nil {
+			constraints = opts.extraFieldConstraints
+		} else {
+			// proto.Merge merges the second argument into the first.
+			// This means extraFieldConstraints will overwrite base rules where they conflict.
+			merged := proto.Clone(constraints).(*validate.FieldRules)
+			proto.Merge(merged, opts.extraFieldConstraints)
+			constraints = merged
+		}
 	}
-	return opts.extraFieldConstraints
+
+	return constraints
 }

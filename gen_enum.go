@@ -1,36 +1,62 @@
 package fauxrpc
 
 import (
+	"slices"
+
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-func enumSimple(fd protoreflect.FieldDescriptor, opts GenOptions) protoreflect.EnumNumber {
-	values := fd.Enum().Values()
-	idx := opts.fake().IntRange(0, values.Len()-1)
-	return protoreflect.EnumNumber(idx)
-}
-
-// Enum returns a fake enum value given a field descriptor.
 func Enum(fd protoreflect.FieldDescriptor, opts GenOptions) protoreflect.EnumNumber {
 	constraints := getFieldConstraints(fd, opts)
-	if constraints == nil {
-		return enumSimple(fd, opts)
-	}
-	rules := constraints.GetEnum()
-	if rules == nil {
-		return enumSimple(fd, opts)
+	allEnumValues := fd.Enum().Values()
+	allowedValues := []protoreflect.EnumNumber{}
+
+	if allEnumValues.Len() > 0 {
+		for i := 0; i < allEnumValues.Len(); i++ {
+			allowedValues = append(allowedValues, allEnumValues.Get(i).Number())
+		}
 	}
 
-	if rules.Const != nil {
-		return protoreflect.EnumNumber(*rules.Const)
-	}
-	if len(rules.Example) > 0 {
-		return protoreflect.EnumNumber(rules.Example[opts.fake().IntRange(0, len(rules.Example)-1)])
+	if constraints != nil {
+		if enumRules := constraints.GetEnum(); enumRules != nil {
+			if enumRules.Const != nil {
+				return protoreflect.EnumNumber(*enumRules.Const)
+			}
+			if len(enumRules.In) > 0 {
+				inValues := make(map[protoreflect.EnumNumber]struct{})
+				for _, v := range enumRules.In {
+					inValues[protoreflect.EnumNumber(v)] = struct{}{}
+				}
+				allowedValues = slices.DeleteFunc(allowedValues, func(v protoreflect.EnumNumber) bool {
+					_, ok := inValues[v]
+					return !ok
+				})
+			}
+			if len(enumRules.NotIn) > 0 {
+				notInValues := make(map[protoreflect.EnumNumber]struct{})
+				for _, v := range enumRules.NotIn {
+					notInValues[protoreflect.EnumNumber(v)] = struct{}{}
+				}
+				allowedValues = slices.DeleteFunc(allowedValues, func(v protoreflect.EnumNumber) bool {
+					_, ok := notInValues[v]
+					return ok
+				})
+			}
+		}
+		if constraints.GetRequired() {
+			allowedValues = slices.DeleteFunc(allowedValues, func(v protoreflect.EnumNumber) bool {
+				return v == 0
+			})
+		}
 	}
 
-	if len(rules.In) > 0 {
-		return protoreflect.EnumNumber(rules.In[opts.fake().IntRange(0, len(rules.In)-1)])
+	if len(allowedValues) > 0 {
+		return allowedValues[opts.fake().IntRange(0, len(allowedValues)-1)]
 	}
 
-	return enumSimple(fd, opts)
+	if allEnumValues.Len() > 0 {
+		idx := opts.fake().IntRange(0, allEnumValues.Len()-1)
+		return allEnumValues.Get(idx).Number()
+	}
+	return 0
 }

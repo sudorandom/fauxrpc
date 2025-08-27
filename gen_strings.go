@@ -9,33 +9,42 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
+const maxPatternRetryAttempts = 5
+
 func randInt64GeometricDist(p float64, opts GenOptions) int64 {
 	return int64(math.Floor(math.Log(opts.fake().Float64()) / math.Log(1.0-p)))
 }
 
-func stringSimple(fd protoreflect.FieldDescriptor, opts GenOptions) string {
+func stringByHeuristics(fd protoreflect.FieldDescriptor, opts GenOptions) (string, bool) {
 	lowerName := strings.ToLower(string(fd.Name()))
 	switch {
 	case strings.Contains(lowerName, "firstname"):
-		return opts.fake().FirstName()
+		return opts.fake().FirstName(), true
 	case strings.Contains(lowerName, "lastname"):
-		return opts.fake().LastName()
+		return opts.fake().LastName(), true
 	case strings.Contains(lowerName, "name"):
-		return opts.fake().FirstName()
+		return opts.fake().FirstName(), true
 	case strings.Contains(lowerName, "fullname"):
-		return opts.fake().Name()
+		return opts.fake().Name(), true
 	case strings.Contains(lowerName, "id"):
-		return opts.fake().UUID()
+		return opts.fake().UUID(), true
 	case strings.Contains(lowerName, "token"):
-		return opts.fake().UUID()
+		return opts.fake().UUID(), true
 	case strings.Contains(lowerName, "photo") && strings.Contains(lowerName, "url"):
-		return "https://picsum.photos/400"
+		return "https://picsum.photos/400", true
 	case strings.Contains(lowerName, "url"):
-		return opts.fake().URL()
+		return opts.fake().URL(), true
 	case strings.Contains(lowerName, "version"):
-		return opts.fake().AppVersion()
+		return opts.fake().AppVersion(), true
 	case strings.Contains(lowerName, "status"):
-		return opts.fake().RandomString([]string{"active", "inactive", "hidden", "archived", "deleted", "pending"})
+		return opts.fake().RandomString([]string{"active", "inactive", "hidden", "archived", "deleted", "pending"}), true
+	}
+	return "", false
+}
+
+func stringSimple(fd protoreflect.FieldDescriptor, opts GenOptions) string {
+	if s, ok := stringByHeuristics(fd, opts); ok {
+		return s
 	}
 
 	return opts.fake().HipsterSentence(int(randInt64GeometricDist(0.5, opts) + 1))
@@ -47,9 +56,15 @@ func String(fd protoreflect.FieldDescriptor, opts GenOptions) string {
 	if constraints == nil {
 		return stringSimple(fd, opts)
 	}
-	rules := constraints.GetString()
-	if rules == nil {
-		return stringSimple(fd, opts)
+	var rules *validate.StringRules
+
+	// Check if the constraints are for a repeated field's items
+	if repeatedRules := constraints.GetRepeated(); repeatedRules != nil && repeatedRules.GetItems() != nil {
+		// If it's a repeated field's items, get the string rules from the items
+		rules = repeatedRules.GetItems().GetString()
+	} else {
+		// Otherwise, get the string rules from the top-level constraints
+		rules = constraints.GetString()
 	}
 
 	if rules == nil {
@@ -61,6 +76,9 @@ func String(fd protoreflect.FieldDescriptor, opts GenOptions) string {
 	}
 	if len(rules.Example) > 0 {
 		return rules.Example[opts.fake().IntRange(0, len(rules.Example)-1)]
+	}
+	if len(rules.In) > 0 {
+		return opts.fake().RandomString(rules.In)
 	}
 
 	minLen, maxLen := uint64(0), uint64(20)
@@ -75,65 +93,100 @@ func String(fd protoreflect.FieldDescriptor, opts GenOptions) string {
 		maxLen = *rules.MaxLen
 	}
 	if rules.MinBytes != nil {
-		maxLen = *rules.MinBytes
+		minLen = *rules.MinBytes
 	}
 	if rules.MaxBytes != nil {
 		maxLen = *rules.MaxBytes
 	}
+
+	var generatedString string
+
 	if rules.Pattern != nil {
-		return opts.fake().Regex(*rules.Pattern)
-	}
-
-	if len(rules.In) > 0 {
-		return opts.fake().RandomString(rules.In)
-	}
-
-	if rules.WellKnown != nil {
+		for range maxPatternRetryAttempts {
+			generatedString = opts.fake().Regex(*rules.Pattern)
+			if uint64(len(generatedString)) >= minLen && uint64(len(generatedString)) <= maxLen {
+				break
+			}
+		}
+	} else if rules.WellKnown != nil {
 		switch rules.WellKnown.(type) {
 		case *validate.StringRules_Email:
-			return opts.fake().Email()
+			generatedString = opts.fake().Email()
 		case *validate.StringRules_Hostname:
-			return strings.ToLower(opts.fake().JobDescriptor())
+			generatedString = strings.ToLower(opts.fake().JobDescriptor())
 		case *validate.StringRules_Ip:
-			return opts.fake().IPv4Address()
+			generatedString = opts.fake().IPv4Address()
 		case *validate.StringRules_Ipv4:
-			return opts.fake().IPv4Address()
+			generatedString = opts.fake().IPv4Address()
 		case *validate.StringRules_Ipv6:
-			return opts.fake().IPv6Address()
+			generatedString = opts.fake().IPv6Address()
 		case *validate.StringRules_Uri:
-			return opts.fake().URL()
+			generatedString = opts.fake().URL()
 		case *validate.StringRules_Address:
-			return opts.fake().DomainName()
+			generatedString = opts.fake().DomainName()
 		case *validate.StringRules_Uuid:
 			return opts.fake().UUID()
 		case *validate.StringRules_Tuuid:
 			return strings.ReplaceAll(opts.fake().UUID(), "-", "")
 		case *validate.StringRules_IpWithPrefixlen:
-			return opts.fake().IPv4Address() + "/30"
+			generatedString = opts.fake().IPv4Address() + "/30"
 		case *validate.StringRules_Ipv4WithPrefixlen:
-			return opts.fake().IPv4Address() + "/30"
+			generatedString = opts.fake().IPv4Address() + "/30"
 		case *validate.StringRules_Ipv6Prefix:
-			return opts.fake().IPv6Address() + "/64"
+			generatedString = opts.fake().IPv6Address() + "/64"
 		case *validate.StringRules_HostAndPort:
-			return strings.ToLower(opts.fake().JobDescriptor()) + ":" + strconv.FormatInt(int64(opts.fake().IntRange(443, 9000)), 10)
-		case *validate.StringRules_WellKnownRegex:
+			generatedString = strings.ToLower(opts.fake().JobDescriptor()) + ":" + strconv.FormatInt(int64(opts.fake().IntRange(443, 9000)), 10)
+		default:
+			// If no specific well-known type is matched, or if WellKnownRegex is encountered,
+			// fall back to heuristics or hipster text.
+			if s, ok := stringByHeuristics(fd, opts); ok {
+				generatedString = s
+			} else {
+				return generateHipsterText(minLen, maxLen, opts)
+			}
 		}
+	} else if s, ok := stringByHeuristics(fd, opts); ok {
+		generatedString = s
+	} else {
+		return generateHipsterText(minLen, maxLen, opts)
 	}
 
-	return generateHipsterText(minLen, maxLen, opts)
+	if uint64(len(generatedString)) < minLen {
+		needed := int(minLen - uint64(len(generatedString)))
+		padding := opts.fake().LetterN(uint(needed))
+		if rules.Pattern != nil {
+			if strings.ContainsAny(*rules.Pattern, "ABCDEFGHIJKLMNOPQRSTUVWXYZ") {
+				padding = strings.ToUpper(padding)
+			}
+			if strings.ContainsAny(*rules.Pattern, "abcdefghijklmnopqrstuvwxyz") {
+				padding = strings.ToLower(padding)
+			}
+		}
+		// Insert padding instead of appending to preserve start/end characters
+		if len(generatedString) >= 2 && rules.Pattern != nil {
+			middleIndex := len(generatedString) - 1
+			generatedString = generatedString[:middleIndex] + padding + generatedString[middleIndex:]
+		} else {
+			generatedString += padding
+		}
+	}
+	if uint64(len(generatedString)) > maxLen {
+		generatedString = generatedString[:maxLen]
+	}
+	return generatedString
 }
 
 func generateHipsterText(minLen, maxLen uint64, opts GenOptions) string {
 	b := &strings.Builder{}
 	addMoreText := func() {
-		b.WriteString(opts.fake().HipsterSentence(int(randInt64GeometricDist(0.5, opts)) + 1))
+		b.WriteString(opts.fake().HipsterSentence(int(randInt64GeometricDist(0.5, opts) + 1)))
 	}
 	addMoreText()
 	for uint64(b.Len()) < minLen {
 		addMoreText()
 	}
 	if uint64(b.Len()) > maxLen {
-		return b.String()[:maxLen-1]
+		return b.String()[:maxLen]
 	}
 	return b.String()
 }

@@ -32,6 +32,7 @@ type serviceRegistry struct {
 	services     map[string]protoreflect.ServiceDescriptor
 	filesOrdered []protoreflect.FileDescriptor
 	files        *protoregistry.Files
+	types        *protoregistry.Types
 	lock         *sync.RWMutex
 }
 
@@ -39,6 +40,7 @@ func NewServiceRegistry() (*serviceRegistry, error) {
 	r := &serviceRegistry{
 		services:     map[string]protoreflect.ServiceDescriptor{},
 		files:        new(protoregistry.Files),
+		types:        new(protoregistry.Types),
 		filesOrdered: []protoreflect.FileDescriptor{},
 		lock:         &sync.RWMutex{},
 	}

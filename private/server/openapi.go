@@ -4,8 +4,8 @@ import (
 	"strings"
 
 	"github.com/sudorandom/protoc-gen-connect-openapi/converter"
+	"go.yaml.in/yaml/v3"
 	"google.golang.org/protobuf/reflect/protoreflect"
-	"gopkg.in/yaml.v3"
 
 	"github.com/sudorandom/fauxrpc/private/registry"
 )

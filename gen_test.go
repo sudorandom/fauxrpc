@@ -1,49 +1,75 @@
 package fauxrpc_test
 
 import (
-	"fmt"
-	"strings"
-
-	"github.com/bufbuild/protocompile/parser"
-	"github.com/bufbuild/protocompile/reporter"
-	"google.golang.org/protobuf/reflect/protodesc"
+	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/reflect/protoregistry"
+	"google.golang.org/protobuf/types/descriptorpb"
 )
 
-func wrapProto(inner string) string {
-	return fmt.Sprintf(`syntax = "proto3";
-
-package test.v1;
-
-import "buf/validate/validate.proto";
-
-%s`, inner)
+// Helper to create a field descriptor with specific constraints for testing
+type mockFieldDescriptor struct {
+	protoreflect.FieldDescriptor
+	name         protoreflect.Name
+	kind         protoreflect.Kind
+	message      protoreflect.MessageDescriptor
+	enum         protoreflect.EnumDescriptor
+	isMap        bool
+	isList       bool
+	constraints  *validate.FieldRules
+	fieldOptions *descriptorpb.FieldOptions // To store the actual FieldOptions with extension
 }
 
-func mustCompileField(fieldType, fieldName, fieldOptions string) protoreflect.FieldDescriptor {
-	optionsSection := ""
-	if len(fieldOptions) > 0 {
-		optionsSection = "[" + fieldOptions + "]"
+func (m *mockFieldDescriptor) Name() protoreflect.Name {
+	return m.name
+}
+
+func (m *mockFieldDescriptor) FullName() protoreflect.FullName {
+	return protoreflect.FullName(m.name)
+}
+
+func (m *mockFieldDescriptor) Kind() protoreflect.Kind {
+	return m.kind
+}
+
+func (m *mockFieldDescriptor) Message() protoreflect.MessageDescriptor {
+	return m.message
+}
+
+func (m *mockFieldDescriptor) Enum() protoreflect.EnumDescriptor {
+	return m.enum
+}
+
+func (m *mockFieldDescriptor) IsMap() bool {
+	return m.isMap
+}
+
+func (m *mockFieldDescriptor) IsList() bool {
+	return m.isList
+}
+
+func (m *mockFieldDescriptor) Options() protoreflect.ProtoMessage {
+	if m.fieldOptions != nil {
+		return m.fieldOptions
 	}
-	protoText := wrapProto(fmt.Sprintf(`
-	message Test {
-		%s %s = 1 %s;
-	}
-	`, fieldType, fieldName, optionsSection))
-	handler := reporter.NewHandler(nil)
-	ast, err := parser.Parse("test.proto", strings.NewReader(protoText), handler)
-	if err != nil {
-		panic(err)
-	}
-	res, err := parser.ResultFromAST(ast, true, handler)
-	if err != nil {
-		panic(fmt.Errorf("convert from AST: %w", err))
-	}
-	fd, err := protodesc.NewFile(res.FileDescriptorProto(), protoregistry.GlobalFiles)
-	if err != nil {
-		panic(fmt.Errorf("protodesc.NewFile: %w", err))
+	return nil
+}
+
+func createFieldDescriptorWithConstraints(baseFd protoreflect.FieldDescriptor, constraints *validate.FieldRules) protoreflect.FieldDescriptor {
+	fieldOptions := &descriptorpb.FieldOptions{}
+	if constraints != nil {
+		proto.SetExtension(fieldOptions, validate.E_Field, constraints)
 	}
 
-	return fd.Messages().ByName("Test").Fields().ByName(protoreflect.Name(fieldName))
+	return &mockFieldDescriptor{
+		FieldDescriptor: baseFd,
+		name:            baseFd.Name(),
+		kind:            baseFd.Kind(),
+		message:         baseFd.Message(),
+		enum:            baseFd.Enum(),
+		isMap:           baseFd.IsMap(),
+		isList:          baseFd.IsList(),
+		constraints:     constraints,
+		fieldOptions:    fieldOptions,
+	}
 }

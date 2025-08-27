@@ -166,7 +166,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 						slog.Error("error serializing validation details", "error", err)
 					}
 				}
-				return nil, grpcErr
+				return msg, grpcErr
 			}
 			return msg, nil
 		}
@@ -187,13 +187,13 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 		} else {
 			var st *status.Status
 			input, st = readMessage()
+			requestBody = input
 			if st != nil {
 				s.IncrementErrors()
 				finalStatus = st
 				grpcWriteStatus(w, st)
 				return
 			}
-			requestBody = input
 		}
 
 		// Handle writing response

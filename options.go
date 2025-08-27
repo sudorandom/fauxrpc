@@ -13,6 +13,10 @@ type StubEntry interface {
 	GetID() string
 }
 
+type FieldGenOptions struct {
+	Message *validate.FieldRules
+}
+
 type GenOptions struct {
 	MaxDepth     int
 	Faker        *gofakeit.Faker
@@ -39,5 +43,10 @@ func (st GenOptions) fake() *gofakeit.Faker {
 func (st GenOptions) nested() GenOptions {
 	st.MaxDepth--
 	st.extraFieldConstraints = nil
+	return st
+}
+
+func (st GenOptions) WithExtraFieldConstraints(rules *validate.FieldRules) GenOptions {
+	st.extraFieldConstraints = rules
 	return st
 }
