@@ -46,7 +46,7 @@ func (c *CurlCmd) Run(globals *Globals) error {
 		httpClient = &http.Client{
 			Transport: &http3.Transport{},
 		}
-	} else {
+	} else if c.HTTP2PriorKnowledge {
 		httpClient = &http.Client{
 			Transport: &http2.Transport{
 				AllowHTTP: true,
@@ -55,6 +55,8 @@ func (c *CurlCmd) Run(globals *Globals) error {
 				},
 			},
 		}
+	} else {
+		httpClient = &http.Client{}
 	}
 
 	// Load schemas from files
