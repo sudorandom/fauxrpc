@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/sudorandom/fauxrpc"
+	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/dynamicpb"
 
 	testv1 "github.com/sudorandom/fauxrpc/private/gen/test/v1"
@@ -104,4 +105,29 @@ func TestRepeated(t *testing.T) {
 	// TODO: Add test for unique rule for message types (requires mocking opts.fake() to control generated values)
 
 	// TODO: Add test for Items rules (requires setting up a protobuf schema with nested rules)
+}
+
+func TestRepeatedEnum(t *testing.T) {
+	md := testv1.File_test_v1_test_proto.Messages().ByName("RepeatedEnumTest")
+	require.NotNil(t, md)
+
+	opts := fauxrpc.GenOptions{MaxDepth: 5}
+
+	getField := func(fieldName string) protoreflect.FieldDescriptor {
+		fd := md.Fields().ByName(protoreflect.Name(fieldName))
+		require.NotNil(t, fd, "field %s not found", fieldName)
+		return fd
+	}
+
+	t.Run("repeated_enum_in", func(t *testing.T) {
+		fd := getField("repeated_enum_in")
+		msg := &testv1.RepeatedEnumTest{}
+		val := fauxrpc.Repeated(msg.ProtoReflect(), fd, opts)
+		require.NotNil(t, val)
+		list := val.List()
+		for i := range list.Len() {
+			item := list.Get(i)
+			assert.Contains(t, []protoreflect.EnumNumber{2, 3}, item.Enum())
+		}
+	})
 }

@@ -1,8 +1,6 @@
 package fauxrpc
 
 import (
-	"fmt"
-
 	"buf.build/go/protovalidate"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -49,8 +47,7 @@ ItemLoop:
 	for range itemCount {
 		// Retry up to 20 times to generate a valid item.
 		for range 20 { // Existing retry for valid item
-			if v := FieldValue(fd, opts.nested().withExtraFieldConstraints(rules.GetItems())); v != nil {
-				fmt.Println("v", v)
+			if v := FieldValue(fd, opts.nested().WithExtraFieldConstraints(rules.GetItems())); v != nil {
 				if rules.GetUnique() { // Check for uniqueness rule
 					isUnique := true
 					for j := 0; j < listVal.List().Len(); j++ {
@@ -81,7 +78,6 @@ ItemLoop:
 						continue // Not unique, try generating another value
 					}
 				}
-				fmt.Println("APPEND")
 				listVal.List().Append(*v)
 				continue ItemLoop // Success, move to the next item.
 			}

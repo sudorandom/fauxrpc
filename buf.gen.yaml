@@ -14,9 +14,9 @@ managed:
     - module: buf.build/protocolbuffers/wellknowntypes
 
 plugins:
-  - remote: buf.build/protocolbuffers/go
+  - local: ["go", "tool", "protoc-gen-go"]
     out: private/gen
     opt: paths=source_relative
-  - remote: buf.build/connectrpc/go
+  - local: ["go", "tool", "protoc-gen-connect-go"]
     out: private/gen
     opt: paths=source_relative

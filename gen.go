@@ -47,11 +47,6 @@ func (f multiFaker) SetDataOnMessage(msg protoreflect.ProtoMessage, opts GenOpti
 	return ErrNotFaked
 }
 
-func (st GenOptions) withExtraFieldConstraints(constraints *validate.FieldRules) GenOptions {
-	st.extraFieldConstraints = constraints
-	return st
-}
-
 func getFieldConstraints(fd protoreflect.FieldDescriptor, opts GenOptions) (constraints *validate.FieldRules) {
 	defer func() {
 		if r := recover(); r != nil {

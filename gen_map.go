@@ -45,8 +45,8 @@ func Map(msg protoreflect.Message, fd protoreflect.FieldDescriptor, opts GenOpti
 	mapVal := msg.NewField(fd)
 	itemCount := opts.fake().IntRange(int(min), int(max))
 	for i := 0; i < itemCount; i++ {
-		v := FieldValue(fd.MapKey(), opts.nested().withExtraFieldConstraints(constraints.GetMap().Keys))
-		w := FieldValue(fd.MapValue(), opts.nested().withExtraFieldConstraints(constraints.GetMap().Values))
+		v := FieldValue(fd.MapKey(), opts.nested().WithExtraFieldConstraints(constraints.GetMap().Keys))
+		w := FieldValue(fd.MapValue(), opts.nested().WithExtraFieldConstraints(constraints.GetMap().Values))
 		if v != nil && w != nil {
 			mapVal.Map().Set((*v).MapKey(), *w)
 		} else {

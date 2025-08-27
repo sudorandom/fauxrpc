@@ -1,7 +1,6 @@
 package fauxrpc
 
 import (
-	"fmt"
 	"math"
 	"strconv"
 	"strings"
@@ -55,7 +54,6 @@ func String(fd protoreflect.FieldDescriptor, opts GenOptions) string {
 	if constraints == nil {
 		return stringSimple(fd, opts)
 	}
-	fmt.Println(fd.FullName(), constraints)
 	var rules *validate.StringRules
 
 	// Check if the constraints are for a repeated field's items

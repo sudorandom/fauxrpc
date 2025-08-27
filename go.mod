@@ -77,4 +77,8 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-tool github.com/a-h/templ/cmd/templ
+tool (
+	connectrpc.com/connect/cmd/protoc-gen-connect-go
+	github.com/a-h/templ/cmd/templ
+	google.golang.org/protobuf/cmd/protoc-gen-go
+)

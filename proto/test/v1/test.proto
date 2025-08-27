@@ -201,3 +201,27 @@ message AllTypes {
     Enum enum_option = 97;
   }
 }
+
+message EnumTest {
+  enum TestEnum {
+    TEST_ENUM_UNSPECIFIED = 0;
+    TEST_ENUM_ONE = 1;
+    TEST_ENUM_TWO = 2;
+    TEST_ENUM_THREE = 3;
+  }
+  TestEnum enum_in = 1 [(buf.validate.field).enum = { in: [2, 3] }];
+  TestEnum enum_not_in = 2 [(buf.validate.field).enum = { not_in: [0, 1] }];
+  TestEnum enum_in_and_not_in = 3 [(buf.validate.field).enum = { in: [1, 2], not_in: [2] }];
+  TestEnum enum_const = 4 [(buf.validate.field).enum = { const: 3 }];
+  TestEnum enum_required = 5 [(buf.validate.field).required = true];
+}
+
+message RepeatedEnumTest {
+  enum TestEnum {
+    TEST_ENUM_UNSPECIFIED = 0;
+    TEST_ENUM_ONE = 1;
+    TEST_ENUM_TWO = 2;
+    TEST_ENUM_THREE = 3;
+  }
+  repeated TestEnum repeated_enum_in = 1 [(buf.validate.field).repeated.items.enum = { in: [2, 3] }];
+}

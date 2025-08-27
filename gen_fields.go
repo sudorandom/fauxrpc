@@ -113,5 +113,5 @@ func FieldValue(fd protoreflect.FieldDescriptor, opts GenOptions) *protoreflect.
 	if !ok {
 		return nil
 	}
-	return fn(fd, opts.nested())
+	return fn(fd, opts)
 }

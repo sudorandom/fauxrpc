@@ -45,3 +45,8 @@ func (st GenOptions) nested() GenOptions {
 	st.extraFieldConstraints = nil
 	return st
 }
+
+func (st GenOptions) WithExtraFieldConstraints(rules *validate.FieldRules) GenOptions {
+	st.extraFieldConstraints = rules
+	return st
+}
