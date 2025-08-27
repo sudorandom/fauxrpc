@@ -44,7 +44,7 @@ func Enum(fd protoreflect.FieldDescriptor, opts GenOptions) protoreflect.EnumNum
 		}
 	} else {
 		// If no 'In' rule, consider all enum values and filter out 'NotIn' values
-		for i := 0; i < allEnumValues.Len(); i++ {
+		for i := range allEnumValues.Len() {
 			val := allEnumValues.Get(i).Number()
 			if !slices.Contains(rules.NotIn, int32(val)) {
 				allowedValues = append(allowedValues, val)
