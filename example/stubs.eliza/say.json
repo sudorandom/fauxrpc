@@ -1,0 +1,31 @@
+{
+  "stubs": [
+    {
+      "id": "say-hello-default",
+      "target": "connectrpc.eliza.v1.ElizaService/Say",
+      "cel_content": "{'sentence': req.sentence}"
+    },
+    {
+      "id": "say-with-quote",
+      "target": "connectrpc.eliza.v1.ElizaService/Say",
+      "cel_content": "{'sentence': fake_quote()}"
+    },
+    {
+      "id": "say-with-question",
+      "target": "connectrpc.eliza.v1.ElizaService/Say",
+      "cel_content": "{'sentence': fake_question()}"
+    },
+    {
+      "id": "say-with-notfound",
+      "target": "connectrpc.eliza.v1.ElizaService/Say",
+      "error_code": 5,
+      "error_message": "not found"
+    },
+    {
+      "id": "say-with-error",
+      "target": "connectrpc.eliza.v1.ElizaService/Say",
+      "error_code": 13,
+      "error_message": "internal server error"
+    }
+  ]
+}
