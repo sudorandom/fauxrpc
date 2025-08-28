@@ -284,7 +284,7 @@ func LogEntry(entry *log.LogEntry) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</span> <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"h-5 w-5 text-gray-400 transition-transform duration-300 group-open:rotate-180\"><path d=\"m6 9 6 6 6-6\"></path></svg></div></summary><div class=\"p-6 border-t border-gray-700 bg-gray-900/50\"><div class=\"grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2 text-sm mb-8\"><div class=\"font-semibold text-gray-400 text-right\">gRPC Status</div><div class=\"font-mono\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</span> <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"h-5 w-5 text-gray-400 transition-transform duration-300 group-open:rotate-180\"><path d=\"m6 9 6 6 6-6\"></path></svg></div></summary><div class=\"p-6 border-t border-gray-700 bg-gray-900/50\"><div class=\"grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2 text-sm mb-8\"><div class=\"font-semibold text-gray-400 text-right\">gRPC Status</div><div class=\"font-mono\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

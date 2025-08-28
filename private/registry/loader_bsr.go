@@ -143,13 +143,21 @@ func loadFromCache(module, commitID string) ([]protoreflect.FileDescriptor, erro
 		}
 		return nil, handleCacheLoadError(cachePath, fmt.Errorf("failed to open cache file %q: %w", cachePath, err))
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			slog.Warn("failed to close file", slog.String("path", cachePath), slog.String("error", err.Error()))
+		}
+	}()
 
 	gzipReader, err := gzip.NewReader(file)
 	if err != nil {
 		return nil, handleCacheLoadError(cachePath, fmt.Errorf("failed to create gzip reader for %q: %w", cachePath, err))
 	}
-	defer gzipReader.Close()
+	defer func() {
+		if err := gzipReader.Close(); err != nil {
+			slog.Warn("failed to close gzip reader", slog.String("path", cachePath), slog.String("error", err.Error()))
+		}
+	}()
 
 	tarReader := tar.NewReader(gzipReader)
 	fileContents := make(map[string]string)
@@ -201,13 +209,25 @@ func saveToCache(module, commitID string, fileContents map[string]string) error 
 	if err != nil {
 		return fmt.Errorf("failed to create cache file: %w", err)
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			slog.Warn("failed to close file", slog.String("path", cachePath), slog.String("error", err.Error()))
+		}
+	}()
 
 	gzipWriter := gzip.NewWriter(file)
-	defer gzipWriter.Close()
+	defer func() {
+		if err := gzipWriter.Close(); err != nil {
+			slog.Warn("failed to close gzip writer", slog.String("path", cachePath), slog.String("error", err.Error()))
+		}
+	}()
 
 	tarWriter := tar.NewWriter(gzipWriter)
-	defer tarWriter.Close()
+	defer func() {
+		if err := tarWriter.Close(); err != nil {
+			slog.Warn("failed to close tar writer", slog.String("path", cachePath), slog.String("error", err.Error()))
+		}
+	}()
 
 	for name, content := range fileContents {
 		header := &tar.Header{
