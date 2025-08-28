@@ -27,24 +27,81 @@ go install github.com/sudorandom/fauxrpc/cmd/fauxrpc@v0.16.0
 ### Pre-built binaries
 Binaries are built for several platforms for each release. See the latest ones on [the releases page](https://github.com/sudorandom/fauxrpc/releases/latest).
 
-## Quick Start
+--------------
 
-Pass [protobuf descriptors](https://buf.build/docs/reference/descriptors) to FauxRPC and a test server will be created, returning random fake data!
+## Usage
+
+### Running the Server
+
+The core command is `fauxrpc run`, which starts the server based on your Protobuf schema. You can combine flags to configure the server on startup.
+
+For example, this command starts the server with a specific schema, loads a stub for a method, and enables the dashboard:
 
 ```shell
-$ fauxrpc run --schema=service.binpb
+fauxrpc run --schema=eliza.binpb --stubs=example/stubs.eliza/say.json --dashboard
 ```
 
-That's... it. Now you can call it with your gRPC/gRPC-Web/Connect clients:
+### Loading Schemas
+
+You must provide Protobuf descriptors so FauxRPC knows which services to fake. Schemas can be loaded from multiple sources, and you can mix and match them.
+
+#### From a local file:
 
 ```shell
-$ buf curl --http2-prior-knowledge http://127.0.0.1:6660/my.own.v1.service/HelloWorld
-{
-  "text": "Thundercats."
-}
+fauxrpc run --schema=service.binpb
 ```
 
-Go to [the documentation website](https://fauxrpc.com) for more!
+#### From the Buf Schema Registry (BSR)
+
+```shell
+fauxrpc run --schema=buf.build/bufbuild/eliza
+```
+
+#### From multiple sources at once
+```shell
+fauxrpc run --schema=service.binpb --schema=buf.build/bufbuild/eliza
+```
+
+## Using Stubs
+
+While FauxRPC generates random fake data by default, **stubs** let you define specific, predictable responses for your RPCs. This is great for testing specific scenarios.
+
+You can load a single stub file or an entire directory of them.
+
+#### Load a single stub file
+
+```shell
+fauxrpc run --schema=eliza.binpb --stubs=example/stubs.eliza/say.json
+```
+
+#### Load all stubs from a directory
+```shell
+fauxrpc run --schema=eliza.binpb --stubs=example/stubs.eliza/
+```
+
+## Making Requests with `fauxrpc curl`
+
+FauxRPC includes a handy built-in client, `fauxrpc curl`, for making requests to your services without needing external tools. It automatically sources the schema to provide a seamless testing experience.
+
+### Hit all RPCs in a service with default data
+
+```shell
+fauxrpc curl --http2-prior-knowledge --schema=buf.build/bufbuild/registry
+```
+
+#### Hit a specific RPC
+
+```shell
+fauxrpc curl --http2-prior-knowledge --schema=buf.build/bufbuild/registry buf.registry.plugin.v1beta1.LabelService/ListLabels
+```
+
+#### Using server reflection
+
+If no `--schema` option is provided, server reflection will be used to figure out the type and service information.
+
+```shell
+fauxrpc curl --http2-prior-knowledge buf.registry.plugin.v1beta1.LabelService/ListLabels
+```
 
 ## Dashboard
 Enhance your FauxRPC experience with the interactive dashboard, providing real-time insights into your server's operations.
@@ -55,7 +112,7 @@ To enable the dashboard, simply start FauxRPC with the `--dashboard` option:
 fauxrpc run --schema=service.binpb --dashboard
 ```
 
-Access the dashboard in your browser at `http://127.0.0.1:6660/fauxrpc`.
+Access the dashboard in your browser at [http://127.0.0.1:6660/fauxrpc](http://127.0.0.1:6660/fauxrpc).
 
 ![](<assets/dashboard.png>)
 
@@ -67,3 +124,5 @@ The dashboard provides:
 *   📚 **API Documentation:** Access auto-generated API documentation.
 
 ![](<assets/dashboard-event-log.gif>)
+
+Go to [the documentation website](https://fauxrpc.com) for more!
