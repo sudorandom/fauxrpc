@@ -22,7 +22,7 @@ import (
 	"buf.build/gen/go/bufbuild/registry/connectrpc/go/buf/registry/module/v1/modulev1connect"
 )
 
-var errCacheMiss = errors.New("cache miss")
+// errCacheMiss removed
 
 func looksLikeBSR(path string) bool {
 	return strings.HasPrefix(path, "buf.build/")
@@ -31,8 +31,6 @@ func looksLikeBSR(path string) bool {
 // AddServicesFromBSR resolves, downloads, and registers Protobuf services from the Buf Schema Registry (BSR).
 // It uses a local file-based cache to avoid re-downloading modules.
 func AddServicesFromBSR(registry LoaderTarget, module string) error {
-	slog.Info("resolving BSR module", slog.String("module", module))
-
 	module, ref, _ := strings.Cut(module, ":")
 	if ref == "" {
 		ref = "main"
@@ -48,13 +46,14 @@ func AddServicesFromBSR(registry LoaderTarget, module string) error {
 	var fileContents map[string]string
 
 	// 2. Try to load the compiled file descriptors from the local cache.
+	// If any error occurs (including cache miss), proceed to load from BSR.
 	cachedFds, err := loadFromCache(module, rootCommitID)
 	if err == nil {
 		slog.Debug("cache hit", slog.String("module", module), slog.String("commit", rootCommitID))
 		fds = cachedFds
-	} else if errors.Is(err, errCacheMiss) {
-		slog.Debug("cache miss", slog.String("module", module), slog.String("commit", rootCommitID))
-		// 3. If it's a cache miss, load the module from the BSR.
+	} else {
+		slog.Debug("cache load failed or miss, loading from BSR", slog.String("module", module), slog.String("commit", rootCommitID), slog.String("error", err.Error()))
+		// 3. Load the module from the BSR.
 		bsrFds, contents, bsrErr := loadFromBSR(module, rootCommitID)
 		if bsrErr != nil {
 			return fmt.Errorf("failed to load from BSR: %w", bsrErr)
@@ -68,9 +67,6 @@ func AddServicesFromBSR(registry LoaderTarget, module string) error {
 				slog.Warn("failed to save to cache", slog.String("error", err.Error()))
 			}
 		}()
-	} else {
-		// A non-miss error from the cache is treated as a fatal error.
-		return fmt.Errorf("failed to load from cache: %w", err)
 	}
 
 	// 4. Register the file descriptors with the target registry.
@@ -123,26 +119,35 @@ func resolveBSRCommitID(module, ref string) (string, error) {
 	return getLabelsResp.Msg.Labels[0].CommitId, nil
 }
 
+// handleCacheLoadError logs a warning and attempts to delete the corrupted cache file.
+func handleCacheLoadError(cachePath string, originalErr error) error {
+	slog.Warn("failed to load from cache, deleting cache file", slog.String("path", cachePath), slog.String("error", originalErr.Error()))
+	if rmErr := os.Remove(cachePath); rmErr != nil {
+		slog.Warn("failed to delete cache file", slog.String("path", cachePath), slog.String("error", rmErr.Error()))
+	}
+	return fmt.Errorf("failed to load from cache: %w", originalErr)
+}
+
 // loadFromCache reads a .tar.gz file from the local cache, extracts the .proto files,
 // and compiles them into file descriptors.
 func loadFromCache(module, commitID string) ([]protoreflect.FileDescriptor, error) {
 	cachePath, err := bsrCachePath(module, commitID)
 	if err != nil {
-		return nil, err
+		return nil, err // This error is not related to cache file corruption, so don't delete.
 	}
 
 	file, err := os.Open(cachePath)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return nil, errCacheMiss
+			return nil, fs.ErrNotExist // This is a cache miss, not an error to warn about or delete.
 		}
-		return nil, fmt.Errorf("failed to open cache file %q: %w", cachePath, err)
+		return nil, handleCacheLoadError(cachePath, fmt.Errorf("failed to open cache file %q: %w", cachePath, err))
 	}
 	defer file.Close()
 
 	gzipReader, err := gzip.NewReader(file)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create gzip reader for %q: %w", cachePath, err)
+		return nil, handleCacheLoadError(cachePath, fmt.Errorf("failed to create gzip reader for %q: %w", cachePath, err))
 	}
 	defer gzipReader.Close()
 
@@ -156,13 +161,13 @@ func loadFromCache(module, commitID string) ([]protoreflect.FileDescriptor, erro
 			break // End of archive
 		}
 		if err != nil {
-			return nil, fmt.Errorf("failed to read tar header from %q: %w", cachePath, err)
+			return nil, handleCacheLoadError(cachePath, fmt.Errorf("failed to read tar header from %q: %w", cachePath, err))
 		}
 
 		if header.Typeflag == tar.TypeReg {
 			contentBytes, err := io.ReadAll(tarReader)
 			if err != nil {
-				return nil, fmt.Errorf("failed to read content of %s from %q: %w", header.Name, cachePath, err)
+				return nil, handleCacheLoadError(cachePath, fmt.Errorf("failed to read content of %s from %q: %w", header.Name, cachePath, err))
 			}
 			fileContents[header.Name] = string(contentBytes)
 			fileNames = append(fileNames, header.Name)
@@ -170,10 +175,14 @@ func loadFromCache(module, commitID string) ([]protoreflect.FileDescriptor, erro
 	}
 
 	if len(fileNames) == 0 {
-		return nil, fmt.Errorf("cache file %q is empty: %w", cachePath, errCacheMiss)
+		return nil, handleCacheLoadError(cachePath, fmt.Errorf("cache file %q is empty", cachePath))
 	}
 
-	return compileAndRegisterFiles(fileContents, fileNames)
+	fds, compileErr := compileAndRegisterFiles(fileContents, fileNames)
+	if compileErr != nil {
+		return nil, handleCacheLoadError(cachePath, compileErr)
+	}
+	return fds, nil
 }
 
 // saveToCache writes the given protobuf file contents into a .tar.gz archive
