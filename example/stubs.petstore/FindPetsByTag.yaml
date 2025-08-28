@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../stubs.schema.json
 ---
 stubs:
 - id: find-pets-by-tag

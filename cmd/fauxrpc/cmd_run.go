@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -208,7 +209,9 @@ func addStubsFromFile(srv server.Server, stubsPath string) error {
 				}
 				contents = standardContents
 			}
-			if err := json.Unmarshal(contents, &stubFile); err != nil {
+			decoder := json.NewDecoder(bytes.NewReader(contents))
+			decoder.DisallowUnknownFields()
+			if err := decoder.Decode(&stubFile); err != nil {
 				return fmt.Errorf("json.Unmarshal: %s: %w", path, err)
 			}
 		case ".yaml":
@@ -216,7 +219,9 @@ func addStubsFromFile(srv server.Server, stubsPath string) error {
 			if err != nil {
 				return fmt.Errorf("%s: %w", path, err)
 			}
-			if err := yaml.Unmarshal(contents, &stubFile); err != nil {
+			decoder := yaml.NewDecoder(bytes.NewReader(contents))
+			decoder.KnownFields(true)
+			if err := decoder.Decode(&stubFile); err != nil {
 				return fmt.Errorf("%s: %w", path, err)
 			}
 		}

@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../stubs.schema.json
 ---
 stubs:
 - id: get-pets-by-id-id-1

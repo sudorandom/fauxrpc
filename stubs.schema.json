@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "FauxRPC Stubs Configuration",
+  "description": "Schema for FauxRPC stub configuration files, supporting both JSON and YAML formats.",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "stubs": {
+      "type": "array",
+      "description": "A list of stub definitions.",
+      "items": {
+        "$ref": "#/definitions/Stub"
+      }
+    }
+  },
+  "required": ["stubs"],
+  "definitions": {
+    "Stub": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Defines a single FauxRPC stub.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "A unique identifier for the stub. If not provided, a random one will be generated."
+        },
+        "target": {
+          "type": "string",
+          "description": "The fully qualified name of the service method or message type this stub applies to (e.g., 'connectrpc.eliza.v1.ElizaService/Say' or 'google.protobuf.Any')."
+        },
+        "active_if": {
+          "type": "string",
+          "description": "A Common Expression Language (CEL) expression that must evaluate to true for this stub to be active. The request message is available as 'req'."
+        },
+        "priority": {
+          "type": "integer",
+          "description": "An integer representing the priority of the stub. Higher values indicate higher priority. Stubs with higher priority are evaluated first."
+        },
+        "content": {
+          "description": "A JSON object representing the response message. This will be unmarshaled into the appropriate protobuf message type."
+        },
+        "cel_content": {
+          "type": "string",
+          "description": "A Common Expression Language (CEL) expression that evaluates to the response message. The request message is available as 'req', and faker functions are available (e.g., 'fake_name()')."
+        },
+        "error_code": {
+          "type": "integer",
+          "description": "The gRPC status code (e.g., 0 for OK, 5 for NOT_FOUND, 13 for INTERNAL)."
+        },
+        "error_message": {
+          "type": "string",
+          "description": "A human-readable error message."
+        }
+      },
+      "required": ["target"],
+      "errorMessage": "A stub must define exactly one of 'cel_content', 'content', 'error_code', or 'error_message'."
+    }
+  }
+}
