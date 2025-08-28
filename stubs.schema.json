@@ -37,8 +37,7 @@
           "description": "An integer representing the priority of the stub. Higher values indicate higher priority. Stubs with higher priority are evaluated first."
         },
         "content": {
-          "type": "object",
-          "description": "A JSON string representing the response message. This will be unmarshaled into the appropriate protobuf message type."
+          "description": "A JSON object representing the response message. This will be unmarshaled into the appropriate protobuf message type."
         },
         "cel_content": {
           "type": "string",
