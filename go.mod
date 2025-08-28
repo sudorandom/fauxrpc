@@ -2,6 +2,8 @@ module github.com/sudorandom/fauxrpc
 
 go 1.24.6
 
+retract v0.15.25
+
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.8-20250717185734-6c6e0d3c608e.1
 	buf.build/gen/go/bufbuild/registry/connectrpc/go v1.18.1-20250819211657-a3dd0d3ea69b.1
