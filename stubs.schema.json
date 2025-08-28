@@ -53,7 +53,7 @@
         }
       },
       "required": ["target"],
-      "errorMessage": "A stub must define exactly one of 'cel_content', 'json', 'proto', or 'error'."
+      "errorMessage": "A stub must define exactly one of 'cel_content', 'content', 'error_code', or 'error_message'."
     }
   }
 }
