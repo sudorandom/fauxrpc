@@ -21,7 +21,7 @@ See the [the documentation website](https://fauxrpc.com) for more!
 
 ### Install via source
 ```
-go install github.com/sudorandom/fauxrpc/cmd/fauxrpc@latest
+go install github.com/sudorandom/fauxrpc/cmd/fauxrpc@v0.6.0
 ```
 
 ### Pre-built binaries
