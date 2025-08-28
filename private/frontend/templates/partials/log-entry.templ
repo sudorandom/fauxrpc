@@ -1,229 +1,253 @@
 package partials
 
 import (
-	"bytes"
-	"encoding/json"
-	"fmt"
-	"sort"
-	"strings"
-	"time"
+    "bytes"
+    "encoding/json"
+    "fmt"
+    "sort"
+    "strings"
+    "time"
 
-	"github.com/sudorandom/fauxrpc/private/log"
+    "github.com/sudorandom/fauxrpc/private/log"
 )
 
 // grpcStatusNames maps gRPC status codes to their string names.
 var grpcStatusNames = map[int]string{
-	0:  "OK",
-	1:  "Canceled",
-	2:  "Unknown",
-	3:  "InvalidArgument",
-	4:  "DeadlineExceeded",
-	5:  "NotFound",
-	6:  "AlreadyExists",
-	7:  "PermissionDenied",
-	8:  "ResourceExhausted",
-	9:  "FailedPrecondition",
-	10: "Aborted",
-	11: "OutOfRange",
-	12: "Unimplemented",
-	13: "Internal",
-	14: "Unavailable",
-	15: "DataLoss",
-	16: "Unauthenticated",
+    0:  "OK",
+    1:  "Canceled",
+    2:  "Unknown",
+    3:  "InvalidArgument",
+    4:  "DeadlineExceeded",
+    5:  "NotFound",
+    6:  "AlreadyExists",
+    7:  "PermissionDenied",
+    8:  "ResourceExhausted",
+    9:  "FailedPrecondition",
+    10: "Aborted",
+    11: "OutOfRange",
+    12: "Unimplemented",
+    13: "Internal",
+    14: "Unavailable",
+    15: "DataLoss",
+    16: "Unauthenticated",
 }
 
 func getStatusName(status int) string {
-	if name, ok := grpcStatusNames[status]; ok {
-		return name
-	}
-	return fmt.Sprintf("UNKNOWN[%d]", status)
+    if name, ok := grpcStatusNames[status]; ok {
+        return name
+    }
+    return fmt.Sprintf("UNKNOWN[%d]", status)
 }
 
 func getStatusColor(status int) string {
-	switch status {
-	case 0: // OK
-		return "bg-green-500 text-green-100"
-	case 1, 3, 5, 6, 9, 10, 11, 15: // Canceled, InvalidArgument, NotFound, AlreadyExists, FailedPrecondition, Aborted, OutOfRange, DataLoss
-		return "bg-yellow-500 text-yellow-100"
-	case 2, 4, 7, 8, 12, 13, 14, 16: // Unknown, DeadlineExceeded, PermissionDenied, ResourceExhausted, Unimplemented, Internal, Unavailable, Unauthenticated
-		return "bg-red-500 text-red-100"
-	default: // Any other status
-		return "bg-gray-500 text-gray-100"
-	}
+    switch status {
+    case 0: // OK
+        return "bg-green-500 text-green-100"
+    case 1, 3, 5, 6, 9, 10, 11, 15: // Canceled, InvalidArgument, NotFound, AlreadyExists, FailedPrecondition, Aborted, OutOfRange, DataLoss
+        return "bg-yellow-500 text-yellow-100"
+    case 2, 4, 7, 8, 12, 13, 14, 16: // Unknown, DeadlineExceeded, PermissionDenied, ResourceExhausted, Unimplemented, Internal, Unavailable, Unauthenticated
+        return "bg-red-500 text-red-100"
+    default: // Any other status
+        return "bg-gray-500 text-gray-100"
+    }
 }
 
 func getProtocolColor(protocol string) string {
-	switch protocol {
-	case "gRPC":
-		return "bg-blue-500 text-blue-100"
-	case "gRPC-Web":
-		return "bg-purple-500 text-purple-100"
-	case "ConnectRPC":
-		return "bg-indigo-500 text-indigo-100"
-	case "HTTP":
-		return "bg-sky-500 text-sky-100"
-	default:
-		return "bg-gray-500 text-gray-100"
-	}
+    switch protocol {
+    case "gRPC":
+        return "bg-blue-500 text-blue-100"
+    case "gRPC-Web":
+        return "bg-purple-500 text-purple-100"
+    case "ConnectRPC":
+        return "bg-indigo-500 text-indigo-100"
+    case "HTTP":
+        return "bg-sky-500 text-sky-100"
+    default:
+        return "bg-gray-500 text-gray-100"
+    }
 }
 
 func formatHeaders(raw json.RawMessage) string {
-	// Gracefully handle nil, empty, or "null" JSON
-	if len(raw) == 0 || string(raw) == "null" {
-		return "n/a"
-	}
+    // Gracefully handle nil, empty, or "null" JSON
+    if len(raw) == 0 || string(raw) == "null" {
+        return "n/a"
+    }
 
-	// Unmarshal into a map where the values are kept as raw JSON.
-	// This allows us to inspect the type of each value individually.
-	var headers map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &headers); err != nil {
-		// If the top-level data isn't a JSON object, just show the raw string.
-		return string(raw)
-	}
+    // Unmarshal into a map where the values are kept as raw JSON.
+    // This allows us to inspect the type of each value individually.
+    var headers map[string]json.RawMessage
+    if err := json.Unmarshal(raw, &headers); err != nil {
+        // If the top-level data isn't a JSON object, just show the raw string.
+        return string(raw)
+    }
 
-	if len(headers) == 0 {
-		return "n/a"
-	}
+    if len(headers) == 0 {
+        return "n/a"
+    }
 
-	// Sort keys for consistent order
-	keys := make([]string, 0, len(headers))
-	for k := range headers {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
+    // Sort keys for consistent order
+    keys := make([]string, 0, len(headers))
+    for k := range headers {
+        keys = append(keys, k)
+    }
+    sort.Strings(keys)
 
-	var builder strings.Builder
-	for _, k := range keys {
-		vRaw := headers[k]
+    var builder strings.Builder
+    for _, k := range keys {
+        vRaw := headers[k]
 
-		// First, try to unmarshal the value as an array of strings
-		var values []string
-		if err := json.Unmarshal(vRaw, &values); err == nil {
-			for _, v := range values {
-				builder.WriteString(fmt.Sprintf("%s: %s\n", k, v))
-			}
-			continue
-		}
+        // First, try to unmarshal the value as an array of strings
+        var values []string
+        if err := json.Unmarshal(vRaw, &values); err == nil {
+            for _, v := range values {
+                builder.WriteString(fmt.Sprintf("%s: %s\n", k, v))
+            }
+            continue
+        }
 
-		// If that fails, try to unmarshal it as a single string
-		var value string
-		if err := json.Unmarshal(vRaw, &value); err == nil {
-			builder.WriteString(fmt.Sprintf("%s: %s\n", k, value))
-			continue
-		}
+        // If that fails, try to unmarshal it as a single string
+        var value string
+        if err := json.Unmarshal(vRaw, &value); err == nil {
+            builder.WriteString(fmt.Sprintf("%s: %s\n", k, value))
+            continue
+        }
 
-		// As a last resort, just show the raw value
-		builder.WriteString(fmt.Sprintf("%s: %s\n", k, string(vRaw)))
-	}
+        // As a last resort, just show the raw value
+        builder.WriteString(fmt.Sprintf("%s: %s\n", k, string(vRaw)))
+    }
 
-	return strings.TrimSpace(builder.String())
+    return strings.TrimSpace(builder.String())
 }
 
 func prettyPrintJSON(data json.RawMessage) string {
-	// Gracefully handle nil, empty, or "null" JSON
-	if len(data) == 0 || string(data) == "null" {
-		return "n/a"
-	}
+    // Gracefully handle nil, empty, or "null" JSON
+    if len(data) == 0 || string(data) == "null" {
+        return "n/a"
+    }
 
-	var indentedJSON bytes.Buffer
-	if err := json.Indent(&indentedJSON, data, "", "  "); err != nil {
-		// If it can't be indented, it might not be JSON. Show the raw string.
-		return string(data)
-	}
-	return indentedJSON.String()
+    var indentedJSON bytes.Buffer
+    if err := json.Indent(&indentedJSON, data, "", "  "); err != nil {
+        // If it can't be indented, it might not be JSON. Show the raw string.
+        return string(data)
+    }
+    return indentedJSON.String()
 }
 
 templ LogEntry(entry *log.LogEntry) {
-	<details class="bg-gray-800/60 border border-gray-700 rounded-lg mb-3 overflow-hidden">
-		<summary class="w-full p-4 text-left flex items-center justify-between hover:bg-gray-700/50 transition-colors duration-200 cursor-pointer">
-			<div class="flex items-center space-x-4 flex-wrap">
-				<span class={ "px-2 py-1 text-xs font-bold rounded-md", getStatusColor(entry.Status) }>{ getStatusName(entry.Status) }</span>
-				<span class="text-gray-400 font-mono text-sm">{ entry.Timestamp.Format(time.TimeOnly) }</span>
-				<span class="text-white font-medium">{ entry.Service }</span>
-				<span class="text-gray-400">{ entry.Method }</span>
-			</div>
-			<div class="flex items-center space-x-2 flex-shrink-0 ml-4">
-				<span class={ "px-2 py-1 text-xs font-bold rounded-md ml-2", getProtocolColor(entry.ClientProtocol) }>{ entry.ClientProtocol }</span>
-				<span class="text-sm text-gray-500">{ entry.Duration.String() }</span>
-				<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 text-gray-400 transition-transform duration-300 group-open:rotate-180"><path d="m6 9 6 6 6-6"></path></svg>
-			</div>
-		</summary>
-		<div class="p-6 border-t border-gray-700 bg-gray-900/50">
-			<div class="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2 text-sm mb-8">
-				<div class="font-semibold text-gray-400 text-right">gRPC Status</div>
-				<div class="font-mono">
-					<span class={ "px-2 py-1 text-xs font-bold rounded-md", getStatusColor(entry.Status) }>{ getStatusName(entry.Status) } [{ entry.Status }]</span>
-				</div>
-				<div class="font-semibold text-gray-400 text-right">Path</div>
-				<div class="font-mono text-gray-200">{ fmt.Sprintf("%s/%s", entry.Service, entry.Method) }</div>
-				<div class="font-semibold text-gray-400 text-right">Time</div>
-				<div class="font-mono text-gray-200">{ entry.Timestamp.Format("2006-01-02 15:04:05.999 Z07:00") }</div>
-				<div class="font-semibold text-gray-400 text-right">Latency</div>
-				<div class="font-mono text-gray-200">{ entry.Duration.String() }</div>
-				<div class="font-semibold text-gray-400 text-right">Mocks Used</div>
-				if len(entry.StubsUsed) > 0 {
-					<div class="font-mono text-gray-200">{ fmt.Sprintf("%d", len(entry.StubsUsed)) }</div>
-				} else {
-					<div class="font-mono text-gray-400">None</div>
-				}
-			</div>
-			<div class="space-y-8">
-				<div>
-					<h4 class="text-lg font-semibold text-gray-300 mb-3">Request</h4>
-					<div class="space-y-4">
-						<div>
-							<h5 class="text-md font-medium text-gray-400 mb-2">Headers</h5>
-							<pre class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto"><code>{ formatHeaders(entry.RequestHeaders) }</code></pre>
-						</div>
-						<div>
-							<h5 class="text-md font-medium text-gray-400 mb-2">Body</h5>
-							<pre class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto"><code>{ prettyPrintJSON(entry.RequestBody) }</code></pre>
-						</div>
-					</div>
-				</div>
-				<div>
-					<h4 class="text-lg font-semibold text-gray-300 mb-3">Response</h4>
-					<div class="space-y-4">
-						<div>
-							<h5 class="text-md font-medium text-gray-400 mb-2">Headers</h5>
-							<pre class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto"><code>{ formatHeaders(entry.ResponseHeaders) }</code></pre>
-						</div>
-						<div>
-							if entry.Status != 0 {
-								<h5 class="text-md font-medium text-red-400 mb-2">Error</h5>
-							} else {
-								<h5 class="text-md font-medium text-gray-400 mb-2">Body</h5>
-							}
-							<pre class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto"><code>{ prettyPrintJSON(entry.ResponseBody) }</code></pre>
-						</div>
-					</div>
-				</div>
-				if len(entry.StubsUsed) > 0 {
-					<div>
-						<h4 class="text-lg font-semibold text-gray-300 mb-3">Mocks Used</h4>
-						<div class="overflow-hidden rounded-md border border-gray-700">
-							<table class="w-full text-sm text-left text-gray-400">
-								<thead class="text-xs text-gray-300 uppercase bg-gray-700/50">
-									<tr>
-										<th scope="col" class="px-4 py-2">Target</th>
-										<th scope="col" class="px-4 py-2">ID</th>
-									</tr>
-								</thead>
-								<tbody>
-									for _, stub := range entry.StubsUsed {
-										<tr class="border-b border-gray-700 last:border-b-0 hover:bg-gray-800/50">
-											<td class="px-4 py-2 font-mono">{ stub.GetName() }</td>
-											<td class="px-4 py-2 font-mono">
-												<a href={ templ.URL(fmt.Sprintf("/fauxrpc/stubs/%s/%s", stub.GetName(), stub.GetID())) } class="text-blue-400 hover:text-blue-200 transition-colors duration-200">{ stub.GetID() }</a>
-											</td>
-										</tr>
-									}
-								</tbody>
-							</table>
-						</div>
-					</div>
-				}
-			</div>
-		</div>
-	</details>
+    <details class="bg-gray-800/60 border border-gray-700 rounded-lg mb-3 overflow-hidden">
+        <summary class="w-full p-4 text-left flex items-center justify-between hover:bg-gray-700/50 transition-colors duration-200 cursor-pointer">
+            <div class="flex items-center space-x-4 flex-wrap">
+                <span class={ "px-2 py-1 text-xs font-bold rounded-md", getStatusColor(entry.Status) }>{ getStatusName(entry.Status) }</span>
+                <span class="text-gray-400 font-mono text-sm">{ entry.Timestamp.Format(time.TimeOnly) }</span>
+                <span class="text-white font-medium">{ entry.Service }</span>
+                <span class="text-gray-400">{ entry.Method }</span>
+            </div>
+            <div class="flex items-center space-x-2 flex-shrink-0 ml-4">
+                <span class={ "px-2 py-1 text-xs font-bold rounded-md ml-2", getProtocolColor(entry.ClientProtocol) }>{ entry.ClientProtocol }</span>
+                <span class="text-sm text-gray-500">{ entry.Duration.String() }</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-5 w-5 text-gray-400 transition-transform duration-300 group-open:rotate-180"><path d="m6 9 6 6 6-6"></path></svg>
+            </div>
+        </summary>
+        <div class="p-6 border-t border-gray-700 bg-gray-900/50">
+            <div class="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2 text-sm mb-8">
+                <div class="font-semibold text-gray-400 text-right">gRPC Status</div>
+                <div class="font-mono">
+                    <span class={ "px-2 py-1 text-xs font-bold rounded-md", getStatusColor(entry.Status) }>{ getStatusName(entry.Status) } [{ entry.Status }]</span>
+                </div>
+                <div class="font-semibold text-gray-400 text-right">Path</div>
+                <div class="font-mono text-gray-200">{ fmt.Sprintf("%s/%s", entry.Service, entry.Method) }</div>
+                <div class="font-semibold text-gray-400 text-right">Time</div>
+                <div class="font-mono text-gray-200">{ entry.Timestamp.Format("2006-01-02 15:04:05.999 Z07:00") }</div>
+                <div class="font-semibold text-gray-400 text-right">Latency</div>
+                <div class="font-mono text-gray-200">{ entry.Duration.String() }</div>
+                <div class="font-semibold text-gray-400 text-right">Mocks Used</div>
+                if len(entry.StubsUsed) > 0 {
+                    <div class="font-mono text-gray-200">{ fmt.Sprintf("%d", len(entry.StubsUsed)) }</div>
+                } else {
+                    <div class="font-mono text-gray-400">None</div>
+                }
+            </div>
+            <div class="space-y-8">
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-300 mb-3">Request</h4>
+                    <div class="space-y-4">
+                        <div>
+                            <h5 class="text-md font-medium text-gray-400 mb-2">Headers</h5>
+                            <pre class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto"><code>{ formatHeaders(entry.RequestHeaders) }</code></pre>
+                        </div>
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <h5 class="text-md font-medium text-gray-400">Body</h5>
+                                <button
+                                    class="flex items-center space-x-2 text-gray-400 hover:text-gray-200 transition-colors duration-200 text-xs"
+                                    onclick="copyToClipboard('request-body-{ entry.ID }', this)"
+                                    title="Copy request body"
+                                >
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a2.25 2.25 0 01-2.25 2.25h-1.5a2.25 2.25 0 01-2.25-2.25v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"/>
+                                    </svg>
+                                    <span>Copy</span>
+                                </button>
+                            </div>
+                            <pre id="request-body-{ entry.ID }" class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto max-h-[200px] overflow-y-auto"><code>{ prettyPrintJSON(entry.RequestBody) }</code></pre>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-300 mb-3">Response</h4>
+                    <div class="space-y-4">
+                        <div>
+                            <h5 class="text-md font-medium text-gray-400 mb-2">Headers</h5>
+                            <pre class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto"><code>{ formatHeaders(entry.ResponseHeaders) }</code></pre>
+                        </div>
+                        <div>
+                            if entry.Status != 0 {
+                                <h5 class="text-md font-medium text-red-400 mb-2">Error</h5>
+                            } else {
+                                <div class="flex items-center justify-between mb-2">
+                                    <h5 class="text-md font-medium text-gray-400">Body</h5>
+                                    <button
+                                        class="flex items-center space-x-2 text-gray-400 hover:text-gray-200 transition-colors duration-200 text-xs"
+                                        onclick="copyToClipboard('response-body-{ entry.ID }', this)"
+                                        title="Copy response body"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a2.25 2.25 0 01-2.25 2.25h-1.5a2.25 2.25 0 01-2.25-2.25v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"/>
+                                        </svg>
+                                        <span>Copy</span>
+                                    </button>
+                                </div>
+                            }
+                            <pre id="response-body-{ entry.ID }" class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto max-h-[200px] overflow-y-auto"><code>{ prettyPrintJSON(entry.ResponseBody) }</code></pre>
+                        </div>
+                    </div>
+                </div>
+                if len(entry.StubsUsed) > 0 {
+                    <div>
+                        <h4 class="text-lg font-semibold text-gray-300 mb-3">Mocks Used</h4>
+                        <div class="overflow-hidden rounded-md border border-gray-700">
+                            <table class="w-full text-sm text-left text-gray-400">
+                                <thead class="text-xs text-gray-300 uppercase bg-gray-700/50">
+                                    <tr>
+                                        <th scope="col" class="px-4 py-2">Target</th>
+                                        <th scope="col" class="px-4 py-2">ID</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    for _, stub := range entry.StubsUsed {
+                                        <tr class="border-b border-gray-700 last:border-b-0 hover:bg-gray-800/50">
+                                            <td class="px-4 py-2 font-mono">{ stub.GetName() }</td>
+                                            <td class="px-4 py-2 font-mono">
+                                                <a href={ templ.URL(fmt.Sprintf("/fauxrpc/stubs/%s/%s", stub.GetName(), stub.GetID())) } class="text-blue-400 hover:text-blue-200 transition-colors duration-200">{ stub.GetID() }</a>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </details>
 }
