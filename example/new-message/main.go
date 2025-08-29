@@ -13,7 +13,13 @@ import (
 
 func main() {
 	{
-		msg := fauxrpc.NewMessage(elizav1.File_connectrpc_eliza_v1_eliza_proto.Messages().ByName("SayResponse"))
+		msg, err := fauxrpc.NewMessage(
+			elizav1.File_connectrpc_eliza_v1_eliza_proto.Messages().ByName("SayResponse"),
+			fauxrpc.GenOptions{MaxDepth: 5},
+		)
+		if err != nil {
+			log.Fatalf("err: %s", err)
+		}
 		b, err := protojson.MarshalOptions{Indent: "  "}.Marshal(msg)
 		if err != nil {
 			log.Fatalf("err: %s", err)
@@ -22,7 +28,13 @@ func main() {
 	}
 
 	{
-		msg := fauxrpc.NewMessage(ownerv1.File_buf_registry_owner_v1_owner_proto.Messages().ByName("Owner"))
+		msg, err := fauxrpc.NewMessage(
+			ownerv1.File_buf_registry_owner_v1_owner_proto.Messages().ByName("Owner"),
+			fauxrpc.GenOptions{MaxDepth: 5},
+		)
+		if err != nil {
+			log.Fatalf("err: %s", err)
+		}
 		b, err := protojson.MarshalOptions{Indent: "  "}.Marshal(msg)
 		if err != nil {
 			log.Fatalf("err: %s", err)
@@ -31,7 +43,13 @@ func main() {
 	}
 
 	{
-		msg := fauxrpc.NewMessage(runtimeapi.File_pkg_apis_runtime_v1_api_proto.Messages().ByName("ListMetricDescriptorsResponse"))
+		msg, err := fauxrpc.NewMessage(
+			runtimeapi.File_pkg_apis_runtime_v1_api_proto.Messages().ByName("ListMetricDescriptorsResponse"),
+			fauxrpc.GenOptions{MaxDepth: 5},
+		)
+		if err != nil {
+			log.Fatalf("err: %s", err)
+		}
 		b, err := protojson.MarshalOptions{Indent: "  "}.Marshal(msg)
 		if err != nil {
 			log.Fatalf("err: %s", err)

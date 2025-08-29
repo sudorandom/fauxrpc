@@ -90,13 +90,14 @@ func (c *FauxRPCContainer) AddFileDescriptor(ctx context.Context, fd protoreflec
 	if err != nil {
 		return err
 	}
-	_, err = client.AddDescriptors(ctx, connect.NewRequest(&registryv1.AddDescriptorsRequest{
-		Descriptors: &descriptorpb.FileDescriptorSet{
-			File: []*descriptorpb.FileDescriptorProto{
-				protodesc.ToFileDescriptorProto(fd),
+	_, err = client.AddDescriptors(ctx, connect.NewRequest(
+		registryv1.AddDescriptorsRequest_builder{
+			Descriptors: &descriptorpb.FileDescriptorSet{
+				File: []*descriptorpb.FileDescriptorProto{
+					protodesc.ToFileDescriptorProto(fd),
+				},
 			},
-		},
-	}))
+		}.Build()))
 	return err
 }
 
@@ -136,7 +137,11 @@ func (c *FauxRPCContainer) AddFiles(ctx context.Context, files *protoregistry.Fi
 		return true
 	})
 
-	_, err = client.AddDescriptors(ctx, connect.NewRequest(&registryv1.AddDescriptorsRequest{Descriptors: fds}))
+	_, err = client.AddDescriptors(ctx, connect.NewRequest(
+		registryv1.AddDescriptorsRequest_builder{
+			Descriptors: fds,
+		}.Build(),
+	))
 	return err
 }
 
@@ -193,17 +198,19 @@ func (c *FauxRPCContainer) AddStub(ctx context.Context, target string, msg proto
 	if err != nil {
 		return err
 	}
-	_, err = client.AddStubs(ctx, connect.NewRequest(&stubsv1.AddStubsRequest{
-		Stubs: []*stubsv1.Stub{
-			{
-				Ref: &stubsv1.StubRef{
-					Id:     uuid.New().String(),
-					Target: target,
-				},
-				Content: &stubsv1.Stub_Proto{Proto: msgpb},
+	_, err = client.AddStubs(ctx, connect.NewRequest(
+		stubsv1.AddStubsRequest_builder{
+			Stubs: []*stubsv1.Stub{
+				stubsv1.Stub_builder{
+					Ref: stubsv1.StubRef_builder{
+						Id:     proto.String(uuid.New().String()),
+						Target: proto.String(target),
+					}.Build(),
+					Proto: msgpb,
+				}.Build(),
 			},
-		},
-	}))
+		}.Build(),
+	))
 	return err
 }
 
@@ -225,22 +232,20 @@ func (c *FauxRPCContainer) AddStubError(ctx context.Context, target string, msg 
 	if err != nil {
 		return err
 	}
-	_, err = client.AddStubs(ctx, connect.NewRequest(&stubsv1.AddStubsRequest{
+	_, err = client.AddStubs(ctx, connect.NewRequest(stubsv1.AddStubsRequest_builder{
 		Stubs: []*stubsv1.Stub{
-			{
-				Ref: &stubsv1.StubRef{
-					Id:     uuid.New().String(),
-					Target: target,
-				},
-				Content: &stubsv1.Stub_Error{
-					Error: &stubsv1.Error{
-						Code:    code,
-						Message: msg,
-					},
-				},
-			},
+			stubsv1.Stub_builder{
+				Ref: stubsv1.StubRef_builder{
+					Id:     proto.String(uuid.New().String()),
+					Target: proto.String(target),
+				}.Build(),
+				Error: stubsv1.Error_builder{
+					Code:    &code,
+					Message: proto.String(msg),
+				}.Build(),
+			}.Build(),
 		},
-	}))
+	}.Build()))
 	return err
 }
 
