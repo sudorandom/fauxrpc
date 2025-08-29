@@ -54,8 +54,23 @@ func AddServicesFromReflection(registry LoaderTarget, httpClient *http.Client, a
 		}
 	}
 
+	// Deduplicate file descriptors. It's possible that we get the same file
+	// descriptor multiple times if we ask for multiple services that are in the
+	// same file or have common dependencies.
+	seen := make(map[string]struct{})
+	uniqueFdps := make([]*descriptorpb.FileDescriptorProto, 0, len(allFdps))
+	for _, fdp := range allFdps {
+		if fdp.Name == nil {
+			continue
+		}
+		if _, ok := seen[fdp.GetName()]; !ok {
+			seen[fdp.GetName()] = struct{}{}
+			uniqueFdps = append(uniqueFdps, fdp)
+		}
+	}
+
 	fds := &descriptorpb.FileDescriptorSet{
-		File: allFdps,
+		File: uniqueFdps,
 	}
 	files, err := protodesc.NewFiles(fds)
 	if err != nil {
