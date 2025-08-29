@@ -350,7 +350,15 @@ func getClientProtocol(r *http.Request) string {
 
 func maskHeaders(headers http.Header) http.Header {
 	maskedHeaders := headers.Clone()
-	for _, h := range []string{"Authorization", "Proxy-Authorization", "Proxy-Authenticate", "WWW-Authenticate", "X-API-Key", "X-Auth-Token"} {
+	for _, h := range []string{
+		"Authorization",
+		"Proxy-Authorization",
+		"Proxy-Authenticate",
+		"WWW-Authenticate",
+		"X-API-Key",
+		"X-Auth-Token",
+		"Cookie",
+	} {
 		if maskedHeaders.Get(h) != "" {
 			maskedHeaders.Set(h, "*****")
 		}
