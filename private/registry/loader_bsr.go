@@ -1,7 +1,7 @@
 package registry
 
 import (
-	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"context"
 	"errors"
@@ -16,8 +16,10 @@ import (
 
 	modulev1 "buf.build/gen/go/bufbuild/registry/protocolbuffers/go/buf/registry/module/v1"
 	"connectrpc.com/connect"
-	"github.com/bufbuild/protocompile"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/types/descriptorpb"
 
 	"buf.build/gen/go/bufbuild/registry/connectrpc/go/buf/registry/module/v1/modulev1connect"
 )
@@ -36,14 +38,15 @@ func AddServicesFromBSR(registry LoaderTarget, module string) error {
 		ref = "main"
 	}
 
+	httpClient := newBufHttpClient()
+
 	// 1. Resolve the module's 'ref' (e.g., "main") to a specific commit ID.
-	rootCommitID, err := resolveBSRCommitID(module, ref)
+	rootCommitID, err := resolveBSRCommitID(httpClient, module, ref)
 	if err != nil {
 		return err
 	}
 
-	var fds []protoreflect.FileDescriptor
-	var fileContents map[string]string
+	var fds *descriptorpb.FileDescriptorSet
 
 	// 2. Try to load the compiled file descriptors from the local cache.
 	// If any error occurs (including cache miss), proceed to load from BSR.
@@ -54,16 +57,16 @@ func AddServicesFromBSR(registry LoaderTarget, module string) error {
 	} else {
 		slog.Debug("cache load failed or miss, loading from BSR", slog.String("module", module), slog.String("commit", rootCommitID), slog.String("error", err.Error()))
 		// 3. Load the module from the BSR.
-		bsrFds, contents, bsrErr := loadFromBSR(module, rootCommitID)
+		bsrFds, bsrErr := loadFromBSR(httpClient, module, rootCommitID)
 		if bsrErr != nil {
 			return fmt.Errorf("failed to load from BSR: %w", bsrErr)
 		}
+
 		fds = bsrFds
-		fileContents = contents
 
 		// Asynchronously save the newly downloaded files to the cache.
 		go func() {
-			if err := saveToCache(module, rootCommitID, fileContents); err != nil {
+			if err := saveToCache(module, rootCommitID, bsrFds); err != nil {
 				slog.Warn("failed to save to cache", slog.String("error", err.Error()))
 			}
 		}()
@@ -71,17 +74,26 @@ func AddServicesFromBSR(registry LoaderTarget, module string) error {
 
 	// 4. Register the file descriptors with the target registry.
 	// This step is now common for both cached and non-cached paths.
-	slog.Info("registering files for module", slog.String("module", module), slog.Int("count", len(fds)))
-	for _, fd := range fds {
-		if err := registry.RegisterFile(fd); err != nil {
-			return fmt.Errorf("RegisterFile for %s: %w", fd.Path(), err)
-		}
+	slog.Info("registering files for module", slog.String("module", module), slog.Int("count", len(fds.GetFile())))
+	files, err := protodesc.FileOptions{AllowUnresolvable: true}.NewFiles(fds)
+	if err != nil {
+		return err
 	}
-
+	var registerErr error
+	files.RangeFiles(func(fd protoreflect.FileDescriptor) bool {
+		if err := registry.RegisterFile(fd); err != nil {
+			registerErr = fmt.Errorf("RegisterFile for %s: %w", fd.Path(), err)
+			return false
+		}
+		return true
+	})
+	if registerErr != nil {
+		return registerErr
+	}
 	return nil
 }
 
-func resolveBSRCommitID(module, ref string) (string, error) {
+func resolveBSRCommitID(httpClient *http.Client, module, ref string) (string, error) {
 	parts := strings.Split(module, "/")
 	if len(parts) < 3 {
 		return "", fmt.Errorf("invalid module format: %s", module)
@@ -89,7 +101,7 @@ func resolveBSRCommitID(module, ref string) (string, error) {
 	remote, owner, repoAndRef := parts[0], parts[1], parts[2]
 	repo, _, _ := strings.Cut(repoAndRef, ":")
 	apiURL := "https://" + remote
-	labelClient := modulev1connect.NewLabelServiceClient(newBufHttpClient(), apiURL)
+	labelClient := modulev1connect.NewLabelServiceClient(httpClient, apiURL)
 
 	// A 32-character hex string is likely a commit ID already.
 	if len(ref) == 32 && !strings.ContainsAny(ref, "ghijklmnopqrstuvwxyz") {
@@ -121,81 +133,51 @@ func resolveBSRCommitID(module, ref string) (string, error) {
 
 // handleCacheLoadError logs a warning and attempts to delete the corrupted cache file.
 func handleCacheLoadError(cachePath string, originalErr error) error {
-	slog.Warn("failed to load from cache, deleting cache file", slog.String("path", cachePath), slog.String("error", originalErr.Error()))
+	slog.Warn("failed to load from cache, a new version will be downloaded", slog.String("path", cachePath), slog.String("error", originalErr.Error()))
 	if rmErr := os.Remove(cachePath); rmErr != nil {
 		slog.Warn("failed to delete cache file", slog.String("path", cachePath), slog.String("error", rmErr.Error()))
 	}
 	return fmt.Errorf("failed to load from cache: %w", originalErr)
 }
 
-// loadFromCache reads a .tar.gz file from the local cache, extracts the .proto files,
-// and compiles them into file descriptors.
-func loadFromCache(module, commitID string) ([]protoreflect.FileDescriptor, error) {
+// loadFromCache reads a .binpb.gz file from the local cache, unmarshals it into a
+// FileDescriptorSet, and then converts it to a slice of FileDescriptors.
+func loadFromCache(module, commitID string) (*descriptorpb.FileDescriptorSet, error) {
 	cachePath, err := bsrCachePath(module, commitID)
 	if err != nil {
 		return nil, err // This error is not related to cache file corruption, so don't delete.
 	}
 
-	file, err := os.Open(cachePath)
+	gzipBytes, err := os.ReadFile(cachePath)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return nil, fs.ErrNotExist // This is a cache miss, not an error to warn about or delete.
 		}
-		return nil, handleCacheLoadError(cachePath, fmt.Errorf("failed to open cache file %q: %w", cachePath, err))
+		return nil, handleCacheLoadError(cachePath, fmt.Errorf("failed to read cache file %q: %w", cachePath, err))
 	}
-	defer func() {
-		if err := file.Close(); err != nil {
-			slog.Warn("failed to close file", slog.String("path", cachePath), slog.String("error", err.Error()))
-		}
-	}()
 
-	gzipReader, err := gzip.NewReader(file)
+	gzipReader, err := gzip.NewReader(bytes.NewReader(gzipBytes))
 	if err != nil {
-		return nil, handleCacheLoadError(cachePath, fmt.Errorf("failed to create gzip reader for %q: %w", cachePath, err))
+		return nil, handleCacheLoadError(cachePath, fmt.Errorf("failed to create gzip reader: %w", err))
 	}
-	defer func() {
-		if err := gzipReader.Close(); err != nil {
-			slog.Warn("failed to close gzip reader", slog.String("path", cachePath), slog.String("error", err.Error()))
-		}
-	}()
+	defer gzipReader.Close()
 
-	tarReader := tar.NewReader(gzipReader)
-	fileContents := make(map[string]string)
-	var fileNames []string
-
-	for {
-		header, err := tarReader.Next()
-		if err == io.EOF {
-			break // End of archive
-		}
-		if err != nil {
-			return nil, handleCacheLoadError(cachePath, fmt.Errorf("failed to read tar header from %q: %w", cachePath, err))
-		}
-
-		if header.Typeflag == tar.TypeReg {
-			contentBytes, err := io.ReadAll(tarReader)
-			if err != nil {
-				return nil, handleCacheLoadError(cachePath, fmt.Errorf("failed to read content of %s from %q: %w", header.Name, cachePath, err))
-			}
-			fileContents[header.Name] = string(contentBytes)
-			fileNames = append(fileNames, header.Name)
-		}
+	bytes, err := io.ReadAll(gzipReader)
+	if err != nil {
+		return nil, handleCacheLoadError(cachePath, fmt.Errorf("failed to read from gzip reader: %w", err))
 	}
 
-	if len(fileNames) == 0 {
-		return nil, handleCacheLoadError(cachePath, fmt.Errorf("cache file %q is empty", cachePath))
+	fds := &descriptorpb.FileDescriptorSet{}
+	if err := proto.Unmarshal(bytes, fds); err != nil {
+		return nil, handleCacheLoadError(cachePath, fmt.Errorf("failed to unmarshal file descriptor set: %w", err))
 	}
 
-	fds, compileErr := compileAndRegisterFiles(fileContents, fileNames)
-	if compileErr != nil {
-		return nil, handleCacheLoadError(cachePath, compileErr)
-	}
 	return fds, nil
 }
 
-// saveToCache writes the given protobuf file contents into a .tar.gz archive
+// saveToCache writes the given protobuf file contents into a gzipped fds file
 // at the appropriate cache location.
-func saveToCache(module, commitID string, fileContents map[string]string) error {
+func saveToCache(module, commitID string, fds *descriptorpb.FileDescriptorSet) error {
 	cachePath, err := bsrCachePath(module, commitID)
 	if err != nil {
 		return err
@@ -205,42 +187,22 @@ func saveToCache(module, commitID string, fileContents map[string]string) error 
 		return fmt.Errorf("failed to create cache dir: %w", err)
 	}
 
-	file, err := os.Create(cachePath)
+	rawBytes, err := proto.Marshal(fds)
 	if err != nil {
-		return fmt.Errorf("failed to create cache file: %w", err)
+		return fmt.Errorf("failed to marshal file descriptor set: %w", err)
 	}
-	defer func() {
-		if err := file.Close(); err != nil {
-			slog.Warn("failed to close file", slog.String("path", cachePath), slog.String("error", err.Error()))
-		}
-	}()
 
-	gzipWriter := gzip.NewWriter(file)
-	defer func() {
-		if err := gzipWriter.Close(); err != nil {
-			slog.Warn("failed to close gzip writer", slog.String("path", cachePath), slog.String("error", err.Error()))
-		}
-	}()
+	var gzipBuffer bytes.Buffer
+	gzipWriter := gzip.NewWriter(&gzipBuffer)
+	if _, err := gzipWriter.Write(rawBytes); err != nil {
+		return fmt.Errorf("failed to write to gzip writer: %w", err)
+	}
+	if err := gzipWriter.Close(); err != nil {
+		return fmt.Errorf("failed to close gzip writer: %w", err)
+	}
 
-	tarWriter := tar.NewWriter(gzipWriter)
-	defer func() {
-		if err := tarWriter.Close(); err != nil {
-			slog.Warn("failed to close tar writer", slog.String("path", cachePath), slog.String("error", err.Error()))
-		}
-	}()
-
-	for name, content := range fileContents {
-		header := &tar.Header{
-			Name: name,
-			Mode: 0644,
-			Size: int64(len(content)),
-		}
-		if err := tarWriter.WriteHeader(header); err != nil {
-			return fmt.Errorf("failed to write tar header for %s: %w", name, err)
-		}
-		if _, err := tarWriter.Write([]byte(content)); err != nil {
-			return fmt.Errorf("failed to write tar content for %s: %w", name, err)
-		}
+	if err := os.WriteFile(cachePath, gzipBuffer.Bytes(), 0644); err != nil {
+		return fmt.Errorf("failed to write cache file: %w", err)
 	}
 
 	slog.Debug("wrote to cache", slog.String("path", cachePath))
@@ -252,10 +214,10 @@ func bsrCachePath(module, commitID string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get user cache dir: %w", err)
 	}
-	return filepath.Join(cacheDir, "fauxrpc", "bsr", module, fmt.Sprintf("%s.tar.gz", commitID)), nil
+	return filepath.Join(cacheDir, "fauxrpc", "bsr", module, fmt.Sprintf("%s.binpb.gz", commitID)), nil
 }
 
-func loadFromBSR(module, rootCommitID string) ([]protoreflect.FileDescriptor, map[string]string, error) {
+func loadFromBSR(httpClient *http.Client, module, rootCommitID string) (*descriptorpb.FileDescriptorSet, error) {
 	slog.Info("loading from BSR", slog.String("module", module), slog.String("commit", rootCommitID))
 
 	parts := strings.Split(module, "/")
@@ -263,82 +225,32 @@ func loadFromBSR(module, rootCommitID string) ([]protoreflect.FileDescriptor, ma
 	repo, _, _ := strings.Cut(repoAndRef, ":")
 	apiURL := "https://" + remote
 
-	httpClient := newBufHttpClient()
-	graphClient := modulev1connect.NewGraphServiceClient(httpClient, apiURL)
-	downloadClient := modulev1connect.NewDownloadServiceClient(httpClient, apiURL)
-
-	getGraphResp, err := graphClient.GetGraph(context.Background(), connect.NewRequest(&modulev1.GetGraphRequest{
-		ResourceRefs: []*modulev1.ResourceRef{
-			{
-				Value: &modulev1.ResourceRef_Name_{
-					Name: &modulev1.ResourceRef_Name{
-						Owner:  owner,
-						Module: repo,
-						Child: &modulev1.ResourceRef_Name_Ref{
-							Ref: rootCommitID,
-						},
-					},
-				},
-			},
-		},
+	fdsClient := modulev1connect.NewFileDescriptorSetServiceClient(httpClient, apiURL)
+	fdsRes, err := fdsClient.GetFileDescriptorSet(context.Background(), connect.NewRequest(&modulev1.GetFileDescriptorSetRequest{
+		ResourceRef: modulev1.ResourceRef_builder{
+			Name: modulev1.ResourceRef_Name_builder{
+				Owner:  owner,
+				Module: repo,
+				Ref:    &rootCommitID,
+			}.Build(),
+		}.Build(),
+		ExcludeImports:                false,
+		IncludeSourceCodeInfo:         false,
+		IncludeSourceRetentionOptions: true,
 	}))
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get graph for commit %s: %w", rootCommitID, err)
+		return nil, fmt.Errorf("failed to get file descriptor set for commit %s: %w", rootCommitID, err)
 	}
 
-	fileContents := map[string]string{}
-	var fileNames []string
-	for _, commit := range getGraphResp.Msg.Graph.Commits {
-		downloadResp, err := downloadClient.Download(context.Background(), connect.NewRequest(&modulev1.DownloadRequest{
-			Values: []*modulev1.DownloadRequest_Value{
-				{
-					FileTypes: []modulev1.FileType{modulev1.FileType_FILE_TYPE_PROTO},
-					ResourceRef: &modulev1.ResourceRef{
-						Value: &modulev1.ResourceRef_Id{
-							Id: commit.Id,
-						},
-					},
-				},
-			},
-		}))
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to download module for commit %s: %w", commit.Id, err)
-		}
-		for _, content := range downloadResp.Msg.Contents {
-			for _, file := range content.GetFiles() {
-				fileContents[file.Path] = string(file.Content)
-				fileNames = append(fileNames, file.Path)
-			}
-		}
-	}
-
-	fds, err := compileAndRegisterFiles(fileContents, fileNames)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return []protoreflect.FileDescriptor(fds), fileContents, nil
+	return fdsRes.Msg.GetFileDescriptorSet(), nil
 }
 
-func compileAndRegisterFiles(fileContents map[string]string, fileNames []string) ([]protoreflect.FileDescriptor, error) {
-	compiler := protocompile.Compiler{
-		Resolver: protocompile.WithStandardImports(protocompile.ResolverFunc(func(path string) (protocompile.SearchResult, error) {
-			if content, ok := fileContents[path]; ok {
-				return protocompile.SearchResult{Source: io.NopCloser(strings.NewReader(content))}, nil
-			}
-			return protocompile.SearchResult{}, fs.ErrNotExist
-		})),
+func newBufHttpClient() *http.Client {
+	return &http.Client{
+		Transport: &bufAuthInterceptor{
+			transport: http.DefaultTransport,
+		},
 	}
-	compiledFiles, err := compiler.Compile(context.Background(), fileNames...)
-	if err != nil {
-		return nil, fmt.Errorf("failed to compile protos: %w", err)
-	}
-	// The result of Compile is already sorted by dependency, so we can just return them.
-	fds := make([]protoreflect.FileDescriptor, len(compiledFiles))
-	for i, fd := range compiledFiles {
-		fds[i] = fd
-	}
-	return fds, nil
 }
 
 type bufAuthInterceptor struct {
@@ -350,12 +262,4 @@ func (b *bufAuthInterceptor) RoundTrip(req *http.Request) (*http.Response, error
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
 	return b.transport.RoundTrip(req)
-}
-
-func newBufHttpClient() *http.Client {
-	return &http.Client{
-		Transport: &bufAuthInterceptor{
-			transport: http.DefaultTransport,
-		},
-	}
 }
