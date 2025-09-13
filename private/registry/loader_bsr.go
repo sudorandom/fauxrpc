@@ -160,7 +160,11 @@ func loadFromCache(module, commitID string) (*descriptorpb.FileDescriptorSet, er
 	if err != nil {
 		return nil, handleCacheLoadError(cachePath, fmt.Errorf("failed to create gzip reader: %w", err))
 	}
-	defer gzipReader.Close()
+	defer func() {
+		if err := gzipReader.Close(); err != nil {
+			slog.Error("failed to close gzip reader", slog.String("error", err.Error()))
+		}
+	}()
 
 	bytes, err := io.ReadAll(gzipReader)
 	if err != nil {
