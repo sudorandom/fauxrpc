@@ -11,6 +11,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
+	"google.golang.org/protobuf/types/known/structpb"
 
 	"github.com/sudorandom/fauxrpc"
 	"github.com/sudorandom/fauxrpc/celfakeit"
@@ -118,9 +119,13 @@ func (p *protocel) setFieldsOnMsg(msg protoreflect.Message, fields map[ref.Val]r
 			return fmt.Errorf("%s: field does not exist: %s", desc.FullName(), key)
 		}
 		val := refVal.Value()
+		if _, ok := val.(structpb.NullValue); ok {
+			continue
+		}
+		if val == nil {
+			continue
+		}
 		switch tval := val.(type) {
-		case nil:
-			return nil
 		case map[ref.Val]ref.Val:
 			if fd.IsMap() {
 				if err := p.setMapField(msg, fd, tval); err != nil {

@@ -7,6 +7,7 @@ import (
 	elizav1 "buf.build/gen/go/connectrpc/eliza/protocolbuffers/go/connectrpc/eliza/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
@@ -562,6 +563,78 @@ func TestProtocel(t *testing.T) {
 		assert.Equal(t, 678.90, msg.ProtoReflect().Get(md.Fields().ByTextName("double_value")).Interface())
 	})
 
+	t.Run("type conversions and values", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
+		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
+
+		testCases := []struct {
+			name         string
+			cel          string
+			expectErr    bool
+			expectedJson string
+		}{
+			{
+				name:         "enum by string",
+				cel:          `{"enum_value": "ENUM_ONE"}`,
+				expectedJson: `{"enumValue": "ENUM_ONE"}`,
+			},
+			{
+				name:         "enum by number",
+				cel:          `{"enum_value": 2}`,
+				expectedJson: `{"enumValue": "ENUM_TWO"}`,
+			},
+			{
+				name:      "enum by invalid string",
+				cel:       `{"enum_value": "INVALID"}`,
+				expectErr: true,
+			},
+			{
+				name:         "enum list by string",
+				cel:          `{"enum_list": ["ENUM_TWO", "ENUM_ONE"]}`,
+				expectedJson: `{"enumList": ["ENUM_TWO", "ENUM_ONE"]}`,
+			},
+			{
+				name:         "null value for optional field",
+				cel:          `{"opt_string_value": null}`,
+				expectedJson: `{}`,
+			},
+			{
+				name:      "type mismatch string to int",
+				cel:       `{"int32_value": "not a number"}`,
+				expectErr: true,
+			},
+			{
+				name:      "float to int32",
+				cel:       `{"int32_value": 123.45}`,
+				expectErr: true,
+			},
+			{
+				name:         "int to float32",
+				cel:          `{"float_value": 123}`,
+				expectedJson: `{"floatValue": 123.0}`,
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				ds, err := protocel.New(files, md, tc.cel)
+				require.NoError(t, err)
+
+				msg, err := ds.NewMessage(context.Background())
+
+				if tc.expectErr {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
+					opts := protojson.MarshalOptions{}
+					jsonBytes, err := opts.Marshal(msg)
+					require.NoError(t, err)
+					assert.JSONEq(t, tc.expectedJson, string(jsonBytes))
+				}
+			})
+		}
+	})
 }
 
 func assertFieldIsSet(t *testing.T, md protoreflect.MessageDescriptor, msg protoreflect.Message, fieldName string) {
