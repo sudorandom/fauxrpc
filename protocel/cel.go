@@ -235,6 +235,64 @@ func (p *protocel) celToValue(fd protoreflect.FieldDescriptor, val any) (protore
 				}
 				return protoreflect.ValueOfEnum(v.Number()), nil
 			}
+		case protoreflect.Int32Kind, protoreflect.Sint32Kind, protoreflect.Sfixed32Kind:
+			switch t := val.(type) {
+			case int64:
+				return protoreflect.ValueOfInt32(int32(t)), nil
+			case uint64:
+				return protoreflect.ValueOfInt32(int32(t)), nil
+			case int32:
+				return protoreflect.ValueOfInt32(t), nil
+			}
+		case protoreflect.Uint32Kind, protoreflect.Fixed32Kind:
+			switch t := val.(type) {
+			case int64:
+				return protoreflect.ValueOfUint32(uint32(t)), nil
+			case uint64:
+				return protoreflect.ValueOfUint32(uint32(t)), nil
+			case uint32:
+				return protoreflect.ValueOfUint32(t), nil
+			}
+		case protoreflect.Int64Kind, protoreflect.Sint64Kind, protoreflect.Sfixed64Kind:
+			switch t := val.(type) {
+			case int64:
+				return protoreflect.ValueOfInt64(t), nil
+			case uint64:
+				return protoreflect.ValueOfInt64(int64(t)), nil
+			case int32:
+				return protoreflect.ValueOfInt64(int64(t)), nil
+			}
+		case protoreflect.Uint64Kind, protoreflect.Fixed64Kind:
+			switch t := val.(type) {
+			case int64:
+				return protoreflect.ValueOfUint64(uint64(t)), nil
+			case uint64:
+				return protoreflect.ValueOfUint64(t), nil
+			case uint32:
+				return protoreflect.ValueOfUint64(uint64(t)), nil
+			}
+		case protoreflect.FloatKind:
+			switch t := val.(type) {
+			case float64:
+				return protoreflect.ValueOfFloat32(float32(t)), nil
+			case float32:
+				return protoreflect.ValueOfFloat32(t), nil
+			case int64:
+				return protoreflect.ValueOfFloat32(float32(t)), nil
+			case uint64:
+				return protoreflect.ValueOfFloat32(float32(t)), nil
+			}
+		case protoreflect.DoubleKind:
+			switch t := val.(type) {
+			case float64:
+				return protoreflect.ValueOfFloat64(t), nil
+			case float32:
+				return protoreflect.ValueOfFloat64(float64(t)), nil
+			case int64:
+				return protoreflect.ValueOfFloat64(float64(t)), nil
+			case uint64:
+				return protoreflect.ValueOfFloat64(float64(t)), nil
+			}
 		}
 	}
 	return protoreflect.ValueOf(val), nil
