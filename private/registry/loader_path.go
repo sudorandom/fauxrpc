@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"context"
 	"errors"
 	"io/fs"
 	"net/http"
@@ -11,13 +12,13 @@ import (
 
 // AddServicesFromPath imports services from a given 'path' which can be a local file path, directory,
 // BSR repo, server address for server reflection.
-func AddServicesFromPath(registry LoaderTarget, path string) error {
+func AddServicesFromPath(ctx context.Context, registry LoaderTarget, path string) error {
 	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
 		return AddServicesFromReflection(registry, http.DefaultClient, path)
 	}
 	stat, err := os.Stat(path)
 	if err != nil && errors.Is(err, os.ErrNotExist) && looksLikeBSR(path) {
-		return AddServicesFromBSR(registry, path)
+		return AddServicesFromBSR(ctx, registry, path)
 	} else if err != nil {
 		return err
 	}

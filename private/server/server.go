@@ -122,8 +122,8 @@ func (s *server) RegisterFile(fd protoreflect.FileDescriptor) error {
 	return nil
 }
 
-func (s *server) AddFileFromPath(path string) error {
-	return registry.AddServicesFromPath(s.ServiceRegistry, path)
+func (s *server) AddFileFromPath(ctx context.Context, path string) error {
+	return registry.AddServicesFromPath(ctx, s.ServiceRegistry, path)
 }
 
 func (s *server) GetLogger() *fauxlog.Logger {

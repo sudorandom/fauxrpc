@@ -34,7 +34,7 @@ func (c *RegistryAddCmd) Run(globals *Globals) error {
 		return err
 	}
 	for _, schema := range c.Schema {
-		if err := registry.AddServicesFromPath(theRegistry, schema); err != nil {
+		if err := registry.AddServicesFromPath(context.Background(), theRegistry, schema); err != nil {
 			if strings.Contains(err.Error(), "name conflict") {
 				continue
 			}

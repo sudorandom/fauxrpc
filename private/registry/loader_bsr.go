@@ -32,7 +32,7 @@ func looksLikeBSR(path string) bool {
 
 // AddServicesFromBSR resolves, downloads, and registers Protobuf services from the Buf Schema Registry (BSR).
 // It uses a local file-based cache to avoid re-downloading modules.
-func AddServicesFromBSR(registry LoaderTarget, module string) error {
+func AddServicesFromBSR(ctx context.Context, registry LoaderTarget, module string) error {
 	module, ref, _ := strings.Cut(module, ":")
 	if ref == "" {
 		ref = "main"
@@ -41,7 +41,7 @@ func AddServicesFromBSR(registry LoaderTarget, module string) error {
 	httpClient := newBufHttpClient()
 
 	// 1. Resolve the module's 'ref' (e.g., "main") to a specific commit ID.
-	rootCommitID, err := resolveBSRCommitID(httpClient, module, ref)
+	rootCommitID, err := resolveBSRCommitID(ctx, httpClient, module, ref)
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func AddServicesFromBSR(registry LoaderTarget, module string) error {
 	} else {
 		slog.Debug("cache load failed or miss, loading from BSR", slog.String("module", module), slog.String("commit", rootCommitID), slog.String("error", err.Error()))
 		// 3. Load the module from the BSR.
-		bsrFds, bsrErr := loadFromBSR(httpClient, module, rootCommitID)
+		bsrFds, bsrErr := loadFromBSR(ctx, httpClient, module, rootCommitID)
 		if bsrErr != nil {
 			return fmt.Errorf("failed to load from BSR: %w", bsrErr)
 		}
@@ -93,7 +93,7 @@ func AddServicesFromBSR(registry LoaderTarget, module string) error {
 	return nil
 }
 
-func resolveBSRCommitID(httpClient *http.Client, module, ref string) (string, error) {
+func resolveBSRCommitID(ctx context.Context, httpClient *http.Client, module, ref string) (string, error) {
 	parts := strings.Split(module, "/")
 	if len(parts) < 3 {
 		return "", fmt.Errorf("invalid module format: %s", module)
@@ -109,7 +109,7 @@ func resolveBSRCommitID(httpClient *http.Client, module, ref string) (string, er
 		return ref, nil
 	}
 
-	getLabelsResp, err := labelClient.GetLabels(context.Background(), connect.NewRequest(&modulev1.GetLabelsRequest{
+	getLabelsResp, err := labelClient.GetLabels(ctx, connect.NewRequest(&modulev1.GetLabelsRequest{
 		LabelRefs: []*modulev1.LabelRef{
 			{
 				Value: &modulev1.LabelRef_Name_{
@@ -221,7 +221,7 @@ func bsrCachePath(module, commitID string) (string, error) {
 	return filepath.Join(cacheDir, "fauxrpc", "bsr", module, fmt.Sprintf("%s.binpb.gz", commitID)), nil
 }
 
-func loadFromBSR(httpClient *http.Client, module, rootCommitID string) (*descriptorpb.FileDescriptorSet, error) {
+func loadFromBSR(ctx context.Context, httpClient *http.Client, module, rootCommitID string) (*descriptorpb.FileDescriptorSet, error) {
 	slog.Info("loading from BSR", slog.String("module", module), slog.String("commit", rootCommitID))
 
 	parts := strings.Split(module, "/")
@@ -230,7 +230,7 @@ func loadFromBSR(httpClient *http.Client, module, rootCommitID string) (*descrip
 	apiURL := "https://" + remote
 
 	fdsClient := modulev1connect.NewFileDescriptorSetServiceClient(httpClient, apiURL)
-	fdsRes, err := fdsClient.GetFileDescriptorSet(context.Background(), connect.NewRequest(&modulev1.GetFileDescriptorSetRequest{
+	fdsRes, err := fdsClient.GetFileDescriptorSet(ctx, connect.NewRequest(&modulev1.GetFileDescriptorSetRequest{
 		ResourceRef: modulev1.ResourceRef_builder{
 			Name: modulev1.ResourceRef_Name_builder{
 				Owner:  owner,

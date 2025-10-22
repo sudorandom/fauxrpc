@@ -111,7 +111,7 @@ func (c *FauxRPCContainer) MustAddFromPath(ctx context.Context, path string) {
 // AddFromPath adds the given protoregistry.Files to the FauxRPC registry.
 func (c *FauxRPCContainer) AddFromPath(ctx context.Context, path string) error {
 	files := new(protoregistry.Files)
-	if err := registry.AddServicesFromPath(files, path); err != nil {
+	if err := registry.AddServicesFromPath(ctx, files, path); err != nil {
 		return err
 	}
 

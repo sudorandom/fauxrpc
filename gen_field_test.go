@@ -97,9 +97,13 @@ func TestFieldValue(t *testing.T) {
 			assert.True(t, seconds != 0 || nanos != 0)
 		})
 
-		// Removed google.protobuf.Any test as there is no corresponding field in test.proto
-
-		// TODO: Add test for google.protobuf.Value
+		t.Run("google.protobuf.Value", func(t *testing.T) {
+			fd := getParamField("value")
+			val := fauxrpc.FieldValue(fd, opts)
+			require.NotNil(t, val)
+			assert.True(t, val.IsValid())
+			assert.True(t, val.Message().IsValid())
+		})
 	})
 
 	t.Run("MaxDepth functionality", func(t *testing.T) {
@@ -118,5 +122,10 @@ func TestFieldValue(t *testing.T) {
 		require.NotNil(t, valOneDepth)
 		assert.True(t, valOneDepth.IsValid())
 		assert.True(t, valOneDepth.Message().IsValid())
+
+		// Check that the nested msg_value is not set
+		nestedMsgField := valOneDepth.Message().Descriptor().Fields().ByName("msg_value")
+		require.NotNil(t, nestedMsgField)
+		assert.False(t, valOneDepth.Message().Has(nestedMsgField))
 	})
 }

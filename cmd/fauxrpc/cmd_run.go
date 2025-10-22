@@ -59,7 +59,7 @@ func (c *RunCmd) Run(globals *Globals) error {
 		return err
 	}
 	for _, schema := range c.Schema {
-		if err := srv.AddFileFromPath(schema); err != nil {
+		if err := srv.AddFileFromPath(context.Background(), schema); err != nil {
 			return err
 		}
 	}

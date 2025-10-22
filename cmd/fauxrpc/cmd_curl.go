@@ -44,7 +44,11 @@ func (c *CurlCmd) Run(globals *Globals) error {
 	var httpClient *http.Client
 	if c.HTTP3 {
 		httpClient = &http.Client{
-			Transport: &http3.Transport{},
+			Transport: &http3.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true,
+				},
+			},
 		}
 	} else if c.HTTP2PriorKnowledge {
 		httpClient = &http.Client{
@@ -61,7 +65,7 @@ func (c *CurlCmd) Run(globals *Globals) error {
 
 	// Load schemas from files
 	for _, schemaPath := range c.Schema {
-		if err := registry.AddServicesFromPath(reg, schemaPath); err != nil {
+		if err := registry.AddServicesFromPath(ctx, reg, schemaPath); err != nil {
 			return fmt.Errorf("failed to load schema from %s: %w", schemaPath, err)
 		}
 	}
@@ -236,7 +240,6 @@ func (c *CurlCmd) callRPC(
 	if resp.Msg == nil || *resp.Msg == nil {
 		m := dynamicpb.NewMessage(methodDesc.Output()).New().Interface().(*dynamicpb.Message)
 		resp.Msg = &m
-		return nil
 	}
 
 	// Print the response
@@ -247,7 +250,7 @@ func (c *CurlCmd) callRPC(
 	}.Marshal(*resp.Msg)
 	if err != nil {
 		slog.Error("Failed to marshal response to JSON", "error", err)
-		return nil
+		return err
 	}
 	fmt.Printf("<- [%s]:\n%s\n\n", fullMethodName, string(jsonBytes))
 	return nil
