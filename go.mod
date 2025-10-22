@@ -27,7 +27,7 @@ require (
 	github.com/google/cel-go v0.26.0
 	github.com/google/uuid v1.6.0
 	github.com/jhump/protoreflect v1.17.0
-	github.com/quic-go/quic-go v0.51.0
+	github.com/quic-go/quic-go v0.54.1
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.10.0
 	github.com/sudorandom/protoc-gen-connect-openapi v0.20.3
@@ -53,17 +53,14 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
-	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/gnostic v0.7.0 // indirect
 	github.com/google/gnostic-models v0.6.9 // indirect
-	github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 // indirect
 	github.com/lmittmann/tint v1.1.2 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/natefinch/atomic v1.0.1 // indirect
-	github.com/onsi/ginkgo/v2 v2.9.5 // indirect
 	github.com/pb33f/libopenapi v0.25.3 // indirect
 	github.com/pb33f/ordered-map/v2 v2.2.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
