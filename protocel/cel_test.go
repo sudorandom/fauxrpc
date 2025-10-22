@@ -7,11 +7,12 @@ import (
 	elizav1 "buf.build/gen/go/connectrpc/eliza/protocolbuffers/go/connectrpc/eliza/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	testv1 "github.com/sudorandom/fauxrpc/private/gen/test/v1"
-	"github.com/sudorandom/fauxrpc/protocel"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
+
+	testv1 "github.com/sudorandom/fauxrpc/private/gen/test/v1"
+	"github.com/sudorandom/fauxrpc/protocel"
 )
 
 func TestProtocel(t *testing.T) {
@@ -468,6 +469,62 @@ func TestProtocel(t *testing.T) {
 		nested := msg.ProtoReflect().Get(md.Fields().ByTextName("msg_value")).Message()
 		assert.Equal(t, "Hello World!", nested.Get(md.Fields().ByTextName("string_value")).Interface())
 	})
+
+	// Test for issue #41: int32 field with plain numeric literal
+	t.Run("int32 with plain numeric literal", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
+		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
+		// Use plain numeric literal (200) without any explicit type conversion
+		ds, err := protocel.New(files, md, `{"int32_value": 200}`)
+		require.NoError(t, err)
+
+		msg, err := ds.NewMessage(context.Background())
+		require.NoError(t, err)
+
+		// Should correctly assign int64 literal to int32 field
+		assert.Equal(t, int32(200), msg.ProtoReflect().Get(md.Fields().ByTextName("int32_value")).Interface())
+	})
+
+	// Test all numeric type conversions from int64 literals
+	t.Run("numeric type conversions from literals", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
+		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
+		ds, err := protocel.New(files, md, `
+		{
+			"int32_value": 200,
+			"int64_value": 300,
+			"uint32_value": 400,
+			"uint64_value": 500,
+			"sint32_value": -100,
+			"sint64_value": -200,
+			"fixed32_value": 600,
+			"fixed64_value": 700,
+			"sfixed32_value": -300,
+			"sfixed64_value": -400,
+			"float_value": 123.45,
+			"double_value": 678.90
+		}`)
+		require.NoError(t, err)
+
+		msg, err := ds.NewMessage(context.Background())
+		require.NoError(t, err)
+
+		assert.Equal(t, int32(200), msg.ProtoReflect().Get(md.Fields().ByTextName("int32_value")).Interface())
+		assert.Equal(t, int64(300), msg.ProtoReflect().Get(md.Fields().ByTextName("int64_value")).Interface())
+		assert.Equal(t, uint32(400), msg.ProtoReflect().Get(md.Fields().ByTextName("uint32_value")).Interface())
+		assert.Equal(t, uint64(500), msg.ProtoReflect().Get(md.Fields().ByTextName("uint64_value")).Interface())
+		assert.Equal(t, int32(-100), msg.ProtoReflect().Get(md.Fields().ByTextName("sint32_value")).Interface())
+		assert.Equal(t, int64(-200), msg.ProtoReflect().Get(md.Fields().ByTextName("sint64_value")).Interface())
+		assert.Equal(t, uint32(600), msg.ProtoReflect().Get(md.Fields().ByTextName("fixed32_value")).Interface())
+		assert.Equal(t, uint64(700), msg.ProtoReflect().Get(md.Fields().ByTextName("fixed64_value")).Interface())
+		assert.Equal(t, int32(-300), msg.ProtoReflect().Get(md.Fields().ByTextName("sfixed32_value")).Interface())
+		assert.Equal(t, int64(-400), msg.ProtoReflect().Get(md.Fields().ByTextName("sfixed64_value")).Interface())
+		assert.Equal(t, float32(123.45), msg.ProtoReflect().Get(md.Fields().ByTextName("float_value")).Interface())
+		assert.Equal(t, 678.90, msg.ProtoReflect().Get(md.Fields().ByTextName("double_value")).Interface())
+	})
+
 }
 
 func assertFieldIsSet(t *testing.T, md protoreflect.MessageDescriptor, msg protoreflect.Message, fieldName string) {
