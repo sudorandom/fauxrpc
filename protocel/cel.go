@@ -8,13 +8,14 @@ import (
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/reflect/protoregistry"
+
 	"github.com/sudorandom/fauxrpc"
 	"github.com/sudorandom/fauxrpc/celfakeit"
 	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
 	"github.com/sudorandom/fauxrpc/private/registry"
-	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/reflect/protoregistry"
 )
 
 type CELMessage interface {
@@ -177,17 +178,17 @@ func (p *protocel) setRepeatedField(msg protoreflect.Message, fd protoreflect.Fi
 	list := msg.NewField(fd).List()
 	switch fd.Kind() {
 	case protoreflect.MessageKind:
-		nested := registry.NewMessage(fd.Message()).Interface()
 		for _, val := range vals {
 			mapVal, ok := val.Value().(map[ref.Val]ref.Val)
 			if !ok {
 				return fmt.Errorf("%s: unhandled type: %T", msg.Descriptor().FullName(), val.Value())
 			}
+			nested := registry.NewMessage(fd.Message()).Interface()
 			if err := p.setFieldsOnMsg(nested.ProtoReflect(), mapVal); err != nil {
 				return err
 			}
+			list.Append(protoreflect.ValueOfMessage(nested.ProtoReflect()))
 		}
-		list.Append(protoreflect.ValueOfMessage(nested.ProtoReflect()))
 	default:
 		for _, val := range vals {
 			value, err := p.celToValue(fd, val.Value())
