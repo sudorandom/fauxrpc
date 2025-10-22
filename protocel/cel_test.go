@@ -252,6 +252,43 @@ func TestProtocel(t *testing.T) {
 		assert.Equal(t, "Hello World!", nested.Get(md.Fields().ByTextName("string_value")).Interface())
 	})
 
+	t.Run("repeated messages with multiple elements", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
+		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
+		ds, err := protocel.New(files, md, `
+		{
+			"msg_list": [
+				{"string_value": "First", "int32_value": 100},
+				{"string_value": "Second", "int32_value": 200},
+				{"string_value": "Third", "int32_value": 300}
+			],
+		}`)
+		require.NoError(t, err)
+
+		msg, err := ds.NewMessage(context.Background())
+		require.NoError(t, err)
+
+		assertFieldIsSet(t, md, msg.ProtoReflect(), "msgList")
+		list := msg.ProtoReflect().Get(md.Fields().ByTextName("msg_list")).List()
+		require.Equal(t, 3, list.Len(), "Expected 3 elements in repeated field")
+
+		// Check first element
+		nested0 := list.Get(0).Message()
+		assert.Equal(t, "First", nested0.Get(md.Fields().ByTextName("string_value")).Interface())
+		assert.Equal(t, int32(100), nested0.Get(md.Fields().ByTextName("int32_value")).Interface())
+
+		// Check second element
+		nested1 := list.Get(1).Message()
+		assert.Equal(t, "Second", nested1.Get(md.Fields().ByTextName("string_value")).Interface())
+		assert.Equal(t, int32(200), nested1.Get(md.Fields().ByTextName("int32_value")).Interface())
+
+		// Check third element
+		nested2 := list.Get(2).Message()
+		assert.Equal(t, "Third", nested2.Get(md.Fields().ByTextName("string_value")).Interface())
+		assert.Equal(t, int32(300), nested2.Get(md.Fields().ByTextName("int32_value")).Interface())
+	})
+
 	t.Run("repeated scalars", func(t *testing.T) {
 		files := &protoregistry.Files{}
 		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
