@@ -9,18 +9,18 @@ require (
 	buf.build/gen/go/bufbuild/registry/connectrpc/go v1.18.1-20250819211657-a3dd0d3ea69b.1
 	buf.build/gen/go/bufbuild/registry/protocolbuffers/go v1.36.8-20250819211657-a3dd0d3ea69b.1
 	buf.build/gen/go/connectrpc/eliza/protocolbuffers/go v1.36.7-20230913231627-233fca715f49.1
-	buf.build/gen/go/grpc/grpc/connectrpc/go v1.18.1-20250429200738-0ee95b84c2c7.1
-	buf.build/gen/go/grpc/grpc/protocolbuffers/go v1.36.6-20250429200738-0ee95b84c2c7.1
+	buf.build/gen/go/grpc/grpc/connectrpc/go v1.19.1-20250429200738-0ee95b84c2c7.2
+	buf.build/gen/go/grpc/grpc/protocolbuffers/go v1.36.10-20250429200738-0ee95b84c2c7.1
 	buf.build/go/protovalidate v0.14.0
 	buf.build/go/protoyaml v0.6.0
-	connectrpc.com/connect v1.18.1
+	connectrpc.com/connect v1.19.1
 	connectrpc.com/cors v0.1.0
 	connectrpc.com/grpcreflect v1.3.0
 	connectrpc.com/validate v0.3.0
 	connectrpc.com/vanguard v0.3.0
 	github.com/MadAppGang/httplog v1.3.0
 	github.com/a-h/templ v0.3.924
-	github.com/alecthomas/kong v1.10.0
+	github.com/alecthomas/kong v1.12.1
 	github.com/brianvoe/gofakeit/v7 v7.2.1
 	github.com/bufbuild/protocompile v0.14.1
 	github.com/go-chi/chi/v5 v5.2.2
@@ -37,7 +37,7 @@ require (
 	golang.org/x/sync v0.16.0
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250818200422-3122310a409c
 	google.golang.org/grpc v1.76.0
-	google.golang.org/protobuf v1.36.8
+	google.golang.org/protobuf v1.36.10
 )
 
 require (
