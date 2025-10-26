@@ -21,7 +21,7 @@ require (
 	github.com/MadAppGang/httplog v1.3.0
 	github.com/a-h/templ v0.3.924
 	github.com/alecthomas/kong v1.12.1
-	github.com/brianvoe/gofakeit/v7 v7.2.1
+	github.com/brianvoe/gofakeit/v7 v7.8.1
 	github.com/bufbuild/protocompile v0.14.1
 	github.com/go-chi/chi/v5 v5.2.2
 	github.com/google/cel-go v0.26.1

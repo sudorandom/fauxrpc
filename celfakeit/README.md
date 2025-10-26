@@ -226,7 +226,6 @@ fmt.Println(out)
 - `fake_dog`
 - `fake_bird`
 - `fake_emoji`
-- `fake_emoji_description`
 - `fake_emoji_category`
 - `fake_emoji_alias`
 - `fake_emoji_tag`

@@ -47,7 +47,7 @@ func stringSimple(fd protoreflect.FieldDescriptor, opts GenOptions) string {
 		return s
 	}
 
-	return opts.fake().HipsterSentence(int(randInt64GeometricDist(0.5, opts) + 1))
+	return opts.fake().Sentence(int(randInt64GeometricDist(0.5, opts) + 1))
 }
 
 // String returns a fake string value given a field descriptor.
@@ -179,7 +179,7 @@ func String(fd protoreflect.FieldDescriptor, opts GenOptions) string {
 func generateHipsterText(minLen, maxLen uint64, opts GenOptions) string {
 	b := &strings.Builder{}
 	addMoreText := func() {
-		b.WriteString(opts.fake().HipsterSentence(int(randInt64GeometricDist(0.5, opts) + 1)))
+		b.WriteString(opts.fake().Sentence(int(randInt64GeometricDist(0.5, opts) + 1)))
 	}
 	addMoreText()
 	for uint64(b.Len()) < minLen {
