@@ -5,18 +5,18 @@ go 1.24.6
 retract v0.15.25
 
 require (
-	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.8-20250717185734-6c6e0d3c608e.1
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.9-20250912141014-52f32327d4b0.1
 	buf.build/gen/go/bufbuild/registry/connectrpc/go v1.18.1-20250819211657-a3dd0d3ea69b.1
 	buf.build/gen/go/bufbuild/registry/protocolbuffers/go v1.36.8-20250819211657-a3dd0d3ea69b.1
 	buf.build/gen/go/connectrpc/eliza/protocolbuffers/go v1.36.7-20230913231627-233fca715f49.1
 	buf.build/gen/go/grpc/grpc/connectrpc/go v1.19.1-20250429200738-0ee95b84c2c7.2
 	buf.build/gen/go/grpc/grpc/protocolbuffers/go v1.36.10-20250429200738-0ee95b84c2c7.1
-	buf.build/go/protovalidate v0.14.0
+	buf.build/go/protovalidate v1.0.0
 	buf.build/go/protoyaml v0.6.0
 	connectrpc.com/connect v1.19.1
 	connectrpc.com/cors v0.1.0
 	connectrpc.com/grpcreflect v1.3.0
-	connectrpc.com/validate v0.3.0
+	connectrpc.com/validate v0.6.0
 	connectrpc.com/vanguard v0.3.0
 	github.com/MadAppGang/httplog v1.3.0
 	github.com/a-h/templ v0.3.924
@@ -24,18 +24,18 @@ require (
 	github.com/brianvoe/gofakeit/v7 v7.2.1
 	github.com/bufbuild/protocompile v0.14.1
 	github.com/go-chi/chi/v5 v5.2.2
-	github.com/google/cel-go v0.26.0
+	github.com/google/cel-go v0.26.1
 	github.com/google/uuid v1.6.0
 	github.com/jhump/protoreflect v1.17.0
 	github.com/quic-go/quic-go v0.54.1
 	github.com/rs/cors v1.11.1
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/sudorandom/protoc-gen-connect-openapi v0.20.3
 	github.com/tailscale/hujson v0.0.0-20250226034555-ec1d1c113d33
 	go.yaml.in/yaml/v3 v3.0.4
-	golang.org/x/net v0.43.0
-	golang.org/x/sync v0.16.0
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250818200422-3122310a409c
+	golang.org/x/net v0.44.0
+	golang.org/x/sync v0.17.0
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250922171735-9219d122eba9
 	google.golang.org/grpc v1.76.0
 	google.golang.org/protobuf v1.36.10
 )
@@ -68,13 +68,13 @@ require (
 	github.com/speakeasy-api/jsonpath v0.6.2 // indirect
 	github.com/stoewer/go-strcase v1.3.1 // indirect
 	go.uber.org/mock v0.5.0 // indirect
-	golang.org/x/crypto v0.41.0 // indirect
-	golang.org/x/exp v0.0.0-20250819193227-8b4c13bb791b // indirect
-	golang.org/x/mod v0.27.0 // indirect
-	golang.org/x/sys v0.35.0 // indirect
-	golang.org/x/text v0.28.0 // indirect
-	golang.org/x/tools v0.36.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250818200422-3122310a409c // indirect
+	golang.org/x/crypto v0.42.0 // indirect
+	golang.org/x/exp v0.0.0-20250911091902-df9299821621 // indirect
+	golang.org/x/mod v0.28.0 // indirect
+	golang.org/x/sys v0.36.0 // indirect
+	golang.org/x/text v0.29.0 // indirect
+	golang.org/x/tools v0.37.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250922171735-9219d122eba9 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
