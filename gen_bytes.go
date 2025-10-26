@@ -6,7 +6,7 @@ import (
 )
 
 func generateBytesSimple() []byte {
-	return []byte(gofakeit.HipsterSentence(3))
+	return []byte(gofakeit.HipsterSentence())
 }
 
 // Bytes returns a fake []byte value given a field descriptor.

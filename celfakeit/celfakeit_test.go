@@ -207,7 +207,6 @@ func TestFakeit(t *testing.T) {
 		{name: "fake_dog", cel: `fake_dog()`},
 		{name: "fake_bird", cel: `fake_bird()`},
 		{name: "fake_emoji", cel: `fake_emoji()`},
-		{name: "fake_emoji_description", cel: `fake_emoji_description()`},
 		{name: "fake_emoji_category", cel: `fake_emoji_category()`},
 		{name: "fake_emoji_alias", cel: `fake_emoji_alias()`},
 		{name: "fake_emoji_tag", cel: `fake_emoji_tag()`},
