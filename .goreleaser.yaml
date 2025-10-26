@@ -1,29 +1,29 @@
+version: 2
 project_name: fauxrpc
 builds:
   - main: ./cmd/fauxrpc/
+    id: fauxrpc
     env:
     - CGO_ENABLED=0
-dockers:
-  - image_templates:
-      - "docker.io/sudorandom/fauxrpc:{{ .Tag }}-amd64"
-      - "docker.io/sudorandom/fauxrpc:{{ .Tag }}"
-      - "docker.io/sudorandom/fauxrpc:v{{ .Major }}"
-      - "docker.io/sudorandom/fauxrpc:latest"
-    use: buildx
-    build_flag_templates:
-      - "--pull"
-      - "--platform=linux/amd64"
-    goarch: amd64
-  - image_templates:
-      - "docker.io/sudorandom/fauxrpc:{{ .Tag }}-arm64"
-      - "docker.io/sudorandom/fauxrpc:{{ .Tag }}"
-      - "docker.io/sudorandom/fauxrpc:v{{ .Major }}"
-      - "docker.io/sudorandom/fauxrpc:latest"
-    use: buildx
-    build_flag_templates:
-      - "--pull"
-      - "--platform=linux/arm64"
-    goarch: arm64
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+dockers_v2:
+  - images:
+      - "docker.io/sudorandom/fauxrpc"
+    tags:
+      - "{{ .Tag }}"
+      - "v{{ .Major }}"
+      - "latest"
+    labels:
+      "org.opencontainers.image.created": "{{.Date}}"
+      "org.opencontainers.image.title": "{{.ProjectName}}"
+      "org.opencontainers.image.revision": "{{.FullCommit}}"
+      "org.opencontainers.image.version": "{{.Version}}"
+    ids:
+      - fauxrpc
 checksum:
   # https://goreleaser.com/customization/checksum/
   name_template: 'checksums.txt'

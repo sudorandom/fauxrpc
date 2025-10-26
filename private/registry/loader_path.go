@@ -3,9 +3,12 @@ package registry
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/fs"
+	"log/slog"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -22,6 +25,21 @@ func AddServicesFromPath(ctx context.Context, registry LoaderTarget, path string
 	} else if err != nil {
 		return err
 	}
+
+	dirPath := path
+	if !stat.IsDir() {
+		dirPath = filepath.Dir(path)
+	}
+
+	bufYamlPath := filepath.Join(dirPath, "buf.yaml")
+	slog.Debug("checking for buf.yaml", "dirPath", dirPath, "bufYamlPath", bufYamlPath)
+	if _, err := os.Stat(bufYamlPath); err == nil {
+		// buf.yaml exists, so we use buf to build the descriptors
+		return addServicesWithBuf(registry, dirPath)
+	} else {
+		slog.Info("buf.yaml not found", "error", err)
+	}
+
 	if stat.IsDir() {
 		if err := fs.WalkDir(os.DirFS(path), ".", func(childpath string, d fs.DirEntry, err error) error {
 			if err != nil {
@@ -37,6 +55,29 @@ func AddServicesFromPath(ctx context.Context, registry LoaderTarget, path string
 		}); err != nil {
 			return err
 		}
+		return nil
 	}
 	return AddServicesFromSingleFile(registry, path)
+}
+
+func addServicesWithBuf(registry LoaderTarget, dirPath string) error {
+	slog.Info("found buf.yaml, building with buf", "path", dirPath)
+	tmpFile, err := os.CreateTemp("", "bufbuild-*.binpb")
+	if err != nil {
+		return fmt.Errorf("failed to create temp file for buf build: %w", err)
+	}
+	defer os.Remove(tmpFile.Name())
+	// Close the file so that buf can write to it
+	if err := tmpFile.Close(); err != nil {
+		return fmt.Errorf("failed to close temp file: %w", err)
+	}
+
+	cmd := exec.Command("buf", "build", "-o", tmpFile.Name())
+	cmd.Dir = dirPath
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("buf build failed: %w\n%s", err, string(output))
+	}
+
+	return AddServicesFromSingleFile(registry, tmpFile.Name())
 }
