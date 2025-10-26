@@ -271,10 +271,7 @@ func (s *server) Handler() (http.Handler, error) {
 		mux.Handle("/fauxrpc/openapi.yaml", s.handlerOpenAPI)
 	}
 
-	validateInterceptor, err := validate.NewInterceptor()
-	if err != nil {
-		return nil, err
-	}
+	validateInterceptor := validate.NewInterceptor()
 	mux.Mount(stubsv1connect.NewStubsServiceHandler(stubs.NewHandler(s, s), connect.WithInterceptors(validateInterceptor)))
 	mux.Mount(registryv1connect.NewRegistryServiceHandler(registry.NewHandler(s), connect.WithInterceptors(validateInterceptor)))
 
