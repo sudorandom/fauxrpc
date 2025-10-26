@@ -66,7 +66,11 @@ func addServicesWithBuf(registry LoaderTarget, dirPath string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create temp file for buf build: %w", err)
 	}
-	defer os.Remove(tmpFile.Name())
+	defer func() {
+		if err := os.Remove(tmpFile.Name()); err != nil {
+			slog.Error("failed to remove temp file", "path", tmpFile.Name(), "error", err)
+		}
+	}()
 	// Close the file so that buf can write to it
 	if err := tmpFile.Close(); err != nil {
 		return fmt.Errorf("failed to close temp file: %w", err)
