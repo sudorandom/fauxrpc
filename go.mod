@@ -19,7 +19,7 @@ require (
 	connectrpc.com/validate v0.6.0
 	connectrpc.com/vanguard v0.3.0
 	github.com/MadAppGang/httplog v1.3.0
-	github.com/a-h/templ v0.3.924
+	github.com/a-h/templ v0.3.960
 	github.com/alecthomas/kong v1.12.1
 	github.com/brianvoe/gofakeit/v7 v7.8.1
 	github.com/bufbuild/protocompile v0.14.1
