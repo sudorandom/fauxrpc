@@ -23,7 +23,7 @@ require (
 	github.com/alecthomas/kong v1.12.1
 	github.com/brianvoe/gofakeit/v7 v7.8.1
 	github.com/bufbuild/protocompile v0.14.1
-	github.com/go-chi/chi/v5 v5.2.2
+	github.com/go-chi/chi/v5 v5.2.3
 	github.com/google/cel-go v0.26.1
 	github.com/google/uuid v1.6.0
 	github.com/jhump/protoreflect v1.17.0
