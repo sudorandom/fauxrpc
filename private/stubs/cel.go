@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/google/cel-go/cel"
+	"github.com/google/cel-go/ext"
 	"github.com/sudorandom/fauxrpc/celfakeit"
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/protocel"
@@ -20,11 +21,13 @@ func NewActiveIf(md protoreflect.MethodDescriptor, expr string) (*ActiveIf, erro
 	reqMsg := registry.NewMessage(md.Input()).New()
 	env, err := cel.NewEnv(
 		celfakeit.Configure(),
+		ext.Encoders(),
 		cel.Types(reqMsg),
 		cel.Variable("req", cel.ObjectType(string(md.Input().FullName()))),
 		cel.Variable("service", cel.StringType),
 		cel.Variable("method", cel.StringType),
-		cel.Variable("procedure", cel.StringType))
+		cel.Variable("procedure", cel.StringType),
+	)
 	if err != nil {
 		return nil, err
 	}

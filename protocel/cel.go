@@ -2,16 +2,22 @@ package protocel
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
+
+	"time"
 
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
 	"github.com/google/cel-go/common/types/ref"
+
+	"github.com/google/cel-go/ext"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
 	"google.golang.org/protobuf/types/known/structpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/sudorandom/fauxrpc"
 	"github.com/sudorandom/fauxrpc/celfakeit"
@@ -298,6 +304,33 @@ func (p *protocel) celToValue(fd protoreflect.FieldDescriptor, val any) (protore
 			case uint64:
 				return protoreflect.ValueOfFloat64(float64(t)), nil
 			}
+		case protoreflect.BytesKind:
+			switch t := val.(type) {
+			case []byte:
+				return protoreflect.ValueOfBytes(t), nil
+			case string:
+				// Attempt to base64 decode the string, if it fails, use the raw string bytes
+				decoded, err := base64.StdEncoding.DecodeString(t)
+				if err == nil {
+					return protoreflect.ValueOfBytes(decoded), nil
+				}
+				return protoreflect.ValueOfBytes([]byte(t)), nil
+			}
+		case protoreflect.MessageKind:
+			if fd.Message().FullName() == "google.protobuf.Timestamp" {
+				switch t := val.(type) {
+				case time.Time:
+					ts := timestamppb.New(t)
+					return protoreflect.ValueOfMessage(ts.ProtoReflect()), nil
+				case string:
+					parsedTime, err := time.Parse(time.RFC3339Nano, t)
+					if err != nil {
+						return protoreflect.ValueOf(nil), fmt.Errorf("failed to parse timestamp: %w", err)
+					}
+					ts := timestamppb.New(parsedTime)
+					return protoreflect.ValueOfMessage(ts.ProtoReflect()), nil
+				}
+			}
 		}
 	}
 	return protoreflect.ValueOf(val), nil
@@ -328,6 +361,7 @@ func getFieldFromName(fds protoreflect.FieldDescriptors, key string) protoreflec
 func newEnv(files *protoregistry.Files) (*cel.Env, error) {
 	return cel.NewEnv(
 		celfakeit.Configure(),
+		ext.Encoders(),
 		cel.TypeDescs(files),
 		cel.Variable("req", cel.DynType),
 		cel.Variable("service", cel.StringType),
