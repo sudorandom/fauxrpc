@@ -59,7 +59,7 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) error {
 		options := oneOf.Fields()
 		idx := opts.fake().IntRange(0, options.Len()-1)
 		field := options.Get(idx)
-		if v := FieldValue(field, opts.nested()); v != nil {
+		if v := FieldValue(field, opts); v != nil {
 			msg.Set(field, *v)
 		}
 	}
@@ -82,7 +82,7 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) error {
 			}
 			continue
 		}
-		if v := FieldValue(field, opts.nested()); v != nil {
+		if v := FieldValue(field, opts); v != nil {
 			msg.Set(field, *v)
 		}
 	}
