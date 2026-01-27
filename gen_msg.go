@@ -2,6 +2,7 @@ package fauxrpc
 
 import (
 	"github.com/sudorandom/fauxrpc/private/registry"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -33,6 +34,13 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) error {
 	if opts.MaxDepth <= 0 {
 		return nil
 	}
+	if opts.StubFinder != nil {
+		if stub := opts.StubFinder.FindStub(pm.ProtoReflect().Descriptor().FullName(), opts.fake()); stub != nil {
+			proto.Merge(pm, stub)
+			return nil
+		}
+	}
+
 	msg := pm.ProtoReflect()
 	desc := msg.Descriptor()
 
@@ -51,7 +59,7 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) error {
 		options := oneOf.Fields()
 		idx := opts.fake().IntRange(0, options.Len()-1)
 		field := options.Get(idx)
-		if v := FieldValue(field, opts.nested()); v != nil {
+		if v := FieldValue(field, opts); v != nil {
 			msg.Set(field, *v)
 		}
 	}
@@ -74,7 +82,7 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) error {
 			}
 			continue
 		}
-		if v := FieldValue(field, opts.nested()); v != nil {
+		if v := FieldValue(field, opts); v != nil {
 			msg.Set(field, *v)
 		}
 	}
