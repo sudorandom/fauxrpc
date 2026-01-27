@@ -12,6 +12,7 @@ import (
 	"github.com/sudorandom/fauxrpc"
 	"github.com/sudorandom/fauxrpc/private/grpc"
 	"github.com/sudorandom/fauxrpc/private/registry"
+	"github.com/sudorandom/fauxrpc/private/stubs"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -22,6 +23,7 @@ type GenerateCmd struct {
 	Target string   `required:"" help:"Protobuf type" example:"'connectrpc.eliza.v1.IntroduceResponse'"`
 	Format string   `default:"json" enum:"json,proto,grpc" help:"Format to output"`
 	Seed   *uint64  `help:"Seed for random number generator"`
+	Stubs  []string `help:"Directories or file paths for JSON files."`
 }
 
 func (c *GenerateCmd) Run(globals *Globals) error {
@@ -34,6 +36,13 @@ func (c *GenerateCmd) Run(globals *Globals) error {
 			if strings.Contains(err.Error(), "name conflict") {
 				continue
 			}
+			return err
+		}
+	}
+
+	stubDB := stubs.NewStubDatabase()
+	for _, path := range c.Stubs {
+		if err := stubs.LoadStubsFromFile(theRegistry, stubDB, path); err != nil {
 			return err
 		}
 	}
@@ -55,7 +64,8 @@ func (c *GenerateCmd) Run(globals *Globals) error {
 	}
 	fakeSrc := source.NewJSF(seed)
 	msg, err := fauxrpc.NewMessage(md, fauxrpc.GenOptions{
-		Faker: gofakeit.NewFaker(fakeSrc, true),
+		Faker:      gofakeit.NewFaker(fakeSrc, true),
+		StubFinder: stubs.NewStubFinder(stubDB),
 	})
 	if err != nil {
 		return err

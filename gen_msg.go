@@ -2,6 +2,7 @@ package fauxrpc
 
 import (
 	"github.com/sudorandom/fauxrpc/private/registry"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -33,6 +34,13 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) error {
 	if opts.MaxDepth <= 0 {
 		return nil
 	}
+	if opts.StubFinder != nil {
+		if stub := opts.StubFinder.FindStub(pm.ProtoReflect().Descriptor().FullName(), opts.fake()); stub != nil {
+			proto.Merge(pm, stub)
+			return nil
+		}
+	}
+
 	msg := pm.ProtoReflect()
 	desc := msg.Descriptor()
 

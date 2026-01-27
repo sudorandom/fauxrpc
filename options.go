@@ -13,6 +13,10 @@ type StubEntry interface {
 	GetID() string
 }
 
+type StubFinder interface {
+	FindStub(name protoreflect.FullName, faker *gofakeit.Faker) protoreflect.ProtoMessage
+}
+
 type FieldGenOptions struct {
 	Message *validate.FieldRules
 }
@@ -22,6 +26,7 @@ type GenOptions struct {
 	Faker        *gofakeit.Faker
 	Context      context.Context
 	StubRecorder func(StubEntry)
+	StubFinder   StubFinder
 
 	extraFieldConstraints *validate.FieldRules
 }
