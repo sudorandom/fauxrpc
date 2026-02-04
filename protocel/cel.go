@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"sync"
 
 	"time"
 
@@ -44,27 +45,60 @@ type protocel struct {
 	program           cel.Program
 }
 
-func New(files *protoregistry.Files, md protoreflect.MessageDescriptor, celString string) (*protocel, error) {
+type Compiler struct {
+	env          *cel.Env
+	programCache map[string]cel.Program
+	mu           sync.RWMutex
+}
+
+func NewCompiler(files *protoregistry.Files) (*Compiler, error) {
 	env, err := newEnv(files)
 	if err != nil {
 		return nil, err
 	}
-	ast, issues := env.Compile(celString)
-	if issues != nil {
-		return nil, issues.Err()
-	}
-	if !isCELType(ast.OutputType(), validTopLevelTypes...) {
-		return nil, fmt.Errorf("%s: unexpected type '%s'; wanted one of: %v", md.FullName(), ast.OutputType(), validTopLevelTypes)
+	return &Compiler{
+		env:          env,
+		programCache: make(map[string]cel.Program),
+	}, nil
+}
+
+func (c *Compiler) Compile(md protoreflect.MessageDescriptor, celString string) (CELMessage, error) {
+	c.mu.RLock()
+	program, ok := c.programCache[celString]
+	c.mu.RUnlock()
+
+	if !ok {
+		ast, issues := c.env.Compile(celString)
+		if issues != nil {
+			return nil, issues.Err()
+		}
+		if !isCELType(ast.OutputType(), validTopLevelTypes...) {
+			return nil, fmt.Errorf("%s: unexpected type '%s'; wanted one of: %v", md.FullName(), ast.OutputType(), validTopLevelTypes)
+		}
+
+		var err error
+		program, err = c.env.Program(ast)
+		if err != nil {
+			return nil, err
+		}
+
+		c.mu.Lock()
+		c.programCache[celString] = program
+		c.mu.Unlock()
 	}
 
-	program, err := env.Program(ast)
-	if err != nil {
-		return nil, err
-	}
 	return &protocel{
 		messageDescriptor: md,
 		program:           program,
 	}, nil
+}
+
+func New(files *protoregistry.Files, md protoreflect.MessageDescriptor, celString string) (CELMessage, error) {
+	c, err := NewCompiler(files)
+	if err != nil {
+		return nil, err
+	}
+	return c.Compile(md, celString)
 }
 
 // NewMessage implements CELMessage.
