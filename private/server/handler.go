@@ -270,10 +270,7 @@ func handleStreamingResponse(ctx context.Context, w http.ResponseWriter, method 
 	stream := stubEntry.Stream
 	startTime := time.Now()
 
-	for {
-		if stream.DoneAfter > 0 && time.Since(startTime) > stream.DoneAfter {
-			break
-		}
+	for stream.DoneAfter == 0 || time.Since(startTime) <= stream.DoneAfter {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()
