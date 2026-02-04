@@ -38,6 +38,7 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 
 	entries := make([]StubEntry, len(req.Msg.GetStubs()))
 	stubs := make([]*stubsv1.Stub, len(req.Msg.GetStubs()))
+	var compiler *protocel.Compiler
 	for i, stub := range req.Msg.GetStubs() {
 		if !stub.HasRef() {
 			stub.SetRef(&stubsv1.StubRef{})
@@ -102,7 +103,14 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 		}
 
 		if stub.GetCelContent() != "" {
-			celmsg, err := protocel.New(h.registry.Files(), md, stub.GetCelContent())
+			if compiler == nil {
+				var err error
+				compiler, err = protocel.NewCompiler(h.registry.Files())
+				if err != nil {
+					return nil, err
+				}
+			}
+			celmsg, err := compiler.Compile(md, stub.GetCelContent())
 			if err != nil {
 				return nil, err
 			}
