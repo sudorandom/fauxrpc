@@ -43,39 +43,33 @@ func Repeated(msg protoreflect.Message, fd protoreflect.FieldDescriptor, opts Ge
 	listVal := msg.NewField(fd)
 	itemCount := opts.fake().IntRange(int(min), int(max))
 
+	seen := make(map[any]struct{})
 ItemLoop:
 	for range itemCount {
 		// Retry up to 20 times to generate a valid item.
 		for range 20 { // Existing retry for valid item
 			if v := FieldValue(fd, opts.nested().WithExtraFieldConstraints(rules.GetItems())); v != nil {
 				if rules.GetUnique() { // Check for uniqueness rule
-					isUnique := true
-					for j := 0; j < listVal.List().Len(); j++ {
-						// Compare based on the underlying value type
-						existingVal := listVal.List().Get(j)
-						if existingVal.IsValid() && v.IsValid() {
-							switch fd.Kind() {
-							case protoreflect.MessageKind:
-								if proto.Equal(existingVal.Message().Interface(), v.Message().Interface()) {
-									isUnique = false
-								}
-							case protoreflect.EnumKind, protoreflect.Int32Kind, protoreflect.Int64Kind,
-								protoreflect.Uint32Kind, protoreflect.Uint64Kind, protoreflect.Sint32Kind,
-								protoreflect.Sint64Kind, protoreflect.Fixed32Kind, protoreflect.Fixed64Kind,
-								protoreflect.Sfixed32Kind, protoreflect.Sfixed64Kind, protoreflect.FloatKind,
-								protoreflect.DoubleKind, protoreflect.BoolKind, protoreflect.StringKind,
-								protoreflect.BytesKind:
-								if existingVal.Interface() == v.Interface() { // Direct comparison for primitive types
-									isUnique = false
-								}
-							}
+					var key any
+					switch fd.Kind() {
+					case protoreflect.MessageKind, protoreflect.GroupKind:
+						// Marshal to bytes for uniqueness check for messages.
+						// We use deterministic marshaling to ensure consistent bytes for equal messages.
+						b, err := proto.MarshalOptions{Deterministic: true}.Marshal(v.Message().Interface())
+						if err == nil {
+							key = string(b)
 						}
-						if !isUnique {
-							break
-						}
+					case protoreflect.BytesKind:
+						key = string(v.Bytes())
+					default:
+						key = v.Interface()
 					}
-					if !isUnique {
-						continue // Not unique, try generating another value
+
+					if key != nil {
+						if _, exists := seen[key]; exists {
+							continue // Not unique, try generating another value
+						}
+						seen[key] = struct{}{}
 					}
 				}
 				listVal.List().Append(*v)
