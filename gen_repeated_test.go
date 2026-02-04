@@ -104,7 +104,37 @@ func TestRepeated(t *testing.T) {
 
 	// TODO: Add test for unique rule for message types (requires mocking opts.fake() to control generated values)
 
-	// TODO: Add test for Items rules (requires setting up a protobuf schema with nested rules)
+	t.Run("Items rules", func(t *testing.T) {
+		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
+		require.NotNil(t, md)
+		repeatedStringField := md.Fields().ByName("string_list")
+		require.NotNil(t, repeatedStringField)
+		msg := dynamicpb.NewMessage(md)
+
+		constVal := "test_value"
+		fd := createFieldDescriptorWithConstraints(repeatedStringField, &validate.FieldRules{
+			Type: &validate.FieldRules_Repeated{
+				Repeated: &validate.RepeatedRules{
+					Items: &validate.FieldRules{
+						Type: &validate.FieldRules_String_{
+							String_: &validate.StringRules{
+								Const: &constVal,
+							},
+						},
+					},
+				},
+			},
+		})
+
+		opts := fauxrpc.GenOptions{MaxDepth: 5, Faker: gofakeit.New(0)}
+		val := fauxrpc.Repeated(msg, fd, opts)
+		require.NotNil(t, val)
+		list := val.List()
+		assert.Greater(t, list.Len(), 0)
+		for i := range list.Len() {
+			assert.Equal(t, constVal, list.Get(i).String())
+		}
+	})
 }
 
 func TestRepeatedEnum(t *testing.T) {
