@@ -197,8 +197,64 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 		}
 
 		// Handle writing response
-		var msg []byte
 		eg.Go(func() error {
+			stubFaker := stubs.NewStubFaker(s)
+			celCtx := &protocel.CELContext{
+				MethodDescriptor: method,
+				Req:              input,
+			}
+			stubEntry, err := stubFaker.FindStub(ctx, celCtx, method.Output())
+			if err != nil {
+				return status.New(codes.Internal, err.Error()).Err()
+			}
+
+			if stubEntry != nil && len(stubEntry.Stream) > 0 {
+				stubsUsed = append(stubsUsed, stubEntry.Key)
+				for _, item := range stubEntry.Stream {
+					for {
+						select {
+						case <-ctx.Done():
+							return ctx.Err()
+						default:
+						}
+
+						out := registry.NewMessage(method.Output()).Interface()
+
+						if item.Message != nil {
+							proto.Merge(out, item.Message)
+						}
+
+						if item.CELMessage != nil {
+							ctxWithCEL := protocel.WithCELContext(ctx, celCtx)
+							if err := item.CELMessage.SetDataOnMessage(ctxWithCEL, out); err != nil {
+								return status.New(codes.Internal, err.Error()).Err()
+							}
+						}
+
+						b, err := proto.Marshal(out)
+						if err != nil {
+							return status.New(codes.Internal, err.Error()).Err()
+						}
+						if err := grpc.WriteGRPCMessage(w, b); err != nil {
+							return err
+						}
+
+						if item.DoneAfter > 0 {
+							select {
+							case <-ctx.Done():
+								return ctx.Err()
+							case <-time.After(item.DoneAfter):
+							}
+						}
+
+						if !item.Repeated {
+							break
+						}
+					}
+				}
+				return nil
+			}
+
 			out := registry.NewMessage(method.Output()).Interface()
 			genOpts := fauxrpc.GenOptions{
 				MaxDepth: 20,
@@ -230,8 +286,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 				slog.Error(fmt.Sprintf("error marshalling msg: %s", err))
 				return status.New(codes.Internal, err.Error()).Err()
 			}
-			msg = b
-			return nil
+			return grpc.WriteGRPCMessage(w, b)
 		})
 
 		// Write response
@@ -247,7 +302,6 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 				return
 			}
 		}
-		_ = grpc.WriteGRPCMessage(w, msg)
 		finalStatus = status.New(codes.OK, "")
 		grpcWriteStatus(w, finalStatus)
 	})

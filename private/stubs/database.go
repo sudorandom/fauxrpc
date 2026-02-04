@@ -3,6 +3,7 @@ package stubs
 import (
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/sudorandom/fauxrpc/protocel"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -29,6 +30,16 @@ type StubEntry struct {
 	Error            *StatusError
 	ActiveIf         *ActiveIf
 	Priority         int
+	Stream           []StreamEntry
+}
+
+type StreamEntry struct {
+	Message          protoreflect.ProtoMessage
+	CELMessage       protocel.CELMessage
+	CELContentString string
+	Error            *StatusError
+	Repeated         bool
+	DoneAfter        time.Duration
 }
 
 type PriorityStubEntries struct {

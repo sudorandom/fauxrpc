@@ -15,6 +15,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 var _ stubsv1connect.StubsServiceHandler = (*handler)(nil)
@@ -110,6 +111,48 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 			entry.CELContentString = stub.GetCelContent()
 		}
 
+		if len(stub.GetStream()) > 0 {
+			streamEntries := make([]StreamEntry, len(stub.GetStream()))
+			for j, s := range stub.GetStream() {
+				se := StreamEntry{
+					Repeated: s.GetRepeated(),
+				}
+				if s.GetDoneAfter() != nil {
+					se.DoneAfter = s.GetDoneAfter().AsDuration()
+				}
+
+				switch s.WhichContent() {
+				case stubsv1.StreamGenerator_Json_case:
+					if s.GetJson() != "" {
+						msg := registry.NewMessage(md).Interface()
+						if err := protojson.Unmarshal([]byte(s.GetJson()), msg); err != nil {
+							return nil, err
+						}
+						se.Message = msg
+					}
+				case stubsv1.StreamGenerator_Proto_case:
+					msg := registry.NewMessage(md).Interface()
+					if err := proto.Unmarshal(s.GetProto(), msg); err != nil {
+						return nil, err
+					}
+					se.Message = msg
+				case stubsv1.StreamGenerator_Error_case:
+					se.Error = &StatusError{StubsError: s.GetError()}
+				}
+
+				if s.GetCelContent() != "" {
+					celmsg, err := protocel.New(h.registry.Files(), md, s.GetCelContent())
+					if err != nil {
+						return nil, err
+					}
+					se.CELMessage = celmsg
+					se.CELContentString = s.GetCelContent()
+				}
+				streamEntries[j] = se
+			}
+			entry.Stream = streamEntries
+		}
+
 		entries[i] = entry
 		stubs[i] = stub
 	}
@@ -201,6 +244,34 @@ func StubsToProto(stubs []StubEntry) ([]*stubsv1.Stub, error) {
 		if stub.CELMessage != nil {
 			pbStub.SetCelContent(stub.CELContentString)
 		}
+
+		if len(stub.Stream) > 0 {
+			streamGenerators := make([]*stubsv1.StreamGenerator, len(stub.Stream))
+			for j, s := range stub.Stream {
+				sgBuilder := stubsv1.StreamGenerator_builder{
+					Repeated: proto.Bool(s.Repeated),
+				}
+				if s.DoneAfter > 0 {
+					sgBuilder.DoneAfter = durationpb.New(s.DoneAfter)
+				}
+				if s.Message != nil {
+					content, err := protojson.Marshal(s.Message)
+					if err != nil {
+						return nil, err
+					}
+					sgBuilder.Json = proto.String(string(content))
+				}
+				if s.CELMessage != nil {
+					sgBuilder.CelContent = proto.String(s.CELContentString)
+				}
+				if s.Error != nil {
+					sgBuilder.Error = s.Error.StubsError
+				}
+				streamGenerators[j] = sgBuilder.Build()
+			}
+			pbStub.SetStream(streamGenerators)
+		}
+
 		pbStubs = append(pbStubs, pbStub)
 	}
 	return pbStubs, nil

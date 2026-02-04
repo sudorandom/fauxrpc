@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"time"
 
 	"connectrpc.com/connect"
 	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
@@ -16,6 +17,7 @@ import (
 	"github.com/tailscale/hujson"
 	"go.yaml.in/yaml/v3"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 type StubFile struct {
@@ -56,6 +58,33 @@ func (f StubFile) ToRequest() (*stubsv1.AddStubsRequest, error) {
 				Message: proto.String(stub.ErrorMessage),
 			}.Build()
 		}
+		if len(stub.Stream) > 0 {
+			streamGenerators := make([]*stubsv1.StreamGenerator, len(stub.Stream))
+			for j, s := range stub.Stream {
+				sgBuilder := stubsv1.StreamGenerator_builder{
+					Repeated: proto.Bool(s.Repeated),
+				}
+				if s.DoneAfter != "" {
+					d, err := time.ParseDuration(s.DoneAfter)
+					if err != nil {
+						return nil, fmt.Errorf("invalid duration %q in stub %d stream %d: %w", s.DoneAfter, i, j, err)
+					}
+					sgBuilder.DoneAfter = durationpb.New(d)
+				}
+				if s.Content != nil {
+					b, err := json.Marshal(s.Content)
+					if err != nil {
+						return nil, err
+					}
+					sgBuilder.Json = proto.String(string(b))
+				}
+				if s.CelContent != "" {
+					sgBuilder.CelContent = proto.String(s.CelContent)
+				}
+				streamGenerators[j] = sgBuilder.Build()
+			}
+			builder.Stream = streamGenerators
+		}
 		stubs[i] = builder.Build()
 	}
 
@@ -63,14 +92,22 @@ func (f StubFile) ToRequest() (*stubsv1.AddStubsRequest, error) {
 }
 
 type StubFileEntry struct {
-	ID           string `json:"id" yaml:"id"`
-	Target       string `json:"target" yaml:"target"`
-	Content      any    `json:"content,omitempty" yaml:"content"`
-	CelContent   string `json:"cel_content,omitempty" yaml:"cel_content"`
-	ActiveIf     string `json:"active_if,omitempty" yaml:"active_if"`
-	ErrorCode    int    `json:"error_code,omitempty" yaml:"error_code"`
-	ErrorMessage string `json:"error_message,omitempty" yaml:"error_message"`
-	Priority     int32  `json:"priority,omitempty" yaml:"priority"`
+	ID           string              `json:"id" yaml:"id"`
+	Target       string              `json:"target" yaml:"target"`
+	Content      any                 `json:"content,omitempty" yaml:"content"`
+	CelContent   string              `json:"cel_content,omitempty" yaml:"cel_content"`
+	ActiveIf     string              `json:"active_if,omitempty" yaml:"active_if"`
+	ErrorCode    int                 `json:"error_code,omitempty" yaml:"error_code"`
+	ErrorMessage string              `json:"error_message,omitempty" yaml:"error_message"`
+	Priority     int32               `json:"priority,omitempty" yaml:"priority"`
+	Stream       []StubFileStreamEntry `json:"stream,omitempty" yaml:"stream"`
+}
+
+type StubFileStreamEntry struct {
+	Content    any    `json:"content,omitempty" yaml:"content"`
+	CelContent string `json:"cel_content,omitempty" yaml:"cel_content"`
+	Repeated   bool   `json:"repeated,omitempty" yaml:"repeated"`
+	DoneAfter  string `json:"done_after,omitempty" yaml:"done_after"`
 }
 
 func LoadStubsFromFile(registry registry.ServiceRegistry, stubdb StubDatabase, stubsPath string) error {

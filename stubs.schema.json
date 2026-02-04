@@ -50,10 +50,38 @@
         "error_message": {
           "type": "string",
           "description": "A human-readable error message."
+        },
+        "stream": {
+          "type": "array",
+          "description": "A sequence of messages to be returned for streaming responses.",
+          "items": {
+            "$ref": "#/definitions/StreamGenerator"
+          }
         }
       },
       "required": ["target"],
-      "errorMessage": "A stub must define exactly one of 'cel_content', 'content', 'error_code', or 'error_message'."
+      "errorMessage": "A stub must define exactly one of 'cel_content', 'content', 'error_code', 'error_message', or 'stream'."
+    },
+    "StreamGenerator": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "content": {
+          "description": "A JSON object representing the response message. This will be unmarshaled into the appropriate protobuf message type."
+        },
+        "cel_content": {
+          "type": "string",
+          "description": "A Common Expression Language (CEL) expression that evaluates to the response message."
+        },
+        "repeated": {
+          "type": "boolean",
+          "description": "If true, this message (or generator) is repeated indefinitely (or until stream closes)."
+        },
+        "done_after": {
+          "type": "string",
+          "description": "Duration to wait after sending this message (e.g., '1s', '500ms')."
+        }
+      }
     }
   }
 }

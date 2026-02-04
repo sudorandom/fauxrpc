@@ -4,6 +4,7 @@ package stubs.v1;
 
 import "buf/validate/validate.proto";
 import "google/protobuf/any.proto";
+import "google/protobuf/duration.proto";
 import "google/protobuf/go_features.proto";
 
 option features.(pb.go).api_level = API_OPAQUE;
@@ -23,6 +24,18 @@ message Stub {
     gte: 0
     lte: 100
   }];
+  repeated StreamGenerator stream = 8;
+}
+
+message StreamGenerator {
+  oneof content {
+    bytes proto = 1;
+    string json = 2;
+    Error error = 3;
+  }
+  string cel_content = 4;
+  bool repeated = 5;
+  google.protobuf.Duration done_after = 6;
 }
 
 message StubRef {
