@@ -141,7 +141,25 @@ func (db *stubDatabase) AddStub(entry StubEntry) {
 func (db *stubDatabase) RemoveStub(key StubKey) {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
+
+	entry, ok := db.stubsByKey[key]
+	if !ok {
+		return
+	}
 	delete(db.stubsByKey, key)
+
+	groups := db.stubIndex[key.Name]
+	for i, group := range groups {
+		if group.Priority == entry.Priority {
+			for j, k := range group.Entries {
+				if k == key {
+					groups[i].Entries = append(group.Entries[:j], group.Entries[j+1:]...)
+					break
+				}
+			}
+			break
+		}
+	}
 }
 
 func (db *stubDatabase) RemoveAllStubs() {
