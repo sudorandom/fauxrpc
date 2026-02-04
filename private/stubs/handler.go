@@ -111,46 +111,54 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 			entry.CELContentString = stub.GetCelContent()
 		}
 
-		if len(stub.GetStream()) > 0 {
-			streamEntries := make([]StreamEntry, len(stub.GetStream()))
-			for j, s := range stub.GetStream() {
-				se := StreamEntry{
-					Repeated: s.GetRepeated(),
-				}
-				if s.GetDoneAfter() != nil {
-					se.DoneAfter = s.GetDoneAfter().AsDuration()
-				}
+		if stub.HasStream() {
+			s := stub.GetStream()
+			se := &StreamEntry{
+				Repeated: s.GetRepeated(),
+			}
+			if s.GetDoneAfter() != nil {
+				se.DoneAfter = s.GetDoneAfter().AsDuration()
+			}
+			if len(s.GetItems()) > 0 {
+				streamItems := make([]StreamItemEntry, len(s.GetItems()))
+				for j, item := range s.GetItems() {
+					sie := StreamItemEntry{}
+					if item.GetDelay() != nil {
+						sie.Delay = item.GetDelay().AsDuration()
+					}
 
-				switch s.WhichContent() {
-				case stubsv1.StreamGenerator_Json_case:
-					if s.GetJson() != "" {
+					switch item.WhichContent() {
+					case stubsv1.StreamItem_Json_case:
+						if item.GetJson() != "" {
+							msg := registry.NewMessage(md).Interface()
+							if err := protojson.Unmarshal([]byte(item.GetJson()), msg); err != nil {
+								return nil, err
+							}
+							sie.Message = msg
+						}
+					case stubsv1.StreamItem_Proto_case:
 						msg := registry.NewMessage(md).Interface()
-						if err := protojson.Unmarshal([]byte(s.GetJson()), msg); err != nil {
+						if err := proto.Unmarshal(item.GetProto(), msg); err != nil {
 							return nil, err
 						}
-						se.Message = msg
+						sie.Message = msg
+					case stubsv1.StreamItem_Error_case:
+						sie.Error = &StatusError{StubsError: item.GetError()}
 					}
-				case stubsv1.StreamGenerator_Proto_case:
-					msg := registry.NewMessage(md).Interface()
-					if err := proto.Unmarshal(s.GetProto(), msg); err != nil {
-						return nil, err
-					}
-					se.Message = msg
-				case stubsv1.StreamGenerator_Error_case:
-					se.Error = &StatusError{StubsError: s.GetError()}
-				}
 
-				if s.GetCelContent() != "" {
-					celmsg, err := protocel.New(h.registry.Files(), md, s.GetCelContent())
-					if err != nil {
-						return nil, err
+					if item.GetCelContent() != "" {
+						celmsg, err := protocel.New(h.registry.Files(), md, item.GetCelContent())
+						if err != nil {
+							return nil, err
+						}
+						sie.CELMessage = celmsg
+						sie.CELContentString = item.GetCelContent()
 					}
-					se.CELMessage = celmsg
-					se.CELContentString = s.GetCelContent()
+					streamItems[j] = sie
 				}
-				streamEntries[j] = se
+				se.Items = streamItems
 			}
-			entry.Stream = streamEntries
+			entry.Stream = se
 		}
 
 		entries[i] = entry
@@ -245,31 +253,39 @@ func StubsToProto(stubs []StubEntry) ([]*stubsv1.Stub, error) {
 			pbStub.SetCelContent(stub.CELContentString)
 		}
 
-		if len(stub.Stream) > 0 {
-			streamGenerators := make([]*stubsv1.StreamGenerator, len(stub.Stream))
-			for j, s := range stub.Stream {
-				sgBuilder := stubsv1.StreamGenerator_builder{
-					Repeated: proto.Bool(s.Repeated),
-				}
-				if s.DoneAfter > 0 {
-					sgBuilder.DoneAfter = durationpb.New(s.DoneAfter)
-				}
-				if s.Message != nil {
-					content, err := protojson.Marshal(s.Message)
-					if err != nil {
-						return nil, err
-					}
-					sgBuilder.Json = proto.String(string(content))
-				}
-				if s.CELMessage != nil {
-					sgBuilder.CelContent = proto.String(s.CELContentString)
-				}
-				if s.Error != nil {
-					sgBuilder.Error = s.Error.StubsError
-				}
-				streamGenerators[j] = sgBuilder.Build()
+		if stub.Stream != nil {
+			s := stub.Stream
+			streamBuilder := stubsv1.Stream_builder{
+				Repeated: proto.Bool(s.Repeated),
 			}
-			pbStub.SetStream(streamGenerators)
+			if s.DoneAfter > 0 {
+				streamBuilder.DoneAfter = durationpb.New(s.DoneAfter)
+			}
+			if len(s.Items) > 0 {
+				streamItems := make([]*stubsv1.StreamItem, len(s.Items))
+				for j, item := range s.Items {
+					siBuilder := stubsv1.StreamItem_builder{}
+					if item.Delay > 0 {
+						siBuilder.Delay = durationpb.New(item.Delay)
+					}
+					if item.Message != nil {
+						content, err := protojson.Marshal(item.Message)
+						if err != nil {
+							return nil, err
+						}
+						siBuilder.Json = proto.String(string(content))
+					}
+					if item.CELMessage != nil {
+						siBuilder.CelContent = proto.String(item.CELContentString)
+					}
+					if item.Error != nil {
+						siBuilder.Error = item.Error.StubsError
+					}
+					streamItems[j] = siBuilder.Build()
+				}
+				streamBuilder.Items = streamItems
+			}
+			pbStub.SetStream(streamBuilder.Build())
 		}
 
 		pbStubs = append(pbStubs, pbStub)

@@ -58,32 +58,44 @@ func (f StubFile) ToRequest() (*stubsv1.AddStubsRequest, error) {
 				Message: proto.String(stub.ErrorMessage),
 			}.Build()
 		}
-		if len(stub.Stream) > 0 {
-			streamGenerators := make([]*stubsv1.StreamGenerator, len(stub.Stream))
-			for j, s := range stub.Stream {
-				sgBuilder := stubsv1.StreamGenerator_builder{
-					Repeated: proto.Bool(s.Repeated),
-				}
-				if s.DoneAfter != "" {
-					d, err := time.ParseDuration(s.DoneAfter)
-					if err != nil {
-						return nil, fmt.Errorf("invalid duration %q in stub %d stream %d: %w", s.DoneAfter, i, j, err)
-					}
-					sgBuilder.DoneAfter = durationpb.New(d)
-				}
-				if s.Content != nil {
-					b, err := json.Marshal(s.Content)
-					if err != nil {
-						return nil, err
-					}
-					sgBuilder.Json = proto.String(string(b))
-				}
-				if s.CelContent != "" {
-					sgBuilder.CelContent = proto.String(s.CelContent)
-				}
-				streamGenerators[j] = sgBuilder.Build()
+		if stub.Stream != nil {
+			streamBuilder := stubsv1.Stream_builder{
+				Repeated: proto.Bool(stub.Stream.Repeated),
 			}
-			builder.Stream = streamGenerators
+			if stub.Stream.DoneAfter != "" {
+				d, err := time.ParseDuration(stub.Stream.DoneAfter)
+				if err != nil {
+					return nil, fmt.Errorf("invalid duration %q in stub %d stream done_after: %w", stub.Stream.DoneAfter, i, err)
+				}
+				streamBuilder.DoneAfter = durationpb.New(d)
+			}
+
+			if len(stub.Stream.Items) > 0 {
+				streamItems := make([]*stubsv1.StreamItem, len(stub.Stream.Items))
+				for j, s := range stub.Stream.Items {
+					siBuilder := stubsv1.StreamItem_builder{}
+					if s.Delay != "" {
+						d, err := time.ParseDuration(s.Delay)
+						if err != nil {
+							return nil, fmt.Errorf("invalid duration %q in stub %d stream item %d: %w", s.Delay, i, j, err)
+						}
+						siBuilder.Delay = durationpb.New(d)
+					}
+					if s.Content != nil {
+						b, err := json.Marshal(s.Content)
+						if err != nil {
+							return nil, err
+						}
+						siBuilder.Json = proto.String(string(b))
+					}
+					if s.CelContent != "" {
+						siBuilder.CelContent = proto.String(s.CelContent)
+					}
+					streamItems[j] = siBuilder.Build()
+				}
+				streamBuilder.Items = streamItems
+			}
+			builder.Stream = streamBuilder.Build()
 		}
 		stubs[i] = builder.Build()
 	}
@@ -100,14 +112,19 @@ type StubFileEntry struct {
 	ErrorCode    int                 `json:"error_code,omitempty" yaml:"error_code"`
 	ErrorMessage string              `json:"error_message,omitempty" yaml:"error_message"`
 	Priority     int32               `json:"priority,omitempty" yaml:"priority"`
-	Stream       []StubFileStreamEntry `json:"stream,omitempty" yaml:"stream"`
+	Stream       *StubFileStreamEntry `json:"stream,omitempty" yaml:"stream"`
 }
 
 type StubFileStreamEntry struct {
+	Items     []StubFileStreamItemEntry `json:"items,omitempty" yaml:"items"`
+	Repeated  bool                      `json:"repeated,omitempty" yaml:"repeated"`
+	DoneAfter string                    `json:"done_after,omitempty" yaml:"done_after"`
+}
+
+type StubFileStreamItemEntry struct {
 	Content    any    `json:"content,omitempty" yaml:"content"`
 	CelContent string `json:"cel_content,omitempty" yaml:"cel_content"`
-	Repeated   bool   `json:"repeated,omitempty" yaml:"repeated"`
-	DoneAfter  string `json:"done_after,omitempty" yaml:"done_after"`
+	Delay      string `json:"delay,omitempty" yaml:"delay"`
 }
 
 func LoadStubsFromFile(registry registry.ServiceRegistry, stubdb StubDatabase, stubsPath string) error {

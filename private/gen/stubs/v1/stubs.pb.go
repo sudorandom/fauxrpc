@@ -117,7 +117,7 @@ type Stub struct {
 	xxx_hidden_ActiveIf    *string                `protobuf:"bytes,5,opt,name=active_if,json=activeIf"`
 	xxx_hidden_CelContent  *string                `protobuf:"bytes,6,opt,name=cel_content,json=celContent"`
 	xxx_hidden_Priority    int32                  `protobuf:"varint,7,opt,name=priority"`
-	xxx_hidden_Stream      *[]*StreamGenerator    `protobuf:"bytes,8,rep,name=stream"`
+	xxx_hidden_Stream      *Stream                `protobuf:"bytes,8,opt,name=stream"`
 	XXX_raceDetectHookData protoimpl.RaceDetectHookData
 	XXX_presence           [1]uint32
 	unknownFields          protoimpl.UnknownFields
@@ -210,11 +210,9 @@ func (x *Stub) GetPriority() int32 {
 	return 0
 }
 
-func (x *Stub) GetStream() []*StreamGenerator {
+func (x *Stub) GetStream() *Stream {
 	if x != nil {
-		if x.xxx_hidden_Stream != nil {
-			return *x.xxx_hidden_Stream
-		}
+		return x.xxx_hidden_Stream
 	}
 	return nil
 }
@@ -257,8 +255,8 @@ func (x *Stub) SetPriority(v int32) {
 	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 6)
 }
 
-func (x *Stub) SetStream(v []*StreamGenerator) {
-	x.xxx_hidden_Stream = &v
+func (x *Stub) SetStream(v *Stream) {
+	x.xxx_hidden_Stream = v
 }
 
 func (x *Stub) HasRef() bool {
@@ -320,6 +318,13 @@ func (x *Stub) HasPriority() bool {
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 4)
 }
 
+func (x *Stub) HasStream() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Stream != nil
+}
+
 func (x *Stub) ClearRef() {
 	x.xxx_hidden_Ref = nil
 }
@@ -361,6 +366,10 @@ func (x *Stub) ClearPriority() {
 	x.xxx_hidden_Priority = 0
 }
 
+func (x *Stub) ClearStream() {
+	x.xxx_hidden_Stream = nil
+}
+
 const Stub_Content_not_set_case case_Stub_Content = 0
 const Stub_Proto_case case_Stub_Content = 2
 const Stub_Json_case case_Stub_Content = 3
@@ -396,7 +405,7 @@ type Stub_builder struct {
 	// Similar to the json attribute but is a CEL expression that returns the result.
 	CelContent *string
 	Priority   *int32
-	Stream     []*StreamGenerator
+	Stream     *Stream
 }
 
 func (b0 Stub_builder) Build() *Stub {
@@ -425,7 +434,7 @@ func (b0 Stub_builder) Build() *Stub {
 		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 6)
 		x.xxx_hidden_Priority = *b.Priority
 	}
-	x.xxx_hidden_Stream = &b.Stream
+	x.xxx_hidden_Stream = b.Stream
 	return m0
 }
 
@@ -461,32 +470,31 @@ func (*stub_Json) isStub_Content() {}
 
 func (*stub_Error) isStub_Content() {}
 
-type StreamGenerator struct {
-	state                  protoimpl.MessageState    `protogen:"opaque.v1"`
-	xxx_hidden_Content     isStreamGenerator_Content `protobuf_oneof:"content"`
-	xxx_hidden_CelContent  *string                   `protobuf:"bytes,4,opt,name=cel_content,json=celContent"`
-	xxx_hidden_Repeated    bool                      `protobuf:"varint,5,opt,name=repeated"`
-	xxx_hidden_DoneAfter   *durationpb.Duration      `protobuf:"bytes,6,opt,name=done_after,json=doneAfter"`
+type Stream struct {
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Items       *[]*StreamItem         `protobuf:"bytes,1,rep,name=items"`
+	xxx_hidden_Repeated    bool                   `protobuf:"varint,2,opt,name=repeated"`
+	xxx_hidden_DoneAfter   *durationpb.Duration   `protobuf:"bytes,3,opt,name=done_after,json=doneAfter"`
 	XXX_raceDetectHookData protoimpl.RaceDetectHookData
 	XXX_presence           [1]uint32
 	unknownFields          protoimpl.UnknownFields
 	sizeCache              protoimpl.SizeCache
 }
 
-func (x *StreamGenerator) Reset() {
-	*x = StreamGenerator{}
+func (x *Stream) Reset() {
+	*x = Stream{}
 	mi := &file_stubs_v1_stubs_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *StreamGenerator) String() string {
+func (x *Stream) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*StreamGenerator) ProtoMessage() {}
+func (*Stream) ProtoMessage() {}
 
-func (x *StreamGenerator) ProtoReflect() protoreflect.Message {
+func (x *Stream) ProtoReflect() protoreflect.Message {
 	mi := &file_stubs_v1_stubs_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -498,34 +506,150 @@ func (x *StreamGenerator) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-func (x *StreamGenerator) GetProto() []byte {
+func (x *Stream) GetItems() []*StreamItem {
 	if x != nil {
-		if x, ok := x.xxx_hidden_Content.(*streamGenerator_Proto); ok {
+		if x.xxx_hidden_Items != nil {
+			return *x.xxx_hidden_Items
+		}
+	}
+	return nil
+}
+
+func (x *Stream) GetRepeated() bool {
+	if x != nil {
+		return x.xxx_hidden_Repeated
+	}
+	return false
+}
+
+func (x *Stream) GetDoneAfter() *durationpb.Duration {
+	if x != nil {
+		return x.xxx_hidden_DoneAfter
+	}
+	return nil
+}
+
+func (x *Stream) SetItems(v []*StreamItem) {
+	x.xxx_hidden_Items = &v
+}
+
+func (x *Stream) SetRepeated(v bool) {
+	x.xxx_hidden_Repeated = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 3)
+}
+
+func (x *Stream) SetDoneAfter(v *durationpb.Duration) {
+	x.xxx_hidden_DoneAfter = v
+}
+
+func (x *Stream) HasRepeated() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
+}
+
+func (x *Stream) HasDoneAfter() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_DoneAfter != nil
+}
+
+func (x *Stream) ClearRepeated() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
+	x.xxx_hidden_Repeated = false
+}
+
+func (x *Stream) ClearDoneAfter() {
+	x.xxx_hidden_DoneAfter = nil
+}
+
+type Stream_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Items     []*StreamItem
+	Repeated  *bool
+	DoneAfter *durationpb.Duration
+}
+
+func (b0 Stream_builder) Build() *Stream {
+	m0 := &Stream{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Items = &b.Items
+	if b.Repeated != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 3)
+		x.xxx_hidden_Repeated = *b.Repeated
+	}
+	x.xxx_hidden_DoneAfter = b.DoneAfter
+	return m0
+}
+
+type StreamItem struct {
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Content     isStreamItem_Content   `protobuf_oneof:"content"`
+	xxx_hidden_CelContent  *string                `protobuf:"bytes,4,opt,name=cel_content,json=celContent"`
+	xxx_hidden_Delay       *durationpb.Duration   `protobuf:"bytes,5,opt,name=delay"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *StreamItem) Reset() {
+	*x = StreamItem{}
+	mi := &file_stubs_v1_stubs_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StreamItem) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StreamItem) ProtoMessage() {}
+
+func (x *StreamItem) ProtoReflect() protoreflect.Message {
+	mi := &file_stubs_v1_stubs_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *StreamItem) GetProto() []byte {
+	if x != nil {
+		if x, ok := x.xxx_hidden_Content.(*streamItem_Proto); ok {
 			return x.Proto
 		}
 	}
 	return nil
 }
 
-func (x *StreamGenerator) GetJson() string {
+func (x *StreamItem) GetJson() string {
 	if x != nil {
-		if x, ok := x.xxx_hidden_Content.(*streamGenerator_Json); ok {
+		if x, ok := x.xxx_hidden_Content.(*streamItem_Json); ok {
 			return x.Json
 		}
 	}
 	return ""
 }
 
-func (x *StreamGenerator) GetError() *Error {
+func (x *StreamItem) GetError() *Error {
 	if x != nil {
-		if x, ok := x.xxx_hidden_Content.(*streamGenerator_Error); ok {
+		if x, ok := x.xxx_hidden_Content.(*streamItem_Error); ok {
 			return x.Error
 		}
 	}
 	return nil
 }
 
-func (x *StreamGenerator) GetCelContent() string {
+func (x *StreamItem) GetCelContent() string {
 	if x != nil {
 		if x.xxx_hidden_CelContent != nil {
 			return *x.xxx_hidden_CelContent
@@ -535,163 +659,139 @@ func (x *StreamGenerator) GetCelContent() string {
 	return ""
 }
 
-func (x *StreamGenerator) GetRepeated() bool {
+func (x *StreamItem) GetDelay() *durationpb.Duration {
 	if x != nil {
-		return x.xxx_hidden_Repeated
-	}
-	return false
-}
-
-func (x *StreamGenerator) GetDoneAfter() *durationpb.Duration {
-	if x != nil {
-		return x.xxx_hidden_DoneAfter
+		return x.xxx_hidden_Delay
 	}
 	return nil
 }
 
-func (x *StreamGenerator) SetProto(v []byte) {
+func (x *StreamItem) SetProto(v []byte) {
 	if v == nil {
 		v = []byte{}
 	}
-	x.xxx_hidden_Content = &streamGenerator_Proto{v}
+	x.xxx_hidden_Content = &streamItem_Proto{v}
 }
 
-func (x *StreamGenerator) SetJson(v string) {
-	x.xxx_hidden_Content = &streamGenerator_Json{v}
+func (x *StreamItem) SetJson(v string) {
+	x.xxx_hidden_Content = &streamItem_Json{v}
 }
 
-func (x *StreamGenerator) SetError(v *Error) {
+func (x *StreamItem) SetError(v *Error) {
 	if v == nil {
 		x.xxx_hidden_Content = nil
 		return
 	}
-	x.xxx_hidden_Content = &streamGenerator_Error{v}
+	x.xxx_hidden_Content = &streamItem_Error{v}
 }
 
-func (x *StreamGenerator) SetCelContent(v string) {
+func (x *StreamItem) SetCelContent(v string) {
 	x.xxx_hidden_CelContent = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 4)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 3)
 }
 
-func (x *StreamGenerator) SetRepeated(v bool) {
-	x.xxx_hidden_Repeated = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 4)
+func (x *StreamItem) SetDelay(v *durationpb.Duration) {
+	x.xxx_hidden_Delay = v
 }
 
-func (x *StreamGenerator) SetDoneAfter(v *durationpb.Duration) {
-	x.xxx_hidden_DoneAfter = v
-}
-
-func (x *StreamGenerator) HasContent() bool {
+func (x *StreamItem) HasContent() bool {
 	if x == nil {
 		return false
 	}
 	return x.xxx_hidden_Content != nil
 }
 
-func (x *StreamGenerator) HasProto() bool {
+func (x *StreamItem) HasProto() bool {
 	if x == nil {
 		return false
 	}
-	_, ok := x.xxx_hidden_Content.(*streamGenerator_Proto)
+	_, ok := x.xxx_hidden_Content.(*streamItem_Proto)
 	return ok
 }
 
-func (x *StreamGenerator) HasJson() bool {
+func (x *StreamItem) HasJson() bool {
 	if x == nil {
 		return false
 	}
-	_, ok := x.xxx_hidden_Content.(*streamGenerator_Json)
+	_, ok := x.xxx_hidden_Content.(*streamItem_Json)
 	return ok
 }
 
-func (x *StreamGenerator) HasError() bool {
+func (x *StreamItem) HasError() bool {
 	if x == nil {
 		return false
 	}
-	_, ok := x.xxx_hidden_Content.(*streamGenerator_Error)
+	_, ok := x.xxx_hidden_Content.(*streamItem_Error)
 	return ok
 }
 
-func (x *StreamGenerator) HasCelContent() bool {
+func (x *StreamItem) HasCelContent() bool {
 	if x == nil {
 		return false
 	}
 	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
 }
 
-func (x *StreamGenerator) HasRepeated() bool {
+func (x *StreamItem) HasDelay() bool {
 	if x == nil {
 		return false
 	}
-	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
+	return x.xxx_hidden_Delay != nil
 }
 
-func (x *StreamGenerator) HasDoneAfter() bool {
-	if x == nil {
-		return false
-	}
-	return x.xxx_hidden_DoneAfter != nil
-}
-
-func (x *StreamGenerator) ClearContent() {
+func (x *StreamItem) ClearContent() {
 	x.xxx_hidden_Content = nil
 }
 
-func (x *StreamGenerator) ClearProto() {
-	if _, ok := x.xxx_hidden_Content.(*streamGenerator_Proto); ok {
+func (x *StreamItem) ClearProto() {
+	if _, ok := x.xxx_hidden_Content.(*streamItem_Proto); ok {
 		x.xxx_hidden_Content = nil
 	}
 }
 
-func (x *StreamGenerator) ClearJson() {
-	if _, ok := x.xxx_hidden_Content.(*streamGenerator_Json); ok {
+func (x *StreamItem) ClearJson() {
+	if _, ok := x.xxx_hidden_Content.(*streamItem_Json); ok {
 		x.xxx_hidden_Content = nil
 	}
 }
 
-func (x *StreamGenerator) ClearError() {
-	if _, ok := x.xxx_hidden_Content.(*streamGenerator_Error); ok {
+func (x *StreamItem) ClearError() {
+	if _, ok := x.xxx_hidden_Content.(*streamItem_Error); ok {
 		x.xxx_hidden_Content = nil
 	}
 }
 
-func (x *StreamGenerator) ClearCelContent() {
+func (x *StreamItem) ClearCelContent() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
 	x.xxx_hidden_CelContent = nil
 }
 
-func (x *StreamGenerator) ClearRepeated() {
-	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
-	x.xxx_hidden_Repeated = false
+func (x *StreamItem) ClearDelay() {
+	x.xxx_hidden_Delay = nil
 }
 
-func (x *StreamGenerator) ClearDoneAfter() {
-	x.xxx_hidden_DoneAfter = nil
-}
+const StreamItem_Content_not_set_case case_StreamItem_Content = 0
+const StreamItem_Proto_case case_StreamItem_Content = 1
+const StreamItem_Json_case case_StreamItem_Content = 2
+const StreamItem_Error_case case_StreamItem_Content = 3
 
-const StreamGenerator_Content_not_set_case case_StreamGenerator_Content = 0
-const StreamGenerator_Proto_case case_StreamGenerator_Content = 1
-const StreamGenerator_Json_case case_StreamGenerator_Content = 2
-const StreamGenerator_Error_case case_StreamGenerator_Content = 3
-
-func (x *StreamGenerator) WhichContent() case_StreamGenerator_Content {
+func (x *StreamItem) WhichContent() case_StreamItem_Content {
 	if x == nil {
-		return StreamGenerator_Content_not_set_case
+		return StreamItem_Content_not_set_case
 	}
 	switch x.xxx_hidden_Content.(type) {
-	case *streamGenerator_Proto:
-		return StreamGenerator_Proto_case
-	case *streamGenerator_Json:
-		return StreamGenerator_Json_case
-	case *streamGenerator_Error:
-		return StreamGenerator_Error_case
+	case *streamItem_Proto:
+		return StreamItem_Proto_case
+	case *streamItem_Json:
+		return StreamItem_Json_case
+	case *streamItem_Error:
+		return StreamItem_Error_case
 	default:
-		return StreamGenerator_Content_not_set_case
+		return StreamItem_Content_not_set_case
 	}
 }
 
-type StreamGenerator_builder struct {
+type StreamItem_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
 	// Fields of oneof xxx_hidden_Content:
@@ -700,66 +800,61 @@ type StreamGenerator_builder struct {
 	Error *Error
 	// -- end of xxx_hidden_Content
 	CelContent *string
-	Repeated   *bool
-	DoneAfter  *durationpb.Duration
+	Delay      *durationpb.Duration
 }
 
-func (b0 StreamGenerator_builder) Build() *StreamGenerator {
-	m0 := &StreamGenerator{}
+func (b0 StreamItem_builder) Build() *StreamItem {
+	m0 := &StreamItem{}
 	b, x := &b0, m0
 	_, _ = b, x
 	if b.Proto != nil {
-		x.xxx_hidden_Content = &streamGenerator_Proto{b.Proto}
+		x.xxx_hidden_Content = &streamItem_Proto{b.Proto}
 	}
 	if b.Json != nil {
-		x.xxx_hidden_Content = &streamGenerator_Json{*b.Json}
+		x.xxx_hidden_Content = &streamItem_Json{*b.Json}
 	}
 	if b.Error != nil {
-		x.xxx_hidden_Content = &streamGenerator_Error{b.Error}
+		x.xxx_hidden_Content = &streamItem_Error{b.Error}
 	}
 	if b.CelContent != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 4)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 3)
 		x.xxx_hidden_CelContent = b.CelContent
 	}
-	if b.Repeated != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 4)
-		x.xxx_hidden_Repeated = *b.Repeated
-	}
-	x.xxx_hidden_DoneAfter = b.DoneAfter
+	x.xxx_hidden_Delay = b.Delay
 	return m0
 }
 
-type case_StreamGenerator_Content protoreflect.FieldNumber
+type case_StreamItem_Content protoreflect.FieldNumber
 
-func (x case_StreamGenerator_Content) String() string {
-	md := file_stubs_v1_stubs_proto_msgTypes[1].Descriptor()
+func (x case_StreamItem_Content) String() string {
+	md := file_stubs_v1_stubs_proto_msgTypes[2].Descriptor()
 	if x == 0 {
 		return "not set"
 	}
 	return protoimpl.X.MessageFieldStringOf(md, protoreflect.FieldNumber(x))
 }
 
-type isStreamGenerator_Content interface {
-	isStreamGenerator_Content()
+type isStreamItem_Content interface {
+	isStreamItem_Content()
 }
 
-type streamGenerator_Proto struct {
+type streamItem_Proto struct {
 	Proto []byte `protobuf:"bytes,1,opt,name=proto,oneof"`
 }
 
-type streamGenerator_Json struct {
+type streamItem_Json struct {
 	Json string `protobuf:"bytes,2,opt,name=json,oneof"`
 }
 
-type streamGenerator_Error struct {
+type streamItem_Error struct {
 	Error *Error `protobuf:"bytes,3,opt,name=error,oneof"`
 }
 
-func (*streamGenerator_Proto) isStreamGenerator_Content() {}
+func (*streamItem_Proto) isStreamItem_Content() {}
 
-func (*streamGenerator_Json) isStreamGenerator_Content() {}
+func (*streamItem_Json) isStreamItem_Content() {}
 
-func (*streamGenerator_Error) isStreamGenerator_Content() {}
+func (*streamItem_Error) isStreamItem_Content() {}
 
 type StubRef struct {
 	state                  protoimpl.MessageState `protogen:"opaque.v1"`
@@ -773,7 +868,7 @@ type StubRef struct {
 
 func (x *StubRef) Reset() {
 	*x = StubRef{}
-	mi := &file_stubs_v1_stubs_proto_msgTypes[2]
+	mi := &file_stubs_v1_stubs_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -785,7 +880,7 @@ func (x *StubRef) String() string {
 func (*StubRef) ProtoMessage() {}
 
 func (x *StubRef) ProtoReflect() protoreflect.Message {
-	mi := &file_stubs_v1_stubs_proto_msgTypes[2]
+	mi := &file_stubs_v1_stubs_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -885,7 +980,7 @@ type Error struct {
 
 func (x *Error) Reset() {
 	*x = Error{}
-	mi := &file_stubs_v1_stubs_proto_msgTypes[3]
+	mi := &file_stubs_v1_stubs_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -897,7 +992,7 @@ func (x *Error) String() string {
 func (*Error) ProtoMessage() {}
 
 func (x *Error) ProtoReflect() protoreflect.Message {
-	mi := &file_stubs_v1_stubs_proto_msgTypes[3]
+	mi := &file_stubs_v1_stubs_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1009,7 +1104,7 @@ type CELGenerate struct {
 
 func (x *CELGenerate) Reset() {
 	*x = CELGenerate{}
-	mi := &file_stubs_v1_stubs_proto_msgTypes[4]
+	mi := &file_stubs_v1_stubs_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1021,7 +1116,7 @@ func (x *CELGenerate) String() string {
 func (*CELGenerate) ProtoMessage() {}
 
 func (x *CELGenerate) ProtoReflect() protoreflect.Message {
-	mi := &file_stubs_v1_stubs_proto_msgTypes[4]
+	mi := &file_stubs_v1_stubs_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1077,7 +1172,7 @@ var File_stubs_v1_stubs_proto protoreflect.FileDescriptor
 
 const file_stubs_v1_stubs_proto_rawDesc = "" +
 	"\n" +
-	"\x14stubs/v1/stubs.proto\x12\bstubs.v1\x1a\x1bbuf/validate/validate.proto\x1a\x19google/protobuf/any.proto\x1a\x1egoogle/protobuf/duration.proto\x1a!google/protobuf/go_features.proto\"\xad\x02\n" +
+	"\x14stubs/v1/stubs.proto\x12\bstubs.v1\x1a\x1bbuf/validate/validate.proto\x1a\x19google/protobuf/any.proto\x1a\x1egoogle/protobuf/duration.proto\x1a!google/protobuf/go_features.proto\"\xa4\x02\n" +
 	"\x04Stub\x12+\n" +
 	"\x03ref\x18\x01 \x01(\v2\x11.stubs.v1.StubRefB\x06\xbaH\x03\xc8\x01\x01R\x03ref\x12\x16\n" +
 	"\x05proto\x18\x02 \x01(\fH\x00R\x05proto\x12\x14\n" +
@@ -1086,18 +1181,22 @@ const file_stubs_v1_stubs_proto_rawDesc = "" +
 	"\tactive_if\x18\x05 \x01(\tR\bactiveIf\x12\x1f\n" +
 	"\vcel_content\x18\x06 \x01(\tR\n" +
 	"celContent\x12%\n" +
-	"\bpriority\x18\a \x01(\x05B\t\xbaH\x06\x1a\x04\x18d(\x00R\bpriority\x121\n" +
-	"\x06stream\x18\b \x03(\v2\x19.stubs.v1.StreamGeneratorR\x06streamB\t\n" +
-	"\acontent\"\xea\x01\n" +
-	"\x0fStreamGenerator\x12\x16\n" +
+	"\bpriority\x18\a \x01(\x05B\t\xbaH\x06\x1a\x04\x18d(\x00R\bpriority\x12(\n" +
+	"\x06stream\x18\b \x01(\v2\x10.stubs.v1.StreamR\x06streamB\t\n" +
+	"\acontent\"\x8a\x01\n" +
+	"\x06Stream\x12*\n" +
+	"\x05items\x18\x01 \x03(\v2\x14.stubs.v1.StreamItemR\x05items\x12\x1a\n" +
+	"\brepeated\x18\x02 \x01(\bR\brepeated\x128\n" +
+	"\n" +
+	"done_after\x18\x03 \x01(\v2\x19.google.protobuf.DurationR\tdoneAfter\"\xc0\x01\n" +
+	"\n" +
+	"StreamItem\x12\x16\n" +
 	"\x05proto\x18\x01 \x01(\fH\x00R\x05proto\x12\x14\n" +
 	"\x04json\x18\x02 \x01(\tH\x00R\x04json\x12'\n" +
 	"\x05error\x18\x03 \x01(\v2\x0f.stubs.v1.ErrorH\x00R\x05error\x12\x1f\n" +
 	"\vcel_content\x18\x04 \x01(\tR\n" +
-	"celContent\x12\x1a\n" +
-	"\brepeated\x18\x05 \x01(\bR\brepeated\x128\n" +
-	"\n" +
-	"done_after\x18\x06 \x01(\v2\x19.google.protobuf.DurationR\tdoneAfterB\t\n" +
+	"celContent\x12/\n" +
+	"\x05delay\x18\x05 \x01(\v2\x19.google.protobuf.DurationR\x05delayB\t\n" +
 	"\acontent\">\n" +
 	"\aStubRef\x12\x1b\n" +
 	"\x02id\x18\x01 \x01(\tB\v\xbaH\b\xc8\x01\x00r\x03\x18\xc8\x01R\x02id\x12\x16\n" +
@@ -1132,30 +1231,33 @@ const file_stubs_v1_stubs_proto_rawDesc = "" +
 	"StubsProtoP\x01Z:github.com/sudorandom/fauxrpc/private/gen/stubs/v1;stubsv1\xa2\x02\x03SXX\xaa\x02\bStubs.V1\xca\x02\bStubs\\V1\xe2\x02\x14Stubs\\V1\\GPBMetadata\xea\x02\tStubs::V1\x92\x03\x05\xd2>\x02\x10\x03b\beditionsp\xe8\a"
 
 var file_stubs_v1_stubs_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_stubs_v1_stubs_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_stubs_v1_stubs_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_stubs_v1_stubs_proto_goTypes = []any{
 	(ErrorCode)(0),              // 0: stubs.v1.ErrorCode
 	(*Stub)(nil),                // 1: stubs.v1.Stub
-	(*StreamGenerator)(nil),     // 2: stubs.v1.StreamGenerator
-	(*StubRef)(nil),             // 3: stubs.v1.StubRef
-	(*Error)(nil),               // 4: stubs.v1.Error
-	(*CELGenerate)(nil),         // 5: stubs.v1.CELGenerate
-	(*durationpb.Duration)(nil), // 6: google.protobuf.Duration
-	(*anypb.Any)(nil),           // 7: google.protobuf.Any
+	(*Stream)(nil),              // 2: stubs.v1.Stream
+	(*StreamItem)(nil),          // 3: stubs.v1.StreamItem
+	(*StubRef)(nil),             // 4: stubs.v1.StubRef
+	(*Error)(nil),               // 5: stubs.v1.Error
+	(*CELGenerate)(nil),         // 6: stubs.v1.CELGenerate
+	(*durationpb.Duration)(nil), // 7: google.protobuf.Duration
+	(*anypb.Any)(nil),           // 8: google.protobuf.Any
 }
 var file_stubs_v1_stubs_proto_depIdxs = []int32{
-	3, // 0: stubs.v1.Stub.ref:type_name -> stubs.v1.StubRef
-	4, // 1: stubs.v1.Stub.error:type_name -> stubs.v1.Error
-	2, // 2: stubs.v1.Stub.stream:type_name -> stubs.v1.StreamGenerator
-	4, // 3: stubs.v1.StreamGenerator.error:type_name -> stubs.v1.Error
-	6, // 4: stubs.v1.StreamGenerator.done_after:type_name -> google.protobuf.Duration
-	0, // 5: stubs.v1.Error.code:type_name -> stubs.v1.ErrorCode
-	7, // 6: stubs.v1.Error.details:type_name -> google.protobuf.Any
-	7, // [7:7] is the sub-list for method output_type
-	7, // [7:7] is the sub-list for method input_type
-	7, // [7:7] is the sub-list for extension type_name
-	7, // [7:7] is the sub-list for extension extendee
-	0, // [0:7] is the sub-list for field type_name
+	4, // 0: stubs.v1.Stub.ref:type_name -> stubs.v1.StubRef
+	5, // 1: stubs.v1.Stub.error:type_name -> stubs.v1.Error
+	2, // 2: stubs.v1.Stub.stream:type_name -> stubs.v1.Stream
+	3, // 3: stubs.v1.Stream.items:type_name -> stubs.v1.StreamItem
+	7, // 4: stubs.v1.Stream.done_after:type_name -> google.protobuf.Duration
+	5, // 5: stubs.v1.StreamItem.error:type_name -> stubs.v1.Error
+	7, // 6: stubs.v1.StreamItem.delay:type_name -> google.protobuf.Duration
+	0, // 7: stubs.v1.Error.code:type_name -> stubs.v1.ErrorCode
+	8, // 8: stubs.v1.Error.details:type_name -> google.protobuf.Any
+	9, // [9:9] is the sub-list for method output_type
+	9, // [9:9] is the sub-list for method input_type
+	9, // [9:9] is the sub-list for extension type_name
+	9, // [9:9] is the sub-list for extension extendee
+	0, // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_stubs_v1_stubs_proto_init() }
@@ -1168,10 +1270,10 @@ func file_stubs_v1_stubs_proto_init() {
 		(*stub_Json)(nil),
 		(*stub_Error)(nil),
 	}
-	file_stubs_v1_stubs_proto_msgTypes[1].OneofWrappers = []any{
-		(*streamGenerator_Proto)(nil),
-		(*streamGenerator_Json)(nil),
-		(*streamGenerator_Error)(nil),
+	file_stubs_v1_stubs_proto_msgTypes[2].OneofWrappers = []any{
+		(*streamItem_Proto)(nil),
+		(*streamItem_Json)(nil),
+		(*streamItem_Error)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -1179,7 +1281,7 @@ func file_stubs_v1_stubs_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_stubs_v1_stubs_proto_rawDesc), len(file_stubs_v1_stubs_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   5,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -24,18 +24,23 @@ message Stub {
     gte: 0
     lte: 100
   }];
-  repeated StreamGenerator stream = 8;
+  Stream stream = 8;
 }
 
-message StreamGenerator {
+message Stream {
+  repeated StreamItem items = 1;
+  bool repeated = 2;
+  google.protobuf.Duration done_after = 3;
+}
+
+message StreamItem {
   oneof content {
     bytes proto = 1;
     string json = 2;
     Error error = 3;
   }
   string cel_content = 4;
-  bool repeated = 5;
-  google.protobuf.Duration done_after = 6;
+  google.protobuf.Duration delay = 5;
 }
 
 message StubRef {

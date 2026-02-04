@@ -52,17 +52,35 @@
           "description": "A human-readable error message."
         },
         "stream": {
-          "type": "array",
-          "description": "A sequence of messages to be returned for streaming responses.",
-          "items": {
-            "$ref": "#/definitions/StreamGenerator"
-          }
+          "$ref": "#/definitions/Stream",
+          "description": "Configuration for streaming responses."
         }
       },
       "required": ["target"],
       "errorMessage": "A stub must define exactly one of 'cel_content', 'content', 'error_code', 'error_message', or 'stream'."
     },
-    "StreamGenerator": {
+    "Stream": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "type": "array",
+          "description": "A sequence of messages to be returned.",
+          "items": {
+            "$ref": "#/definitions/StreamItem"
+          }
+        },
+        "repeated": {
+          "type": "boolean",
+          "description": "If true, the sequence of items is repeated indefinitely (or until done_after is reached)."
+        },
+        "done_after": {
+          "type": "string",
+          "description": "Total duration for the stream to run (e.g., '10s', '1m')."
+        }
+      }
+    },
+    "StreamItem": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -73,13 +91,9 @@
           "type": "string",
           "description": "A Common Expression Language (CEL) expression that evaluates to the response message."
         },
-        "repeated": {
-          "type": "boolean",
-          "description": "If true, this message (or generator) is repeated indefinitely (or until stream closes)."
-        },
-        "done_after": {
+        "delay": {
           "type": "string",
-          "description": "Duration to wait after sending this message (e.g., '1s', '500ms')."
+          "description": "Duration to wait before sending this message (e.g., '1s', '500ms')."
         }
       }
     }

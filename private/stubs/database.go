@@ -30,16 +30,21 @@ type StubEntry struct {
 	Error            *StatusError
 	ActiveIf         *ActiveIf
 	Priority         int
-	Stream           []StreamEntry
+	Stream           *StreamEntry
 }
 
 type StreamEntry struct {
+	Items     []StreamItemEntry
+	Repeated  bool
+	DoneAfter time.Duration
+}
+
+type StreamItemEntry struct {
 	Message          protoreflect.ProtoMessage
 	CELMessage       protocel.CELMessage
 	CELContentString string
 	Error            *StatusError
-	Repeated         bool
-	DoneAfter        time.Duration
+	Delay            time.Duration
 }
 
 type PriorityStubEntries struct {

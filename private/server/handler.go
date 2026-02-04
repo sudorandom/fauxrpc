@@ -209,7 +209,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 				return status.New(codes.Internal, err.Error()).Err()
 			}
 
-			if stubEntry != nil && len(stubEntry.Stream) > 0 {
+			if stubEntry != nil && stubEntry.Stream != nil {
 				stubsUsed = append(stubsUsed, stubEntry.Key)
 				return handleStreamingResponse(ctx, w, method, celCtx, stubEntry)
 			}
@@ -267,12 +267,33 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 }
 
 func handleStreamingResponse(ctx context.Context, w http.ResponseWriter, method protoreflect.MethodDescriptor, celCtx *protocel.CELContext, stubEntry *stubs.StubEntry) error {
-	for _, item := range stubEntry.Stream {
-		for {
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			default:
+	stream := stubEntry.Stream
+	startTime := time.Now()
+
+	for {
+		if stream.DoneAfter > 0 && time.Since(startTime) > stream.DoneAfter {
+			break
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+
+		for _, item := range stream.Items {
+			if stream.DoneAfter > 0 && time.Since(startTime) > stream.DoneAfter {
+				break
+			}
+			if item.Delay > 0 {
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case <-time.After(item.Delay):
+				}
+			}
+
+			if item.Error != nil {
+				return grpcStatusFromError(item.Error.StubsError).Err()
 			}
 
 			out := registry.NewMessage(method.Output()).Interface()
@@ -295,18 +316,10 @@ func handleStreamingResponse(ctx context.Context, w http.ResponseWriter, method 
 			if err := grpc.WriteGRPCMessage(w, b); err != nil {
 				return err
 			}
+		}
 
-			if item.DoneAfter > 0 {
-				select {
-				case <-ctx.Done():
-					return ctx.Err()
-				case <-time.After(item.DoneAfter):
-				}
-			}
-
-			if !item.Repeated {
-				break
-			}
+		if !stream.Repeated {
+			break
 		}
 	}
 	return nil
