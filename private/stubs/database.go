@@ -142,6 +142,35 @@ func (db *stubDatabase) RemoveStub(key StubKey) {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 	delete(db.stubsByKey, key)
+
+	groups, ok := db.stubIndex[key.Name]
+	if !ok {
+		return
+	}
+
+	for i, group := range groups {
+		for j, entryKey := range group.Entries {
+			if entryKey == key {
+				// Remove the key from the slice
+				group.Entries = append(group.Entries[:j], group.Entries[j+1:]...)
+
+				// If the group is empty, remove it from the groups list
+				if len(group.Entries) == 0 {
+					groups = append(groups[:i], groups[i+1:]...)
+				} else {
+					groups[i] = group
+				}
+
+				// Update the map
+				if len(groups) == 0 {
+					delete(db.stubIndex, key.Name)
+				} else {
+					db.stubIndex[key.Name] = groups
+				}
+				return
+			}
+		}
+	}
 }
 
 func (db *stubDatabase) RemoveAllStubs() {
