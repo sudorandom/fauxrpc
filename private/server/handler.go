@@ -44,6 +44,8 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 		var requestBody proto.Message
 		var responseBody proto.Message
 		var stubsUsed []fauxrpc.StubEntry
+		reqFrameTracker := NewFrameTracker(10)
+		resFrameTracker := NewFrameTracker(10)
 
 		defer func() {
 			duration := time.Since(startTime)
@@ -109,6 +111,8 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 				ResponseHeaders: resHeaders,
 				RequestBody:     reqBodyBytes,
 				ResponseBody:    resBodyBytes,
+				RequestFrames:   reqFrameTracker.Frames(),
+				ResponseFrames:  resFrameTracker.Frames(),
 				StubsUsed:       stubsUsed,
 			})
 		}()
@@ -180,9 +184,14 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 			// completely ignore the body. Maybe later we'll need it as input to the response message
 			eg.Go(func() error {
 				for {
-					if _, st := readMessage(); st != nil {
+					msg, st := readMessage()
+					if st != nil {
 						return st.Err()
 					}
+					if msg == nil {
+						return nil
+					}
+					reqFrameTracker.Add(msg)
 				}
 			})
 		} else {
@@ -211,7 +220,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 
 			if stubEntry != nil && stubEntry.Stream != nil {
 				stubsUsed = append(stubsUsed, stubEntry.Key)
-				return handleStreamingResponse(ctx, w, method, celCtx, stubEntry)
+				return handleStreamingResponse(ctx, w, method, celCtx, stubEntry, resFrameTracker)
 			}
 
 			out := registry.NewMessage(method.Output()).Interface()
@@ -266,7 +275,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 	})
 }
 
-func handleStreamingResponse(ctx context.Context, w http.ResponseWriter, method protoreflect.MethodDescriptor, celCtx *protocel.CELContext, stubEntry *stubs.StubEntry) error {
+func handleStreamingResponse(ctx context.Context, w http.ResponseWriter, method protoreflect.MethodDescriptor, celCtx *protocel.CELContext, stubEntry *stubs.StubEntry, resFrameTracker *FrameTracker) error {
 	stream := stubEntry.Stream
 	startTime := time.Now()
 
@@ -313,6 +322,7 @@ func handleStreamingResponse(ctx context.Context, w http.ResponseWriter, method 
 			if err := grpc.WriteGRPCMessage(w, b); err != nil {
 				return err
 			}
+			resFrameTracker.Add(out)
 		}
 
 		if !stream.Repeated {

@@ -175,22 +175,48 @@ templ LogEntry(entry *log.LogEntry) {
                             <h5 class="text-md font-medium text-gray-400 mb-2">Headers</h5>
                             <pre class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto"><code>{ formatHeaders(entry.RequestHeaders) }</code></pre>
                         </div>
-                        <div>
-                            <div class="flex items-center justify-between mb-2">
-                                <h5 class="text-md font-medium text-gray-400">Body</h5>
-                                <button
-                                    class="flex items-center space-x-2 text-gray-400 hover:text-gray-200 transition-colors duration-200 text-xs"
-                                    onclick="copyToClipboard('request-body-{ entry.ID }', this)"
-                                    title="Copy request body"
-                                >
-                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a2.25 2.25 0 01-2.25 2.25h-1.5a2.25 2.25 0 01-2.25-2.25v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"/>
-                                    </svg>
-                                    <span>Copy</span>
-                                </button>
+                        if len(entry.RequestFrames) > 0 {
+                            <div>
+                                <h5 class="text-md font-medium text-gray-400 mb-2">Frames</h5>
+                                <div class="space-y-2">
+                                    for i, frame := range entry.RequestFrames {
+                                        <div class="relative group">
+                                            <div class="flex items-center justify-between mb-1">
+                                                <span class="text-xs text-gray-500 font-mono">Frame { fmt.Sprintf("%d", i+1) }</span>
+                                                <button
+                                                    class="flex items-center space-x-2 text-gray-400 hover:text-gray-200 transition-colors duration-200 text-xs opacity-0 group-hover:opacity-100"
+                                                    onclick={ templ.ComponentScript{Call: fmt.Sprintf("copyToClipboard('request-frame-%s-%d', this)", entry.ID, i)} }
+                                                    title="Copy frame"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3 h-3">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a2.25 2.25 0 01-2.25 2.25h-1.5a2.25 2.25 0 01-2.25-2.25v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"/>
+                                                    </svg>
+                                                    <span>Copy</span>
+                                                </button>
+                                            </div>
+                                            <pre id={ fmt.Sprintf("request-frame-%s-%d", entry.ID, i) } class="bg-gray-800 p-2 rounded-md text-xs text-gray-300 overflow-x-auto max-h-[150px] overflow-y-auto"><code>{ prettyPrintJSON(frame) }</code></pre>
+                                        </div>
+                                    }
+                                </div>
                             </div>
-                            <pre id="request-body-{ entry.ID }" class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto max-h-[200px] overflow-y-auto"><code>{ prettyPrintJSON(entry.RequestBody) }</code></pre>
-                        </div>
+                        } else {
+                            <div>
+                                <div class="flex items-center justify-between mb-2">
+                                    <h5 class="text-md font-medium text-gray-400">Body</h5>
+                                    <button
+                                        class="flex items-center space-x-2 text-gray-400 hover:text-gray-200 transition-colors duration-200 text-xs"
+                                        onclick="copyToClipboard('request-body-{ entry.ID }', this)"
+                                        title="Copy request body"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a2.25 2.25 0 01-2.25 2.25h-1.5a2.25 2.25 0 01-2.25-2.25v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"/>
+                                        </svg>
+                                        <span>Copy</span>
+                                    </button>
+                                </div>
+                                <pre id="request-body-{ entry.ID }" class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto max-h-[200px] overflow-y-auto"><code>{ prettyPrintJSON(entry.RequestBody) }</code></pre>
+                            </div>
+                        }
                     </div>
                 </div>
                 <div>
@@ -200,26 +226,52 @@ templ LogEntry(entry *log.LogEntry) {
                             <h5 class="text-md font-medium text-gray-400 mb-2">Headers</h5>
                             <pre class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto"><code>{ formatHeaders(entry.ResponseHeaders) }</code></pre>
                         </div>
-                        <div>
-                            if entry.Status != 0 {
-                                <h5 class="text-md font-medium text-red-400 mb-2">Error</h5>
-                            } else {
-                                <div class="flex items-center justify-between mb-2">
-                                    <h5 class="text-md font-medium text-gray-400">Body</h5>
-                                    <button
-                                        class="flex items-center space-x-2 text-gray-400 hover:text-gray-200 transition-colors duration-200 text-xs"
-                                        onclick="copyToClipboard('response-body-{ entry.ID }', this)"
-                                        title="Copy response body"
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a2.25 2.25 0 01-2.25 2.25h-1.5a2.25 2.25 0 01-2.25-2.25v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"/>
-                                        </svg>
-                                        <span>Copy</span>
-                                    </button>
+                        if len(entry.ResponseFrames) > 0 {
+                            <div>
+                                <h5 class="text-md font-medium text-gray-400 mb-2">Frames</h5>
+                                <div class="space-y-2">
+                                    for i, frame := range entry.ResponseFrames {
+                                        <div class="relative group">
+                                            <div class="flex items-center justify-between mb-1">
+                                                <span class="text-xs text-gray-500 font-mono">Frame { fmt.Sprintf("%d", i+1) }</span>
+                                                <button
+                                                    class="flex items-center space-x-2 text-gray-400 hover:text-gray-200 transition-colors duration-200 text-xs opacity-0 group-hover:opacity-100"
+                                                    onclick={ templ.ComponentScript{Call: fmt.Sprintf("copyToClipboard('response-frame-%s-%d', this)", entry.ID, i)} }
+                                                    title="Copy frame"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-3 h-3">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a2.25 2.25 0 01-2.25 2.25h-1.5a2.25 2.25 0 01-2.25-2.25v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"/>
+                                                    </svg>
+                                                    <span>Copy</span>
+                                                </button>
+                                            </div>
+                                            <pre id={ fmt.Sprintf("response-frame-%s-%d", entry.ID, i) } class="bg-gray-800 p-2 rounded-md text-xs text-gray-300 overflow-x-auto max-h-[150px] overflow-y-auto"><code>{ prettyPrintJSON(frame) }</code></pre>
+                                        </div>
+                                    }
                                 </div>
-                            }
-                            <pre id="response-body-{ entry.ID }" class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto max-h-[200px] overflow-y-auto"><code>{ prettyPrintJSON(entry.ResponseBody) }</code></pre>
-                        </div>
+                            </div>
+                        } else {
+                            <div>
+                                if entry.Status != 0 {
+                                    <h5 class="text-md font-medium text-red-400 mb-2">Error</h5>
+                                } else {
+                                    <div class="flex items-center justify-between mb-2">
+                                        <h5 class="text-md font-medium text-gray-400">Body</h5>
+                                        <button
+                                            class="flex items-center space-x-2 text-gray-400 hover:text-gray-200 transition-colors duration-200 text-xs"
+                                            onclick="copyToClipboard('response-body-{ entry.ID }', this)"
+                                            title="Copy response body"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a2.25 2.25 0 01-2.25 2.25h-1.5a2.25 2.25 0 01-2.25-2.25v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"/>
+                                            </svg>
+                                            <span>Copy</span>
+                                        </button>
+                                    </div>
+                                }
+                                <pre id="response-body-{ entry.ID }" class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto max-h-[200px] overflow-y-auto"><code>{ prettyPrintJSON(entry.ResponseBody) }</code></pre>
+                            </div>
+                        }
                     </div>
                 </div>
                 if len(entry.StubsUsed) > 0 {

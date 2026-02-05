@@ -17,7 +17,7 @@ stubs:
     priority: 10
     stream:
       repeated: true
-      done_after: 5s
+      done_after: 30s
       items:
         - content: { sentence: "This message repeats." }
           delay: 1s

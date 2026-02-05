@@ -21,6 +21,8 @@ type LogEntry struct {
 	ResponseHeaders json.RawMessage     `json:"responseHeaders"`
 	RequestBody     json.RawMessage     `json:"requestBody"`
 	ResponseBody    json.RawMessage     `json:"responseBody"`
+	RequestFrames   []json.RawMessage   `json:"requestFrames,omitempty"`
+	ResponseFrames  []json.RawMessage   `json:"responseFrames,omitempty"`
 	StubsUsed       []fauxrpc.StubEntry `json:"stubsUsed,omitempty"`
 }
 
