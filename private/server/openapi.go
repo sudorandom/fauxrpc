@@ -68,6 +68,7 @@ func convertToOpenAPISpec(registry registry.ServiceRegistry, version string) ([]
 	}
 
 	return converter.GenerateSingle(
+		converter.WithStreaming(true),
 		converter.WithBaseOpenAPI(b),
 		converter.WithFiles(registry.Files()),
 	)
