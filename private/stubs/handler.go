@@ -15,6 +15,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/types/known/durationpb"
 )
 
 var _ stubsv1connect.StubsServiceHandler = (*handler)(nil)
@@ -118,6 +119,56 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 			entry.CELContentString = stub.GetCelContent()
 		}
 
+		if stub.HasStream() {
+			s := stub.GetStream()
+			se := &StreamEntry{
+				Repeated: s.GetRepeated(),
+			}
+			if s.GetDoneAfter() != nil {
+				se.DoneAfter = s.GetDoneAfter().AsDuration()
+			}
+			if len(s.GetItems()) > 0 {
+				streamItems := make([]StreamItemEntry, len(s.GetItems()))
+				for j, item := range s.GetItems() {
+					sie := StreamItemEntry{}
+					if item.GetDelay() != nil {
+						sie.Delay = item.GetDelay().AsDuration()
+					}
+
+					switch item.WhichContent() {
+					case stubsv1.StreamItem_Json_case:
+						if item.GetJson() != "" {
+							msg := registry.NewMessage(md).Interface()
+							if err := protojson.Unmarshal([]byte(item.GetJson()), msg); err != nil {
+								return nil, err
+							}
+							sie.Message = msg
+						}
+					case stubsv1.StreamItem_Proto_case:
+						msg := registry.NewMessage(md).Interface()
+						if err := proto.Unmarshal(item.GetProto(), msg); err != nil {
+							return nil, err
+						}
+						sie.Message = msg
+					case stubsv1.StreamItem_Error_case:
+						sie.Error = &StatusError{StubsError: item.GetError()}
+					}
+
+					if item.GetCelContent() != "" {
+						celmsg, err := protocel.New(h.registry.Files(), md, item.GetCelContent())
+						if err != nil {
+							return nil, err
+						}
+						sie.CELMessage = celmsg
+						sie.CELContentString = item.GetCelContent()
+					}
+					streamItems[j] = sie
+				}
+				se.Items = streamItems
+			}
+			entry.Stream = se
+		}
+
 		entries[i] = entry
 		stubs[i] = stub
 	}
@@ -209,6 +260,42 @@ func StubsToProto(stubs []StubEntry) ([]*stubsv1.Stub, error) {
 		if stub.CELMessage != nil {
 			pbStub.SetCelContent(stub.CELContentString)
 		}
+
+		if stub.Stream != nil {
+			s := stub.Stream
+			streamBuilder := stubsv1.Stream_builder{
+				Repeated: proto.Bool(s.Repeated),
+			}
+			if s.DoneAfter > 0 {
+				streamBuilder.DoneAfter = durationpb.New(s.DoneAfter)
+			}
+			if len(s.Items) > 0 {
+				streamItems := make([]*stubsv1.StreamItem, len(s.Items))
+				for j, item := range s.Items {
+					siBuilder := stubsv1.StreamItem_builder{}
+					if item.Delay > 0 {
+						siBuilder.Delay = durationpb.New(item.Delay)
+					}
+					if item.Message != nil {
+						content, err := protojson.Marshal(item.Message)
+						if err != nil {
+							return nil, err
+						}
+						siBuilder.Json = proto.String(string(content))
+					}
+					if item.CELMessage != nil {
+						siBuilder.CelContent = proto.String(item.CELContentString)
+					}
+					if item.Error != nil {
+						siBuilder.Error = item.Error.StubsError
+					}
+					streamItems[j] = siBuilder.Build()
+				}
+				streamBuilder.Items = streamItems
+			}
+			pbStub.SetStream(streamBuilder.Build())
+		}
+
 		pbStubs = append(pbStubs, pbStub)
 	}
 	return pbStubs, nil

@@ -38,7 +38,7 @@ The core command is `fauxrpc run`, which starts the server based on your Protobu
 For example, this command starts the server with a specific schema, loads a stub for a method, and enables the dashboard:
 
 ```shell
-fauxrpc run --schema=eliza.binpb --stubs=example/stubs.eliza/say.json --dashboard
+fauxrpc run --schema=buf.build/connectrpc/eliza --stubs=example/stubs.eliza --dashboard
 ```
 
 ### Loading Schemas
