@@ -94,6 +94,21 @@
         "delay": {
           "type": "string",
           "description": "Duration to wait before sending this message (e.g., '1s', '500ms')."
+        },
+        "error": {
+          "type": "object",
+          "description": "An error to return instead of a message.",
+          "properties": {
+            "code": {
+              "type": "integer",
+              "description": "The gRPC status code (e.g., 0 for OK, 5 for NOT_FOUND, 13 for INTERNAL)."
+            },
+            "message": {
+              "type": "string",
+              "description": "A human-readable error message."
+            }
+          },
+          "required": ["code", "message"]
         }
       }
     }
