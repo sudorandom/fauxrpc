@@ -112,9 +112,11 @@ func TestRepeated(t *testing.T) {
 		msg := dynamicpb.NewMessage(md)
 
 		constVal := "test_value"
+		minItems := uint64(1)
 		fd := createFieldDescriptorWithConstraints(repeatedStringField, &validate.FieldRules{
 			Type: &validate.FieldRules_Repeated{
 				Repeated: &validate.RepeatedRules{
+					MinItems: &minItems,
 					Items: &validate.FieldRules{
 						Type: &validate.FieldRules_String_{
 							String_: &validate.StringRules{
