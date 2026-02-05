@@ -141,7 +141,49 @@ func (db *stubDatabase) AddStub(entry StubEntry) {
 func (db *stubDatabase) RemoveStub(key StubKey) {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
+
+	// Check if the stub exists
+	entry, exists := db.stubsByKey[key]
+	if !exists {
+		return
+	}
 	delete(db.stubsByKey, key)
+
+	groups, ok := db.stubIndex[key.Name]
+	if !ok {
+		return
+	}
+
+	for i, group := range groups {
+		if group.Priority != entry.Priority {
+			continue
+		}
+
+		for j, entryKey := range group.Entries {
+			if entryKey == key {
+				// Remove the key from the slice
+				group.Entries = append(group.Entries[:j], group.Entries[j+1:]...)
+
+				// If the group is empty, remove it from the groups list
+				if len(group.Entries) == 0 {
+					groups = append(groups[:i], groups[i+1:]...)
+				} else {
+					groups[i] = group
+				}
+
+				// Update the map
+				if len(groups) == 0 {
+					delete(db.stubIndex, key.Name)
+				} else {
+					db.stubIndex[key.Name] = groups
+				}
+				return
+			}
+		}
+		// If we found the group with the correct priority but didn't find the key,
+		// we can stop searching because a key can only belong to one priority group.
+		return
+	}
 }
 
 func (db *stubDatabase) RemoveAllStubs() {
