@@ -91,6 +91,13 @@ func (f StubFile) ToRequest() (*stubsv1.AddStubsRequest, error) {
 					if s.CelContent != "" {
 						siBuilder.CelContent = proto.String(s.CelContent)
 					}
+					if s.Error != nil {
+						code := stubsv1.ErrorCode(int32(s.Error.Code))
+						siBuilder.Error = stubsv1.Error_builder{
+							Code:    &code,
+							Message: proto.String(s.Error.Message),
+						}.Build()
+					}
 					streamItems[j] = siBuilder.Build()
 				}
 				streamBuilder.Items = streamItems
@@ -122,9 +129,15 @@ type StubFileStreamEntry struct {
 }
 
 type StubFileStreamItemEntry struct {
-	Content    any    `json:"content,omitempty" yaml:"content"`
-	CelContent string `json:"cel_content,omitempty" yaml:"cel_content"`
-	Delay      string `json:"delay,omitempty" yaml:"delay"`
+	Content    any                 `json:"content,omitempty" yaml:"content"`
+	CelContent string              `json:"cel_content,omitempty" yaml:"cel_content"`
+	Delay      string              `json:"delay,omitempty" yaml:"delay"`
+	Error      *StubFileErrorEntry `json:"error,omitempty" yaml:"error"`
+}
+
+type StubFileErrorEntry struct {
+	Code    int    `json:"code" yaml:"code"`
+	Message string `json:"message" yaml:"message"`
 }
 
 func LoadStubsFromFile(registry registry.ServiceRegistry, stubdb StubDatabase, stubsPath string) error {
