@@ -14,6 +14,7 @@ stubs:
   - id: introduce-repeated
     target: connectrpc.eliza.v1.ElizaService/Introduce
     active_if: req.name == "repeat"
+    priority: 10
     stream:
       repeated: true
       done_after: 5s
@@ -24,6 +25,7 @@ stubs:
   - id: introduce-cel
     target: connectrpc.eliza.v1.ElizaService/Introduce
     active_if: req.name == "cel"
+    priority: 10
     stream:
       items:
         - cel_content: "{'sentence': 'Hello ' + req.name}"
@@ -34,6 +36,7 @@ stubs:
   - id: introduce-error
     target: connectrpc.eliza.v1.ElizaService/Introduce
     active_if: req.name == "error"
+    priority: 10
     stream:
       items:
         - content: { sentence: "Something is about to go wrong..." }
