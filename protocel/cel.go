@@ -403,6 +403,7 @@ func newEnv(files *protoregistry.Files) (*cel.Env, error) {
 		cel.Variable("procedure", cel.StringType),
 		cel.Variable("gen", cel.DynType),
 		cel.Variable("faker", cel.DynType),
+		cel.Variable("now", cel.TimestampType),
 		cel.Types(&stubsv1.CELGenerate{}),
 	)
 }

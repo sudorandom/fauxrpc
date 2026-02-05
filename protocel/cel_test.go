@@ -3,6 +3,7 @@ package protocel_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	elizav1 "buf.build/gen/go/connectrpc/eliza/protocolbuffers/go/connectrpc/eliza/v1"
 	"github.com/stretchr/testify/assert"
@@ -11,6 +12,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/reflect/protoregistry"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	testv1 "github.com/sudorandom/fauxrpc/private/gen/test/v1"
 	"github.com/sudorandom/fauxrpc/protocel"
@@ -561,6 +563,21 @@ func TestProtocel(t *testing.T) {
 		assert.Equal(t, int64(-400), msg.ProtoReflect().Get(md.Fields().ByTextName("sfixed64_value")).Interface())
 		assert.Equal(t, float32(123.45), msg.ProtoReflect().Get(md.Fields().ByTextName("float_value")).Interface())
 		assert.Equal(t, 678.90, msg.ProtoReflect().Get(md.Fields().ByTextName("double_value")).Interface())
+	})
+
+	t.Run("now", func(t *testing.T) {
+		files := &protoregistry.Files{}
+		require.NoError(t, files.RegisterFile(testv1.File_test_v1_test_proto))
+		md := testv1.File_test_v1_test_proto.Messages().ByName("ParameterValues")
+		ds, err := protocel.New(files, md, `{"timestamp": now}`)
+		require.NoError(t, err)
+
+		msg, err := ds.NewMessage(context.Background())
+		require.NoError(t, err)
+
+		ts := msg.ProtoReflect().Get(md.Fields().ByTextName("timestamp")).Message().Interface().(*timestamppb.Timestamp)
+		assert.NotNil(t, ts)
+		assert.WithinDuration(t, time.Now(), ts.AsTime(), time.Second)
 	})
 
 	t.Run("type conversions and values", func(t *testing.T) {
