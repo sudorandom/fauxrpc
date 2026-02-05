@@ -2,6 +2,7 @@ package protocel
 
 import (
 	"context"
+	"time"
 
 	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
 	"google.golang.org/protobuf/proto"
@@ -14,14 +15,16 @@ type CELContext struct {
 }
 
 func (c *CELContext) ToInput() map[string]any {
-	if c == nil {
-		return map[string]any{}
+	m := map[string]any{
+		"gen": &stubsv1.CELGenerate{},
+		"now": time.Now(),
 	}
 
-	m := map[string]any{
-		"req": c.Req,
-		"gen": &stubsv1.CELGenerate{},
+	if c == nil {
+		return m
 	}
+
+	m["req"] = c.Req
 	if c.MethodDescriptor != nil {
 		m["service"] = string(c.MethodDescriptor.Parent().FullName())
 		m["method"] = string(c.MethodDescriptor.Name())

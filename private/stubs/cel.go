@@ -27,6 +27,7 @@ func NewActiveIf(md protoreflect.MethodDescriptor, expr string) (*ActiveIf, erro
 		cel.Variable("service", cel.StringType),
 		cel.Variable("method", cel.StringType),
 		cel.Variable("procedure", cel.StringType),
+		cel.Variable("now", cel.TimestampType),
 	)
 	if err != nil {
 		return nil, err
