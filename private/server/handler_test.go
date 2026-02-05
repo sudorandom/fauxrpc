@@ -25,10 +25,10 @@ type mockServer struct {
 	logger *fauxlog.Logger
 }
 
-func (m *mockServer) GetStats() *metrics.Stats          { return nil }
-func (m *mockServer) IncrementTotalRequests()           {}
-func (m *mockServer) IncrementErrors()                  {}
-func (m *mockServer) GetLogger() *fauxlog.Logger        { return m.logger }
+func (m *mockServer) GetStats() *metrics.Stats   { return nil }
+func (m *mockServer) IncrementTotalRequests()    {}
+func (m *mockServer) IncrementErrors()           {}
+func (m *mockServer) GetLogger() *fauxlog.Logger { return m.logger }
 
 func TestHandler_Logging_Streaming(t *testing.T) {
 	// Setup
@@ -81,7 +81,7 @@ func TestHandler_Logging_Streaming(t *testing.T) {
 	msg2 := &elizav1.ConverseRequest{Sentence: "World"}
 	writeMsg(t, pw, msg2)
 
-	pw.Close()
+	require.NoError(t, pw.Close())
 
 	<-done
 
