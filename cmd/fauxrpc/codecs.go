@@ -52,6 +52,18 @@ func (c *dynamicProtoCodec) Unmarshal(binary []byte, msg any) error {
 		*ptr = newMsg
 		return nil
 	}
+	// Handle *dynamicpb.Message (pointer to struct)
+	if m, ok := msg.(*dynamicpb.Message); ok {
+		// We need to re-initialize this message with the descriptor because
+		// connect-go creates a zero-value struct which lacks type info.
+		newMsg := dynamicpb.NewMessage(c.methodDesc.Output())
+		if err := proto.Unmarshal(binary, newMsg); err != nil {
+			return err
+		}
+		// Copy the content back to m
+		*m = *newMsg
+		return nil
+	}
 	p, ok := msg.(proto.Message)
 	if !ok {
 		return fmt.Errorf("can't unmarshal into %T", msg)
@@ -100,6 +112,18 @@ func (c *dynamicJSONCodec) Unmarshal(binary []byte, msg any) error {
 		}
 		// Point the original pointer to the new message.
 		*ptr = newMsg
+		return nil
+	}
+	// Handle *dynamicpb.Message (pointer to struct)
+	if m, ok := msg.(*dynamicpb.Message); ok {
+		// We need to re-initialize this message with the descriptor because
+		// connect-go creates a zero-value struct which lacks type info.
+		newMsg := dynamicpb.NewMessage(c.methodDesc.Output())
+		if err := protojson.Unmarshal(binary, newMsg); err != nil {
+			return err
+		}
+		// Copy the content back to m
+		*m = *newMsg
 		return nil
 	}
 	p, ok := msg.(proto.Message)
