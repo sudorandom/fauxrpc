@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -220,7 +219,17 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 
 			if stubEntry != nil && stubEntry.Stream != nil {
 				stubsUsed = append(stubsUsed, stubEntry.Key)
-				return handleStreamingResponse(ctx, w, method, celCtx, stubEntry, resFrameTracker)
+				return stubs.ExecuteStream(ctx, stubEntry.Stream, method.Output(), celCtx, func(msg proto.Message) error {
+					b, err := proto.Marshal(msg)
+					if err != nil {
+						return status.New(codes.Internal, err.Error()).Err()
+					}
+					if err := grpc.WriteGRPCMessage(w, b); err != nil {
+						return err
+					}
+					resFrameTracker.Add(msg)
+					return nil
+				}, nil)
 			}
 
 			out := registry.NewMessage(method.Output()).Interface()
@@ -260,7 +269,12 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 		// Write response
 		if err := eg.Wait(); err != nil {
 			s.IncrementErrors()
-			if st, ok := status.FromError(err); ok {
+			var stubErr *stubs.StatusError
+			if errors.As(err, &stubErr) {
+				finalStatus = grpcStatusFromError(stubErr.StubsError)
+				grpcWriteStatus(w, finalStatus)
+				return
+			} else if st, ok := status.FromError(err); ok {
 				finalStatus = st
 				grpcWriteStatus(w, st)
 				return
@@ -273,63 +287,6 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 		finalStatus = status.New(codes.OK, "")
 		grpcWriteStatus(w, finalStatus)
 	})
-}
-
-func handleStreamingResponse(ctx context.Context, w http.ResponseWriter, method protoreflect.MethodDescriptor, celCtx *protocel.CELContext, stubEntry *stubs.StubEntry, resFrameTracker *FrameTracker) error {
-	stream := stubEntry.Stream
-	startTime := time.Now()
-
-	for stream.DoneAfter == 0 || time.Since(startTime) <= stream.DoneAfter {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
-		}
-
-		for _, item := range stream.Items {
-			if stream.DoneAfter > 0 && time.Since(startTime) > stream.DoneAfter {
-				break
-			}
-			if item.Delay > 0 {
-				select {
-				case <-ctx.Done():
-					return ctx.Err()
-				case <-time.After(item.Delay):
-				}
-			}
-
-			if item.Error != nil {
-				return grpcStatusFromError(item.Error.StubsError).Err()
-			}
-
-			out := registry.NewMessage(method.Output()).Interface()
-
-			if item.Message != nil {
-				proto.Merge(out, item.Message)
-			}
-
-			if item.CELMessage != nil {
-				ctxWithCEL := protocel.WithCELContext(ctx, celCtx)
-				if err := item.CELMessage.SetDataOnMessage(ctxWithCEL, out); err != nil {
-					return status.New(codes.Internal, err.Error()).Err()
-				}
-			}
-
-			b, err := proto.Marshal(out)
-			if err != nil {
-				return status.New(codes.Internal, err.Error()).Err()
-			}
-			if err := grpc.WriteGRPCMessage(w, b); err != nil {
-				return err
-			}
-			resFrameTracker.Add(out)
-		}
-
-		if !stream.Repeated {
-			break
-		}
-	}
-	return nil
 }
 
 func grpcWriteStatus(w http.ResponseWriter, st *status.Status) {
