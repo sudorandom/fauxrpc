@@ -291,11 +291,10 @@ func (c *CurlCmd) callRPC(
 			if stubEntry.Stream != nil {
 				streamEntry = stubEntry.Stream
 				fallbackGenerator = nil // Use explicit stream, no fallback
-			} else {
-				// Unary stub for stream? Treat as default stream but let multiFaker pick up the stub content
-				// streamEntry remains as default
-				// fallbackGenerator remains as multiFaker (which includes stubFaker)
 			}
+			// Unary stub for stream? Treat as default stream but let multiFaker pick up the stub content
+			// streamEntry remains as default
+			// fallbackGenerator remains as multiFaker (which includes stubFaker)
 		}
 	}
 
