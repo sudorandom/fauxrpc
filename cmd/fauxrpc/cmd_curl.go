@@ -32,6 +32,7 @@ type CurlCmd struct {
 	Encoding            string   `short:"e" help:"Encoding to use for requests." default:"proto" enum:"proto,json"`
 	HTTP2PriorKnowledge bool     `name:"http2-prior-knowledge" help:"This flag can be used to indicate that HTTP/2 should be used."`
 	HTTP3               bool     `help:"Enables HTTP/3."`
+	Stubs               []string `help:"Directories or file paths for JSON files."`
 	Method              string   `arg:"" help:"Service or method name." optional:""`
 }
 
@@ -43,6 +44,8 @@ func (c *CurlCmd) Run(globals *Globals) error {
 	if err != nil {
 		return fmt.Errorf("failed to create server instance: %w", err)
 	}
+
+	stubDB := stubs.NewStubDatabase()
 
 	var httpClient *http.Client
 	if c.HTTP3 {
@@ -75,6 +78,12 @@ func (c *CurlCmd) Run(globals *Globals) error {
 	if len(c.Schema) == 0 {
 		if err := registry.AddServicesFromReflection(reg, httpClient, c.Addr); err != nil {
 			return fmt.Errorf("failed to load schema from %s: %w", c.Addr, err)
+		}
+	}
+
+	for _, path := range c.Stubs {
+		if err := stubs.LoadStubsFromFile(reg, stubDB, path); err != nil {
+			return err
 		}
 	}
 
@@ -125,10 +134,8 @@ func (c *CurlCmd) Run(globals *Globals) error {
 		return fmt.Errorf("no methods found to call")
 	}
 
-	faker := fauxrpc.NewFauxFaker()
-
 	for fullMethodName, methodDesc := range methodsToCall {
-		if err := c.callRPC(ctx, httpClient, fullMethodName, methodDesc, faker); err != nil {
+		if err := c.callRPC(ctx, httpClient, fullMethodName, methodDesc, stubDB); err != nil {
 			return err
 		}
 	}
@@ -141,9 +148,13 @@ func (c *CurlCmd) callRPC(
 	httpClient *http.Client,
 	fullMethodName string,
 	methodDesc protoreflect.MethodDescriptor,
-	faker fauxrpc.ProtoFaker,
+	stubDB stubs.StubDatabase,
 ) error {
 	slog.Debug("Calling RPC", "method", fullMethodName)
+
+	stubFaker := stubs.NewStubFaker(stubDB)
+	fauxFaker := fauxrpc.NewFauxFaker()
+	multiFaker := fauxrpc.NewMultiFaker([]fauxrpc.ProtoFaker{stubFaker, fauxFaker})
 
 	// Create a new client for each method with a custom codec
 	// that can handle dynamic responses.
@@ -183,13 +194,14 @@ func (c *CurlCmd) callRPC(
 	isServerStream := methodDesc.IsStreamingServer()
 
 	reqMsg := dynamicpb.NewMessage(methodDesc.Input()).New().Interface().(*dynamicpb.Message)
+	celCtx := &protocel.CELContext{
+		MethodDescriptor: methodDesc,
+		Req:              reqMsg,
+	}
 	genOpts := fauxrpc.GenOptions{
 		MaxDepth: 20,
 		Faker:    gofakeit.New(0),
-		Context: protocel.WithCELContext(ctx, &protocel.CELContext{
-			MethodDescriptor: methodDesc,
-			Req:              reqMsg,
-		}),
+		Context:  protocel.WithCELContext(ctx, celCtx),
 	}
 
 	// Helper to print request
@@ -244,7 +256,7 @@ func (c *CurlCmd) callRPC(
 	}
 
 	if !isClientStream && !isServerStream {
-		if err := faker.SetDataOnMessage(reqMsg, genOpts); err != nil {
+		if err := multiFaker.SetDataOnMessage(reqMsg, genOpts); err != nil {
 			return err
 		}
 		printRequest(reqMsg)
@@ -266,6 +278,25 @@ func (c *CurlCmd) callRPC(
 	// Streaming logic
 	streamEntry := &stubs.StreamEntry{
 		Items: []stubs.StreamItemEntry{{}}, // One empty item to trigger generation
+	}
+
+	var fallbackGenerator stubs.FallbackGenerator = func(msg proto.Message) error {
+		return multiFaker.SetDataOnMessage(msg, genOpts)
+	}
+
+	// For streaming, we need to check if we have a stub that defines a stream
+	if isClientStream {
+		stubEntry, err := stubFaker.FindStub(ctx, celCtx, methodDesc.Input())
+		if err == nil && stubEntry != nil {
+			if stubEntry.Stream != nil {
+				streamEntry = stubEntry.Stream
+				fallbackGenerator = nil // Use explicit stream, no fallback
+			} else {
+				// Unary stub for stream? Treat as default stream but let multiFaker pick up the stub content
+				// streamEntry remains as default
+				// fallbackGenerator remains as multiFaker (which includes stubFaker)
+			}
+		}
 	}
 
 	var streamSender func(proto.Message) error
@@ -307,7 +338,7 @@ func (c *CurlCmd) callRPC(
 		}
 	} else if isServerStream {
 		// Server streaming requires an initial request
-		if err := faker.SetDataOnMessage(reqMsg, genOpts); err != nil {
+		if err := multiFaker.SetDataOnMessage(reqMsg, genOpts); err != nil {
 			return err
 		}
 		printRequest(reqMsg)
@@ -329,12 +360,7 @@ func (c *CurlCmd) callRPC(
 
 	// Execute sending if client streaming involved
 	if isClientStream {
-		celCtx := &protocel.CELContext{
-			MethodDescriptor: methodDesc,
-		}
-		err := stubs.ExecuteStream(ctx, streamEntry, methodDesc.Input(), celCtx, streamSender, func(msg proto.Message) error {
-			return faker.SetDataOnMessage(msg, genOpts)
-		})
+		err := stubs.ExecuteStream(ctx, streamEntry, methodDesc.Input(), celCtx, streamSender, fallbackGenerator)
 		if err != nil {
 			printError(err)
 			return nil

@@ -29,6 +29,9 @@ func (c *dynamicProtoCodec) Marshal(msg any) ([]byte, error) {
 		}
 		return proto.Marshal(*m)
 
+	case dynamicpb.Message:
+		return proto.Marshal(&m)
+
 	default:
 		return nil, fmt.Errorf("can't marshal %T", msg)
 	}
@@ -75,6 +78,9 @@ func (c *dynamicJSONCodec) Marshal(msg any) ([]byte, error) {
 			return nil, fmt.Errorf("cannot marshal nil **dynamicpb.Message")
 		}
 		return protojson.Marshal(*m)
+
+	case dynamicpb.Message:
+		return protojson.Marshal(&m)
 
 	default:
 		return nil, fmt.Errorf("can't marshal %T", msg)
