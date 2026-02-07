@@ -8,11 +8,28 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/sudorandom/fauxrpc"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/dynamicpb"
 
 	testv1 "github.com/sudorandom/fauxrpc/private/gen/test/v1"
 )
+
+// A custom stub finder to control message generation for testing uniqueness.
+type uniqueTestStubFinder struct {
+	callCount int
+	stubs     []protoreflect.ProtoMessage
+}
+
+func (f *uniqueTestStubFinder) FindStub(name protoreflect.FullName, faker *gofakeit.Faker) protoreflect.ProtoMessage {
+	if len(f.stubs) == 0 {
+		return nil
+	}
+	// Cycle through the stubs to create duplicates
+	stub := f.stubs[f.callCount%len(f.stubs)]
+	f.callCount++
+	return stub
+}
 
 func TestRepeated(t *testing.T) {
 	md := testv1.File_test_v1_test_proto.Messages().ByName("ParameterValues")
@@ -102,7 +119,64 @@ func TestRepeated(t *testing.T) {
 		}
 	})
 
-	// TODO: Add test for unique rule for message types (requires mocking opts.fake() to control generated values)
+	t.Run("unique rule for message types", func(t *testing.T) {
+		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
+		require.NotNil(t, md)
+		repeatedMsgField := md.Fields().ByName("msg_list")
+		require.NotNil(t, repeatedMsgField)
+
+		unique := true
+		// We have 2 unique stubs, so we should only be able to generate 2 unique items.
+		// We request between 5 and 10 items.
+		minItems := uint64(5)
+		maxItems := uint64(10)
+		fd := createFieldDescriptorWithConstraints(repeatedMsgField, &validate.FieldRules{
+			Type: &validate.FieldRules_Repeated{
+				Repeated: &validate.RepeatedRules{
+					Unique:   &unique,
+					MinItems: &minItems,
+					MaxItems: &maxItems,
+				},
+			},
+		})
+
+		msg := dynamicpb.NewMessage(md)
+
+		stub1 := testv1.AllTypes_builder{StringValue: proto.String("stub1")}.Build()
+		stub2 := testv1.AllTypes_builder{StringValue: proto.String("stub2")}.Build()
+
+		stubFinder := &uniqueTestStubFinder{
+			stubs: []protoreflect.ProtoMessage{stub1, stub2},
+		}
+
+		opts := fauxrpc.GenOptions{
+			MaxDepth:   5,
+			Faker:      gofakeit.New(0),
+			StubFinder: stubFinder,
+		}
+
+		val := fauxrpc.Repeated(msg, fd, opts)
+		require.NotNil(t, val)
+
+		list := val.List()
+
+		// Because the stub finder only produces 2 unique items, the generator should
+		// only be able to create a list with 2 items, despite MinItems being 5.
+		// This is because it will fail to generate more unique items after exhausting the stubs.
+		assert.Equal(t, 2, list.Len())
+
+		// Verify that the two items are indeed the two unique stubs
+		generatedValues := make(map[string]struct{})
+		for i := range list.Len() {
+			item := list.Get(i).Message().Interface().(*testv1.AllTypes)
+			key := item.GetStringValue()
+			_, found := generatedValues[key]
+			assert.False(t, found, "Duplicate value found: %v", key)
+			generatedValues[key] = struct{}{}
+		}
+		assert.Contains(t, generatedValues, "stub1")
+		assert.Contains(t, generatedValues, "stub2")
+	})
 
 	t.Run("Items rules", func(t *testing.T) {
 		md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
