@@ -1,5 +1,5 @@
 [tools]
-go = "1.25.0"
+go = "1.24.7"
 buf = "latest"
 just = "1.42.4"
 "go:github.com/a-h/templ/cmd/templ" = "v0.3.937"
