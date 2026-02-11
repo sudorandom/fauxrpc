@@ -146,9 +146,9 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 			_ = r.Body.Close()
 		}()
 
+		readMessageBuf := make([]byte, maxMessageSize)
 		readMessage := func() (proto.Message, *status.Status) {
-			body := make([]byte, maxMessageSize)
-			size, err := grpc.ReadGRPCMessage(r.Body, body)
+			size, err := grpc.ReadGRPCMessage(r.Body, readMessageBuf)
 			if err != nil {
 				if errors.Is(err, io.EOF) {
 					return nil, nil
@@ -157,7 +157,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 				return nil, status.New(codes.NotFound, err.Error())
 			}
 			msg := registry.NewMessage(method.Input()).Interface()
-			if err := proto.Unmarshal(body[:size], msg); err != nil {
+			if err := proto.Unmarshal(readMessageBuf[:size], msg); err != nil {
 				s.IncrementErrors()
 				return nil, status.New(codes.NotFound, err.Error())
 			}
