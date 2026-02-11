@@ -9,8 +9,8 @@ require (
 	buf.build/gen/go/bufbuild/registry/connectrpc/go v1.19.1-20251027152159-f1066ce064ca.2
 	buf.build/gen/go/bufbuild/registry/protocolbuffers/go v1.36.10-20251027152159-f1066ce064ca.1
 	buf.build/gen/go/connectrpc/eliza/protocolbuffers/go v1.36.10-20230913231627-233fca715f49.1
-	buf.build/gen/go/grpc/grpc/connectrpc/go v1.19.1-20250429200738-0ee95b84c2c7.2
-	buf.build/gen/go/grpc/grpc/protocolbuffers/go v1.36.10-20250429200738-0ee95b84c2c7.1
+	buf.build/gen/go/grpc/grpc/connectrpc/go v1.19.1-20260203201457-e126be52bace.2
+	buf.build/gen/go/grpc/grpc/protocolbuffers/go v1.36.10-20260203201457-e126be52bace.1
 	buf.build/go/protovalidate v1.0.0
 	buf.build/go/protoyaml v0.6.0
 	connectrpc.com/connect v1.19.1
