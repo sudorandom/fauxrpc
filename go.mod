@@ -1,6 +1,6 @@
 module github.com/sudorandom/fauxrpc
 
-go 1.24.7
+go 1.25.7
 
 retract v0.15.25
 

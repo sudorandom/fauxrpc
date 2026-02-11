@@ -44,17 +44,10 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) error {
 	msg := pm.ProtoReflect()
 	desc := msg.Descriptor()
 
-	oneOfFields := map[protoreflect.FullName]struct{}{}
 	oneOfs := desc.Oneofs()
-	// gather one-of fields
+	// process one-of fields
 	for i := 0; i < oneOfs.Len(); i++ {
 		oneOf := oneOfs.Get(i)
-		fields := oneOf.Fields()
-		for i := 0; i < fields.Len(); i++ {
-			field := fields.Get(i)
-			oneOfFields[field.FullName()] = struct{}{}
-		}
-
 		// pick oneOf the fields to create data for
 		options := oneOf.Fields()
 		idx := opts.fake().IntRange(0, options.Len()-1)
@@ -67,7 +60,7 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) error {
 	fields := desc.Fields()
 	for i := 0; i < fields.Len(); i++ {
 		field := fields.Get(i)
-		if _, ok := oneOfFields[field.FullName()]; ok {
+		if field.ContainingOneof() != nil {
 			continue
 		}
 		if field.IsList() {
