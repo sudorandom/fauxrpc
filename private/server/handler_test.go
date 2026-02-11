@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"io"
 	"net/http/httptest"
@@ -132,4 +133,66 @@ func writeMsg(t *testing.T, w io.Writer, msg proto.Message) {
 	require.NoError(t, err)
 	_, err = w.Write(b)
 	require.NoError(t, err)
+}
+
+func BenchmarkHandler_Streaming_Messages(b *testing.B) {
+	// Setup
+	logger := fauxlog.NewLogger()
+	s := &mockServer{
+		ServiceRegistry: mustNewRegistry(),
+		StubDatabase:    stubs.NewStubDatabase(),
+		logger:          logger,
+	}
+
+	validator, err := protovalidate.New()
+	require.NoError(b, err)
+
+	faker := fauxrpc.NewFauxFaker()
+
+	// Eliza Service
+	file := elizav1.File_connectrpc_eliza_v1_eliza_proto
+	service := file.Services().ByName("ElizaService")
+	require.NotNil(b, service)
+
+	handler := NewHandler(service, faker, validator, s, logger)
+
+	// Create a pipe to simulate streaming body
+	pr, pw := io.Pipe()
+
+	req := httptest.NewRequest("POST", "/connectrpc.eliza.v1.ElizaService/Converse", pr)
+	req.Header.Set("Content-Type", "application/grpc")
+
+	w := httptest.NewRecorder()
+
+	// Start handler in goroutine
+	done := make(chan struct{})
+	go func() {
+		handler.ServeHTTP(w, req)
+		close(done)
+	}()
+
+	// Prepare a message
+	msg := &elizav1.ConverseRequest{Sentence: "Hello World"}
+	msgBytes, err := proto.Marshal(msg)
+	require.NoError(b, err)
+
+	// Prepare framed message
+	framedMsg := make([]byte, 5+len(msgBytes))
+	framedMsg[0] = 0 // not compressed
+	length := len(msgBytes)
+	binary.BigEndian.PutUint32(framedMsg[1:], uint32(length))
+	copy(framedMsg[5:], msgBytes)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		_, err := pw.Write(framedMsg)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+
+	require.NoError(b, pw.Close())
+	<-done
 }
