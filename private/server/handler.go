@@ -255,11 +255,14 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 				s.IncrementErrors()
 				switch {
 				case errors.Is(err, fauxrpc.ErrNotFaked):
-					return status.New(codes.NotFound, err.Error()).Err()
+					// If we can't fake it, we should return the empty message instead of an error
+					// This ensures the client gets a valid response structure
+					slog.Warn("Failed to fake response data, returning empty message", "method", method.FullName(), "error", err)
 				case errors.As(err, &stubErr):
 					return grpcStatusFromError(stubErr.StubsError).Err()
+				default:
+					return status.New(codes.Internal, err.Error()).Err()
 				}
-				return status.New(codes.Internal, err.Error()).Err()
 			}
 			responseBody = out
 

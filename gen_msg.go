@@ -24,6 +24,9 @@ func NewMessage(md protoreflect.MessageDescriptor, opts GenOptions) (protoreflec
 
 // SetDataOnMessage generates fake data given a protoreflect.ProtoMessage and sets the field values.
 func SetDataOnMessage(msg protoreflect.ProtoMessage, opts GenOptions) error {
+	if msg == nil {
+		return nil
+	}
 	if opts.MaxDepth == 0 {
 		opts.MaxDepth = defaultMaxDepth
 	}
@@ -31,6 +34,9 @@ func SetDataOnMessage(msg protoreflect.ProtoMessage, opts GenOptions) error {
 }
 
 func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) error {
+	if pm == nil {
+		return nil
+	}
 	if opts.MaxDepth <= 0 {
 		return nil
 	}
