@@ -46,6 +46,13 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 		reqFrameTracker := NewFrameTracker(10)
 		resFrameTracker := NewFrameTracker(10)
 
+		parts := strings.Split(r.URL.Path, "/")
+		var serviceName, methodName string
+		if len(parts) == 3 {
+			serviceName = parts[1]
+			methodName = parts[2]
+		}
+
 		defer func() {
 			duration := time.Since(startTime)
 
@@ -69,14 +76,6 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 			var resBodyBytes []byte
 			if responseBody != nil {
 				resBodyBytes, _ = protojson.Marshal(responseBody)
-			}
-
-			parts := strings.Split(r.URL.Path, "/")
-			serviceName := ""
-			methodName := ""
-			if len(parts) == 3 {
-				serviceName = parts[1]
-				methodName = parts[2]
 			}
 
 			code := codes.Unknown
@@ -119,7 +118,6 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 		w.Header().Set("Trailer", "Grpc-Status,Grpc-Message,Grpc-Status-Details-Bin")
 		w.Header().Add("Content-Type", "application/grpc")
 
-		parts := strings.Split(r.URL.Path, "/")
 		if len(parts) != 3 {
 			s.IncrementErrors()
 			finalStatus = status.New(codes.NotFound, "")
@@ -127,14 +125,12 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 			return
 		}
 
-		serviceName := parts[1]
 		if serviceName != string(service.FullName()) {
 			s.IncrementErrors()
 			finalStatus = status.New(codes.NotFound, "service not found")
 			grpcWriteStatus(w, finalStatus)
 			return
 		}
-		methodName := parts[2]
 		method := service.Methods().ByName(protoreflect.Name(methodName))
 		if method == nil {
 			s.IncrementErrors()
