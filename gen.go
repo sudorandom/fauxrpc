@@ -2,6 +2,7 @@ package fauxrpc
 
 import (
 	"errors"
+	"sync"
 
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	"buf.build/go/protovalidate"
@@ -10,7 +11,8 @@ import (
 )
 
 var (
-	ErrNotFaked = errors.New("no data was faked either because there was no relevant data or the faker was just out of faker juice")
+	ErrNotFaked     = errors.New("no data was faked either because there was no relevant data or the faker was just out of faker juice")
+	fieldRulesCache sync.Map
 )
 
 type ProtoFaker interface {
@@ -54,7 +56,14 @@ func getFieldConstraints(fd protoreflect.FieldDescriptor, opts GenOptions) (cons
 		}
 	}()
 
-	constraints, _ = protovalidate.ResolveFieldRules(fd)
+	if v, ok := fieldRulesCache.Load(fd); ok {
+		if v != nil {
+			constraints = v.(*validate.FieldRules)
+		}
+	} else {
+		constraints, _ = protovalidate.ResolveFieldRules(fd)
+		fieldRulesCache.Store(fd, constraints)
+	}
 
 	if opts.extraFieldConstraints != nil {
 		if constraints == nil {
