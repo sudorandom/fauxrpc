@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"buf.build/go/protovalidate"
@@ -33,6 +34,13 @@ import (
 )
 
 const maxMessageSize = 4 * 1024 * 1024
+
+var bufferPool = sync.Pool{
+	New: func() any {
+		b := make([]byte, maxMessageSize)
+		return &b
+	},
+}
 
 func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker, validate protovalidate.Validator, s Server, logger *fauxlog.Logger) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -142,9 +150,11 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 			_ = r.Body.Close()
 		}()
 
-		readMessageBuf := make([]byte, maxMessageSize)
+		readMessageBuf := bufferPool.Get().(*[]byte)
+		defer bufferPool.Put(readMessageBuf)
+
 		readMessage := func() (proto.Message, *status.Status) {
-			size, err := grpc.ReadGRPCMessage(r.Body, readMessageBuf)
+			size, err := grpc.ReadGRPCMessage(r.Body, *readMessageBuf)
 			if err != nil {
 				if errors.Is(err, io.EOF) {
 					return nil, nil
@@ -153,7 +163,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 				return nil, status.New(codes.NotFound, err.Error())
 			}
 			msg := registry.NewMessage(method.Input()).Interface()
-			if err := proto.Unmarshal(readMessageBuf[:size], msg); err != nil {
+			if err := proto.Unmarshal((*readMessageBuf)[:size], msg); err != nil {
 				s.IncrementErrors()
 				return nil, status.New(codes.NotFound, err.Error())
 			}
