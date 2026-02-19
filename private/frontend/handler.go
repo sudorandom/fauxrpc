@@ -271,7 +271,7 @@ func DashboardHandler(p Provider) http.Handler {
 					return
 				}
 
-				pbStubs, err := stubs.StubsToProto([]stubs.StubEntry{stubEntry})
+				pbStubs, err := stubs.StubsToProto([]*stubs.StubEntry{stubEntry})
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
 					return

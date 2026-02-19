@@ -190,7 +190,7 @@ func (h *handler) ListStubs(ctx context.Context, req *connect.Request[stubsv1.Li
 	if err != nil {
 		return nil, err
 	}
-	filtered := []StubEntry{}
+	filtered := []*StubEntry{}
 	for _, stub := range h.stubdb.GetStubs() {
 		if ref.GetTarget() != "" && targetName != stub.Key.Name {
 			continue
@@ -236,7 +236,7 @@ func (h *handler) RemoveStubs(ctx context.Context, msg *connect.Request[stubsv1.
 	return connect.NewResponse(&stubsv1.RemoveStubsResponse{}), nil
 }
 
-func StubsToProto(stubs []StubEntry) ([]*stubsv1.Stub, error) {
+func StubsToProto(stubs []*StubEntry) ([]*stubsv1.Stub, error) {
 	pbStubs := []*stubsv1.Stub{}
 	for _, stub := range stubs {
 		pbStub := &stubsv1.Stub{}

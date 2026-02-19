@@ -34,7 +34,7 @@ func (f *StubFaker) FindStub(ctx context.Context, celCtx *protocel.CELContext, d
 						continue
 					}
 				}
-				return &stub, nil
+				return stub, nil
 			}
 		}
 	}
