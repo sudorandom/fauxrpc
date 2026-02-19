@@ -8,10 +8,10 @@ buf.build/gen/go/connectrpc/eliza/connectrpc/go v1.19.1-20230913231627-233fca715
 buf.build/gen/go/connectrpc/eliza/connectrpc/go v1.19.1-20230913231627-233fca715f49.2/go.mod h1:sAUZW9CK4Phon6DngFHNy30E68aYDkepz84QgXet2Hk=
 buf.build/gen/go/connectrpc/eliza/protocolbuffers/go v1.36.10-20230913231627-233fca715f49.1 h1:Ofmydk4kMYKYlRiIaIz7iQcR/ZY9wMyGTmDZJBFUrt8=
 buf.build/gen/go/connectrpc/eliza/protocolbuffers/go v1.36.10-20230913231627-233fca715f49.1/go.mod h1:xphlaJNcyPwcMEQ4LKBdi7uaVJr/Z+WMHnc2rHXXV7U=
-buf.build/gen/go/grpc/grpc/connectrpc/go v1.19.1-20250429200738-0ee95b84c2c7.2 h1:ANM7W1owlzHf9/f2J19O4Nzmp2FqhdcmYbQ9NE3qgXI=
-buf.build/gen/go/grpc/grpc/connectrpc/go v1.19.1-20250429200738-0ee95b84c2c7.2/go.mod h1:rbu6Hv5RtQDZx9Ui/tAz/JDF2fxJUVJTEY/UFStDEI8=
-buf.build/gen/go/grpc/grpc/protocolbuffers/go v1.36.10-20250429200738-0ee95b84c2c7.1 h1:Ln2PX1YpQm9TOZ0lH0voXY0hUziPfmVnBBx3e5RD93U=
-buf.build/gen/go/grpc/grpc/protocolbuffers/go v1.36.10-20250429200738-0ee95b84c2c7.1/go.mod h1:7tIDDj2K/mHK1HNGA+EsjvS1drDXY99q64fxPmkQiu4=
+buf.build/gen/go/grpc/grpc/connectrpc/go v1.19.1-20260203201457-e126be52bace.2 h1:5rRRevXCCDGcqOQbQYuluipY2+agg5/bKwqZcN45tsc=
+buf.build/gen/go/grpc/grpc/connectrpc/go v1.19.1-20260203201457-e126be52bace.2/go.mod h1:Y6BAa3OBWBLDIU1536Ec/J3Iob9uMFD0mDNU1y85keY=
+buf.build/gen/go/grpc/grpc/protocolbuffers/go v1.36.10-20260203201457-e126be52bace.1 h1:MUasyuZaIjCybkub89mF5xu3E2aGYtSzfzckLJ+vGtk=
+buf.build/gen/go/grpc/grpc/protocolbuffers/go v1.36.10-20260203201457-e126be52bace.1/go.mod h1:7tIDDj2K/mHK1HNGA+EsjvS1drDXY99q64fxPmkQiu4=
 buf.build/go/protovalidate v1.0.0 h1:IAG1etULddAy93fiBsFVhpj7es5zL53AfB/79CVGtyY=
 buf.build/go/protovalidate v1.0.0/go.mod h1:KQmEUrcQuC99hAw+juzOEAmILScQiKBP1Oc36vvCLW8=
 buf.build/go/protoyaml v0.6.0 h1:Nzz1lvcXF8YgNZXk+voPPwdU8FjDPTUV4ndNTXN0n2w=
