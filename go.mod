@@ -27,7 +27,7 @@ require (
 	github.com/google/cel-go v0.26.1
 	github.com/google/uuid v1.6.0
 	github.com/jhump/protoreflect v1.17.0
-	github.com/quic-go/quic-go v0.55.0
+	github.com/quic-go/quic-go v0.59.0
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.11.1
 	github.com/sudorandom/protoc-gen-connect-openapi v0.21.3
@@ -65,7 +65,7 @@ require (
 	github.com/pb33f/libopenapi v0.27.2 // indirect
 	github.com/pb33f/ordered-map/v2 v2.3.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/quic-go/qpack v0.5.1 // indirect
+	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/stoewer/go-strcase v1.3.1 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.2 // indirect
 	golang.org/x/crypto v0.43.0 // indirect
