@@ -206,6 +206,16 @@ func (c *CurlCmd) callRPC(
 
 	// Helper to print request
 	printRequest := func(msg proto.Message) {
+		defer func() {
+			if r := recover(); r != nil {
+				slog.Error("Recovered from panic in printRequest", "error", r, "method", fullMethodName)
+			}
+		}()
+		if msg == nil || !msg.ProtoReflect().IsValid() {
+			slog.Error("Request message is nil or invalid", "method", fullMethodName)
+			return
+		}
+
 		jsonBytes, err := protojson.MarshalOptions{
 			Multiline: true,
 			Indent:    "  ",
@@ -219,6 +229,16 @@ func (c *CurlCmd) callRPC(
 
 	// Helper to print response
 	printResponse := func(msg proto.Message) {
+		defer func() {
+			if r := recover(); r != nil {
+				slog.Error("Recovered from panic in printResponse", "error", r, "method", fullMethodName)
+			}
+		}()
+		if msg == nil || !msg.ProtoReflect().IsValid() {
+			slog.Error("Response message is nil or invalid", "method", fullMethodName)
+			return
+		}
+
 		jsonBytes, err := protojson.MarshalOptions{
 			Multiline: true,
 			Indent:    "  ",
@@ -232,6 +252,12 @@ func (c *CurlCmd) callRPC(
 
 	// Helper to print error
 	printError := func(err error) {
+		defer func() {
+			if r := recover(); r != nil {
+				slog.Error("Recovered from panic in printError", "error", r, "method", fullMethodName)
+			}
+		}()
+
 		var connectErr *connect.Error
 		if errors.As(err, &connectErr) {
 			for _, detail := range connectErr.Details() {
