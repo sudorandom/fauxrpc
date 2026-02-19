@@ -7,9 +7,9 @@ import (
 )
 
 func WriteGRPCMessage(w io.Writer, msg []byte) error {
-	prefix := make([]byte, 5)
+	var prefix [5]byte
 	binary.BigEndian.PutUint32(prefix[1:], uint32(len(msg)))
-	if _, err := w.Write(prefix); err != nil {
+	if _, err := w.Write(prefix[:]); err != nil {
 		return err
 	}
 	if _, err := w.Write(msg); err != nil {
