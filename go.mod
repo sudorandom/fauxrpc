@@ -26,7 +26,7 @@ require (
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/google/cel-go v0.27.0
 	github.com/google/uuid v1.6.0
-	github.com/jhump/protoreflect v1.17.0
+	github.com/jhump/protoreflect v1.18.0
 	github.com/quic-go/quic-go v0.59.0
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.11.1
@@ -57,6 +57,7 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/gnostic v0.7.1 // indirect
 	github.com/google/gnostic-models v0.7.1 // indirect
+	github.com/jhump/protoreflect/v2 v2.0.0-beta.1 // indirect
 	github.com/lmittmann/tint v1.1.3 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
