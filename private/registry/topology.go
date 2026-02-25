@@ -12,7 +12,9 @@ func sortFilesByDependency(files *protoregistry.Files) ([]protoreflect.FileDescr
 	inDegree := make(map[string]int)
 
 	// Build the dependency graph.
+	var numFiles int
 	files.RangeFiles(func(fd protoreflect.FileDescriptor) bool {
+		numFiles++
 		inDegree[fd.Path()] = 0
 		imports := fd.Imports()
 		for i := 0; i < imports.Len(); i++ {
@@ -24,14 +26,14 @@ func sortFilesByDependency(files *protoregistry.Files) ([]protoreflect.FileDescr
 	})
 
 	// Topological sort using Kahn's algorithm.
-	var queue []string
+	queue := make([]string, 0, numFiles)
 	for fileName, degree := range inDegree {
 		if degree == 0 {
 			queue = append(queue, fileName)
 		}
 	}
 
-	var sortedFiles []protoreflect.FileDescriptor
+	sortedFiles := make([]protoreflect.FileDescriptor, 0, numFiles)
 	for len(queue) > 0 {
 		currentFile := queue[0]
 		queue = queue[1:]
