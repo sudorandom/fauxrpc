@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"buf.build/go/protovalidate"
-	"github.com/brianvoe/gofakeit/v7"
 	"github.com/google/uuid"
 	"github.com/sudorandom/fauxrpc"
 	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
@@ -241,7 +240,6 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 			out := registry.NewMessage(method.Output()).Interface()
 			genOpts := fauxrpc.GenOptions{
 				MaxDepth: 20,
-				Faker:    gofakeit.New(0),
 				Context: protocel.WithCELContext(ctx, &protocel.CELContext{
 					MethodDescriptor: method,
 					Req:              input,
