@@ -81,7 +81,7 @@ func String(fd protoreflect.FieldDescriptor, opts GenOptions) string {
 		return opts.fake().RandomString(rules.In)
 	}
 
-	minLen, maxLen := uint64(0), uint64(20)
+	minLen, maxLen := uint64(0), uint64(255)
 	if rules.Len != nil {
 		minLen = *rules.Len
 		maxLen = *rules.Len
