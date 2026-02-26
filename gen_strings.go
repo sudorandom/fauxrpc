@@ -24,11 +24,15 @@ var (
 )
 
 func stringByHeuristics(fd protoreflect.FieldDescriptor, opts GenOptions) (string, bool) {
-	if f, ok := heuristicCache.Load(fd); ok {
+	if v, ok := heuristicCache.Load(fd); ok {
+		if v == nil {
+			return "", false
+		}
+		f := v.(heuristicFunc)
 		if f == nil {
 			return "", false
 		}
-		return f.(heuristicFunc)(opts), true
+		return f(opts), true
 	}
 
 	lowerName := strings.ToLower(string(fd.Name()))
@@ -62,10 +66,11 @@ func stringByHeuristics(fd protoreflect.FieldDescriptor, opts GenOptions) (strin
 		}
 	}
 
-	heuristicCache.Store(fd, f)
 	if f == nil {
+		heuristicCache.Store(fd, nil)
 		return "", false
 	}
+	heuristicCache.Store(fd, f)
 	return f(opts), true
 }
 
