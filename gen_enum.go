@@ -9,7 +9,7 @@ import (
 func Enum(fd protoreflect.FieldDescriptor, opts GenOptions) protoreflect.EnumNumber {
 	constraints := getFieldConstraints(fd, opts)
 	allEnumValues := fd.Enum().Values()
-	allowedValues := []protoreflect.EnumNumber{}
+	allowedValues := make([]protoreflect.EnumNumber, 0, allEnumValues.Len())
 
 	if allEnumValues.Len() > 0 {
 		for i := 0; i < allEnumValues.Len(); i++ {
