@@ -4,6 +4,7 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"sync"
 
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -15,31 +16,62 @@ func randInt64GeometricDist(p float64, opts GenOptions) int64 {
 	return int64(math.Floor(math.Log(opts.fake().Float64()) / math.Log(1.0-p)))
 }
 
+type heuristicFunc func(GenOptions) string
+
+var (
+	heuristicCache sync.Map
+	statusValues   = []string{"active", "inactive", "hidden", "archived", "deleted", "pending"}
+)
+
 func stringByHeuristics(fd protoreflect.FieldDescriptor, opts GenOptions) (string, bool) {
-	lowerName := strings.ToLower(string(fd.Name()))
-	switch {
-	case strings.Contains(lowerName, "firstname"):
-		return opts.fake().FirstName(), true
-	case strings.Contains(lowerName, "lastname"):
-		return opts.fake().LastName(), true
-	case strings.Contains(lowerName, "name"):
-		return opts.fake().FirstName(), true
-	case strings.Contains(lowerName, "fullname"):
-		return opts.fake().Name(), true
-	case strings.Contains(lowerName, "id"):
-		return opts.fake().UUID(), true
-	case strings.Contains(lowerName, "token"):
-		return opts.fake().UUID(), true
-	case strings.Contains(lowerName, "photo") && strings.Contains(lowerName, "url"):
-		return "https://picsum.photos/400", true
-	case strings.Contains(lowerName, "url"):
-		return opts.fake().URL(), true
-	case strings.Contains(lowerName, "version"):
-		return opts.fake().AppVersion(), true
-	case strings.Contains(lowerName, "status"):
-		return opts.fake().RandomString([]string{"active", "inactive", "hidden", "archived", "deleted", "pending"}), true
+	if v, ok := heuristicCache.Load(fd); ok {
+		if v == nil {
+			return "", false
+		}
+		f := v.(heuristicFunc)
+		if f == nil {
+			return "", false
+		}
+		return f(opts), true
 	}
-	return "", false
+
+	lowerName := strings.ToLower(string(fd.Name()))
+	var f heuristicFunc
+	switch {
+	case strings.Contains(lowerName, "name"):
+		if strings.Contains(lowerName, "firstname") {
+			f = func(opts GenOptions) string { return opts.fake().FirstName() }
+		} else if strings.Contains(lowerName, "lastname") {
+			f = func(opts GenOptions) string { return opts.fake().LastName() }
+		} else if strings.Contains(lowerName, "fullname") {
+			f = func(opts GenOptions) string { return opts.fake().Name() }
+		} else {
+			f = func(opts GenOptions) string { return opts.fake().FirstName() }
+		}
+	case strings.Contains(lowerName, "id"):
+		f = func(opts GenOptions) string { return opts.fake().UUID() }
+	case strings.Contains(lowerName, "token"):
+		f = func(opts GenOptions) string { return opts.fake().UUID() }
+	case strings.Contains(lowerName, "url"):
+		if strings.Contains(lowerName, "photo") {
+			f = func(opts GenOptions) string { return "https://picsum.photos/400" }
+		} else {
+			f = func(opts GenOptions) string { return opts.fake().URL() }
+		}
+	case strings.Contains(lowerName, "version"):
+		f = func(opts GenOptions) string { return opts.fake().AppVersion() }
+	case strings.Contains(lowerName, "status"):
+		f = func(opts GenOptions) string {
+			return opts.fake().RandomString(statusValues)
+		}
+	}
+
+	if f == nil {
+		heuristicCache.Store(fd, nil)
+		return "", false
+	}
+	heuristicCache.Store(fd, f)
+	return f(opts), true
 }
 
 func stringSimple(fd protoreflect.FieldDescriptor, opts GenOptions) string {
