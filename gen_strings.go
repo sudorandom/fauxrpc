@@ -81,22 +81,26 @@ func String(fd protoreflect.FieldDescriptor, opts GenOptions) string {
 		return opts.fake().RandomString(rules.In)
 	}
 
-	minLen, maxLen := uint64(0), uint64(255)
+	minLen, maxLen := uint64(0), uint64(20)
+	isMaxLenSet := false
 	if rules.Len != nil {
 		minLen = *rules.Len
 		maxLen = *rules.Len
+		isMaxLenSet = true
 	}
 	if rules.MinLen != nil {
 		minLen = *rules.MinLen
 	}
 	if rules.MaxLen != nil {
 		maxLen = *rules.MaxLen
+		isMaxLenSet = true
 	}
 	if rules.MinBytes != nil {
 		minLen = *rules.MinBytes
 	}
 	if rules.MaxBytes != nil {
 		maxLen = *rules.MaxBytes
+		isMaxLenSet = true
 	}
 
 	var generatedString string
@@ -171,7 +175,11 @@ func String(fd protoreflect.FieldDescriptor, opts GenOptions) string {
 		}
 	}
 	if uint64(len(generatedString)) > maxLen {
-		generatedString = generatedString[:maxLen]
+		if !isMaxLenSet && rules.WellKnown != nil {
+			// Don't truncate well-known types unless specifically requested
+		} else {
+			generatedString = generatedString[:maxLen]
+		}
 	}
 	return generatedString
 }
