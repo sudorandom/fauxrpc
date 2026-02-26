@@ -299,7 +299,13 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 func grpcWriteStatus(w http.ResponseWriter, st *status.Status) {
 	w.Header().Set("Grpc-Status", strconv.FormatInt(int64(st.Code()), 10))
 	w.Header().Set("Grpc-Message", st.Message())
-	if details, err := proto.Marshal(st.Proto()); err != nil {
+
+	p := st.Proto()
+	if len(p.Details) == 0 {
+		return
+	}
+
+	if details, err := proto.Marshal(p); err != nil {
 		slog.Error("error serializing validation details", "error", err)
 	} else {
 		w.Header().Set("Grpc-Status-Details-Bin", base64.StdEncoding.EncodeToString(details))
