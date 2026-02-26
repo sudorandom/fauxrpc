@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"encoding/binary"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
@@ -12,6 +13,8 @@ import (
 	"github.com/sudorandom/fauxrpc"
 	fauxlog "github.com/sudorandom/fauxrpc/private/log"
 	"github.com/sudorandom/fauxrpc/private/stubs"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -62,5 +65,35 @@ func BenchmarkHandler_RequestAllocation(b *testing.B) {
 		w := httptest.NewRecorder()
 
 		handler.ServeHTTP(w, req)
+	}
+}
+
+type mockWriter struct {
+	h http.Header
+}
+
+func (m *mockWriter) Header() http.Header {
+	return m.h
+}
+
+func (m *mockWriter) Write([]byte) (int, error) {
+	return 0, nil
+}
+
+func (m *mockWriter) WriteHeader(statusCode int) {}
+
+func BenchmarkGRPCWriteStatus(b *testing.B) {
+	st := status.New(codes.NotFound, "not found")
+	w := &mockWriter{h: make(http.Header)}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		grpcWriteStatus(w, st)
+		// Reset header
+		for k := range w.h {
+			delete(w.h, k)
+		}
 	}
 }
