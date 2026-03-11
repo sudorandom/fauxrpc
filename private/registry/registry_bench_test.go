@@ -47,7 +47,7 @@ func BenchmarkForEachService_InsideRLock(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		r.lock.RLock()
-		for _, _ = range r.services {
+		for range r.services {
 			if !true {
 				break
 			}
@@ -74,7 +74,7 @@ func BenchmarkForEachService_Slice(b *testing.B) {
 			services = append(services, s)
 		}
 		r.lock.RUnlock()
-		for _, _ = range services {
+		for range services {
 			if !true {
 				break
 			}
