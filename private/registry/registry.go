@@ -108,9 +108,8 @@ func (r *serviceRegistry) ServiceCount() int {
 
 func (r *serviceRegistry) ForEachService(cb func(protoreflect.ServiceDescriptor) bool) {
 	r.lock.RLock()
-	services := r.services
-	r.lock.RUnlock()
-	for _, service := range services {
+	defer r.lock.RUnlock()
+	for _, service := range r.services {
 		if !cb(service) {
 			break
 		}
