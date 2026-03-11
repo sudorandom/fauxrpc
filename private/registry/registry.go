@@ -108,9 +108,8 @@ func (r *serviceRegistry) ServiceCount() int {
 
 func (r *serviceRegistry) ForEachService(cb func(protoreflect.ServiceDescriptor) bool) {
 	r.lock.RLock()
-	services := r.services
-	r.lock.RUnlock()
-	for _, service := range services {
+	defer r.lock.RUnlock()
+	for _, service := range r.services {
 		if !cb(service) {
 			break
 		}
@@ -118,9 +117,8 @@ func (r *serviceRegistry) ForEachService(cb func(protoreflect.ServiceDescriptor)
 }
 func (r *serviceRegistry) ForEachFile(cb func(protoreflect.FileDescriptor)) {
 	r.lock.RLock()
-	filesOrdered := r.filesOrdered
-	r.lock.RUnlock()
-	for _, fd := range filesOrdered {
+	defer r.lock.RUnlock()
+	for _, fd := range r.filesOrdered {
 		cb(fd)
 	}
 }
