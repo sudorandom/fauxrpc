@@ -35,10 +35,13 @@ func ExecuteStream(
 				break
 			}
 			if item.Delay > 0 {
+				timer := time.NewTimer(item.Delay)
 				select {
 				case <-ctx.Done():
+					timer.Stop()
 					return ctx.Err()
-				case <-time.After(item.Delay):
+				case <-timer.C:
+					timer.Stop()
 				}
 			}
 
