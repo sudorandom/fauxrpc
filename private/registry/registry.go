@@ -117,9 +117,8 @@ func (r *serviceRegistry) ForEachService(cb func(protoreflect.ServiceDescriptor)
 }
 func (r *serviceRegistry) ForEachFile(cb func(protoreflect.FileDescriptor)) {
 	r.lock.RLock()
-	filesOrdered := r.filesOrdered
-	r.lock.RUnlock()
-	for _, fd := range filesOrdered {
+	defer r.lock.RUnlock()
+	for _, fd := range r.filesOrdered {
 		cb(fd)
 	}
 }
