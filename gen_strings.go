@@ -147,7 +147,7 @@ func String(fd protoreflect.FieldDescriptor, opts GenOptions) string {
 	} else if rules.WellKnown != nil {
 		switch rules.WellKnown.(type) {
 		case *validate.StringRules_Email:
-			generatedString = opts.fake().Email()
+			generatedString = strings.ToLower(opts.fake().FirstName() + "@" + opts.fake().DomainName())
 		case *validate.StringRules_Hostname:
 			generatedString = strings.ToLower(opts.fake().JobDescriptor())
 		case *validate.StringRules_Ip:

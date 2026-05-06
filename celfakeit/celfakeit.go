@@ -1,6 +1,8 @@
 package celfakeit
 
 import (
+	"strings"
+
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/types"
@@ -129,7 +131,9 @@ func (lib *gofakeitLib) CompileOptions() []cel.EnvOption {
 		),
 		cel.Function("fake_email",
 			cel.Overload("fake_email", []*cel.Type{}, cel.StringType,
-				cel.FunctionBinding(func(...ref.Val) ref.Val { return types.String(gofakeit.Email()) }),
+				cel.FunctionBinding(func(...ref.Val) ref.Val {
+					return types.String(strings.ToLower(gofakeit.FirstName() + "@" + gofakeit.DomainName()))
+				}),
 			),
 		),
 		cel.Function("fake_phone",
