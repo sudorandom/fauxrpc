@@ -10,7 +10,7 @@ func repeatedSimple(msg protoreflect.Message, fd protoreflect.FieldDescriptor, o
 	listVal := msg.NewField(fd)
 	itemCount := opts.fake().IntRange(0, 4)
 	for range itemCount {
-		if v := FieldValue(fd, opts.nested()); v != nil {
+		if v := FieldValue(fd, opts); v != nil {
 			listVal.List().Append(*v)
 		}
 	}
@@ -48,7 +48,7 @@ ItemLoop:
 	for range itemCount {
 		// Retry up to 20 times to generate a valid item.
 		for range 20 { // Existing retry for valid item
-			if v := FieldValue(fd, opts.nested().WithExtraFieldConstraints(rules.GetItems())); v != nil {
+			if v := FieldValue(fd, opts.WithExtraFieldConstraints(rules.GetItems())); v != nil {
 				if rules.GetUnique() { // Check for uniqueness rule
 					var key any
 					switch fd.Kind() {

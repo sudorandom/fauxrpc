@@ -119,24 +119,28 @@ func GoogleValue(fd protoreflect.FieldDescriptor, opts GenOptions) *structpb.Val
 		func() *structpb.Value { return structpb.NewBoolValue(Bool(fd, opts)) },
 		func() *structpb.Value { return structpb.NewNumberValue(Float64(fd, opts)) },
 		func() *structpb.Value { return structpb.NewStringValue(String(fd, opts)) },
-		func() *structpb.Value {
-			list := &structpb.ListValue{}
-			itemCount := opts.fake().IntRange(0, 4)
-			for i := 0; i < itemCount; i++ {
-				list.Values = append(list.Values, GoogleValue(fd, opts.nested()))
-			}
-			return structpb.NewListValue(list)
-		},
-		func() *structpb.Value {
-			obj := &structpb.Struct{
-				Fields: map[string]*structpb.Value{},
-			}
-			itemCount := opts.fake().IntRange(0, 4)
-			for i := 0; i < itemCount; i++ {
-				obj.Fields[strings.ToLower(opts.fake().Word())] = GoogleValue(fd, opts.nested())
-			}
-			return structpb.NewStructValue(obj)
-		},
+	}
+	if opts.MaxDepth > 0 {
+		options = append(options,
+			func() *structpb.Value {
+				list := &structpb.ListValue{}
+				itemCount := opts.fake().IntRange(0, 4)
+				for range itemCount {
+					list.Values = append(list.Values, GoogleValue(fd, opts.nested()))
+				}
+				return structpb.NewListValue(list)
+			},
+			func() *structpb.Value {
+				obj := &structpb.Struct{
+					Fields: map[string]*structpb.Value{},
+				}
+				itemCount := opts.fake().IntRange(0, 4)
+				for range itemCount {
+					obj.Fields[strings.ToLower(opts.fake().Word())] = GoogleValue(fd, opts.nested())
+				}
+				return structpb.NewStructValue(obj)
+			},
+		)
 	}
 	fn := options[opts.fake().IntRange(0, len(options)-1)]
 	return fn()
