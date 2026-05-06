@@ -103,13 +103,21 @@ func FieldValue(fd protoreflect.FieldDescriptor, opts GenOptions) *protoreflect.
 			}
 		}
 
+		nopts := opts.nested()
+		if nopts.MaxDepth <= 0 {
+			return nil
+		}
 		nested := registry.NewMessage(fd.Message())
-		_ = setDataOnMessage(nested.Interface(), opts.nested())
+		_ = setDataOnMessage(nested.Interface(), nopts)
 		v := protoreflect.ValueOf(nested)
 		return &v
 	case protoreflect.GroupKind:
+		nopts := opts.nested()
+		if nopts.MaxDepth <= 0 {
+			return nil
+		}
 		nested := registry.NewMessage(fd.Message())
-		_ = setDataOnMessage(nested.Interface(), opts.nested())
+		_ = setDataOnMessage(nested.Interface(), nopts)
 		v := protoreflect.ValueOf(nested)
 		return &v
 	}

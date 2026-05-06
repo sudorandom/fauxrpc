@@ -201,3 +201,31 @@ func TestNewMessage(t *testing.T) {
 		assertFieldIsSet(t, md, pmsg, "enum_list")
 	})
 }
+
+func TestRecursionLimit(t *testing.T) {
+	md := testv1.File_test_v1_test_proto.Messages().ByName("ParameterValues")
+	require.NotNil(t, md, "ParameterValues not found")
+
+	t.Run("MaxDepth 1", func(t *testing.T) {
+		opts := fauxrpc.GenOptions{MaxDepth: 1}
+		msg, err := fauxrpc.NewMessage(md, opts)
+		require.NoError(t, err)
+
+		pmsg := msg.ProtoReflect()
+		recursiveField := md.Fields().ByName("recursive")
+		assert.False(t, pmsg.Has(recursiveField), "recursive field should not be set at MaxDepth 1")
+	})
+
+	t.Run("MaxDepth 2", func(t *testing.T) {
+		opts := fauxrpc.GenOptions{MaxDepth: 2}
+		msg, err := fauxrpc.NewMessage(md, opts)
+		require.NoError(t, err)
+
+		pmsg := msg.ProtoReflect()
+		recursiveField := md.Fields().ByName("recursive")
+		require.True(t, pmsg.Has(recursiveField), "recursive field should be set at MaxDepth 2")
+
+		recursive := pmsg.Get(recursiveField).Message()
+		assert.False(t, recursive.Has(recursiveField), "nested recursive field should not be set at MaxDepth 2")
+	})
+}

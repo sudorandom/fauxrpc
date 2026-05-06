@@ -116,16 +116,21 @@ func TestFieldValue(t *testing.T) {
 		valZeroDepth := fauxrpc.FieldValue(msgField, optsZeroDepth)
 		assert.Nil(t, valZeroDepth)
 
-		// Test with MaxDepth = 1, should generate the message but not its nested messages
+		// Test with MaxDepth = 1, should return nil for message fields because it can't populate it
 		optsOneDepth := fauxrpc.GenOptions{MaxDepth: 1}
 		valOneDepth := fauxrpc.FieldValue(msgField, optsOneDepth)
-		require.NotNil(t, valOneDepth)
-		assert.True(t, valOneDepth.IsValid())
-		assert.True(t, valOneDepth.Message().IsValid())
+		assert.Nil(t, valOneDepth)
+
+		// Test with MaxDepth = 2, should generate the message but not its nested messages
+		optsTwoDepth := fauxrpc.GenOptions{MaxDepth: 2}
+		valTwoDepth := fauxrpc.FieldValue(msgField, optsTwoDepth)
+		require.NotNil(t, valTwoDepth)
+		assert.True(t, valTwoDepth.IsValid())
+		assert.True(t, valTwoDepth.Message().IsValid())
 
 		// Check that the nested msg_value is not set
-		nestedMsgField := valOneDepth.Message().Descriptor().Fields().ByName("msg_value")
+		nestedMsgField := valTwoDepth.Message().Descriptor().Fields().ByName("msg_value")
 		require.NotNil(t, nestedMsgField)
-		assert.False(t, valOneDepth.Message().Has(nestedMsgField))
+		assert.False(t, valTwoDepth.Message().Has(nestedMsgField))
 	})
 }
