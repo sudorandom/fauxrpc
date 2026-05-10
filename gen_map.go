@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	"buf.build/go/protovalidate"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -26,27 +25,32 @@ func Map(msg protoreflect.Message, fd protoreflect.FieldDescriptor, opts GenOpti
 	if opts.MaxDepth <= 0 {
 		return nil
 	}
-	constraints, err := protovalidate.ResolveFieldRules(fd)
-	if err != nil || constraints == nil {
+	constraints := getFieldConstraints(fd, opts)
+	if constraints == nil {
 		return mapSimple(msg, fd, opts)
 	}
-	rules := constraints.GetEnum()
+	rules := constraints.GetMap()
 	if rules == nil {
 		return mapSimple(msg, fd, opts)
 	}
 	min, max := uint64(0), uint64(4)
-	if constraints.GetMap().MinPairs != nil {
-		min = constraints.GetMap().GetMinPairs()
+	if rules.MinPairs != nil {
+		min = rules.GetMinPairs()
 	}
-	if constraints.GetMap().MaxPairs != nil {
-		max = constraints.GetMap().GetMaxPairs()
+	if rules.MaxPairs != nil {
+		max = rules.GetMaxPairs()
+	}
+
+	// Ensure max is at least min
+	if min > max {
+		max = min
 	}
 
 	mapVal := msg.NewField(fd)
 	itemCount := opts.fake().IntRange(int(min), int(max))
 	for i := 0; i < itemCount; i++ {
-		v := FieldValue(fd.MapKey(), opts.WithExtraFieldConstraints(constraints.GetMap().Keys))
-		w := FieldValue(fd.MapValue(), opts.WithExtraFieldConstraints(constraints.GetMap().Values))
+		v := FieldValue(fd.MapKey(), opts.WithExtraFieldConstraints(rules.Keys))
+		w := FieldValue(fd.MapValue(), opts.WithExtraFieldConstraints(rules.Values))
 		if v != nil && w != nil {
 			mapVal.Map().Set((*v).MapKey(), *w)
 		} else {
