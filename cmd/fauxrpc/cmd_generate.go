@@ -24,6 +24,7 @@ type GenerateCmd struct {
 	Format string   `default:"json" enum:"json,proto,grpc" help:"Format to output"`
 	Seed   *uint64  `help:"Seed for random number generator"`
 	Stubs  []string `help:"Directories or file paths for JSON files."`
+	Depth  int      `help:"Max depth for generated messages." default:"5"`
 }
 
 func (c *GenerateCmd) Run(globals *Globals) error {
@@ -64,6 +65,7 @@ func (c *GenerateCmd) Run(globals *Globals) error {
 	}
 	fakeSrc := source.NewJSF(seed)
 	msg, err := fauxrpc.NewMessage(md, fauxrpc.GenOptions{
+		MaxDepth:   c.Depth,
 		Faker:      gofakeit.NewFaker(fakeSrc, true),
 		StubFinder: stubs.NewStubFinder(stubDB),
 	})

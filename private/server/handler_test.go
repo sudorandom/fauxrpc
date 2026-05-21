@@ -30,6 +30,7 @@ func (m *mockServer) GetStats() *metrics.Stats   { return nil }
 func (m *mockServer) IncrementTotalRequests()    {}
 func (m *mockServer) IncrementErrors()           {}
 func (m *mockServer) GetLogger() *fauxlog.Logger { return m.logger }
+func (m *mockServer) GetMaxDepth() int           { return 20 }
 
 func TestHandler_Logging_Streaming(t *testing.T) {
 	// Setup
@@ -53,7 +54,7 @@ func TestHandler_Logging_Streaming(t *testing.T) {
 	service := file.Services().ByName("ElizaService")
 	require.NotNil(t, service)
 
-	handler := NewHandler(service, faker, validator, s, logger)
+	handler := NewHandler(service, faker, validator, s, logger, 20)
 
 	// Test Client Streaming (Converse is Bidi, so it counts as client streaming)
 	converseMethod := service.Methods().ByName("Converse")
@@ -154,7 +155,7 @@ func BenchmarkHandler_Streaming_Messages(b *testing.B) {
 	service := file.Services().ByName("ElizaService")
 	require.NotNil(b, service)
 
-	handler := NewHandler(service, faker, validator, s, logger)
+	handler := NewHandler(service, faker, validator, s, logger, 20)
 
 	// Create a pipe to simulate streaming body
 	pr, pw := io.Pipe()

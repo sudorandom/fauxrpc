@@ -4,12 +4,15 @@
 // 	protoc        (unknown)
 // source: test.proto
 
-package demov1
+package gen
 
 import (
 	_ "buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
+	durationpb "google.golang.org/protobuf/types/known/durationpb"
+	structpb "google.golang.org/protobuf/types/known/structpb"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -22,85 +25,76 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-type User_Role int32
+type ItemType int32
 
 const (
-	User_ROLE_UNSPECIFIED User_Role = 0
-	User_ROLE_USER        User_Role = 1
-	User_ROLE_ADMIN       User_Role = 2
+	ItemType_ITEM_TYPE_UNSPECIFIED ItemType = 0
+	ItemType_ITEM_TYPE_PHYSICAL    ItemType = 1
+	ItemType_ITEM_TYPE_DIGITAL     ItemType = 2
 )
 
-// Enum value maps for User_Role.
+// Enum value maps for ItemType.
 var (
-	User_Role_name = map[int32]string{
-		0: "ROLE_UNSPECIFIED",
-		1: "ROLE_USER",
-		2: "ROLE_ADMIN",
+	ItemType_name = map[int32]string{
+		0: "ITEM_TYPE_UNSPECIFIED",
+		1: "ITEM_TYPE_PHYSICAL",
+		2: "ITEM_TYPE_DIGITAL",
 	}
-	User_Role_value = map[string]int32{
-		"ROLE_UNSPECIFIED": 0,
-		"ROLE_USER":        1,
-		"ROLE_ADMIN":       2,
+	ItemType_value = map[string]int32{
+		"ITEM_TYPE_UNSPECIFIED": 0,
+		"ITEM_TYPE_PHYSICAL":    1,
+		"ITEM_TYPE_DIGITAL":     2,
 	}
 )
 
-func (x User_Role) Enum() *User_Role {
-	p := new(User_Role)
+func (x ItemType) Enum() *ItemType {
+	p := new(ItemType)
 	*p = x
 	return p
 }
 
-func (x User_Role) String() string {
+func (x ItemType) String() string {
 	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
 }
 
-func (User_Role) Descriptor() protoreflect.EnumDescriptor {
+func (ItemType) Descriptor() protoreflect.EnumDescriptor {
 	return file_test_proto_enumTypes[0].Descriptor()
 }
 
-func (User_Role) Type() protoreflect.EnumType {
+func (ItemType) Type() protoreflect.EnumType {
 	return &file_test_proto_enumTypes[0]
 }
 
-func (x User_Role) Number() protoreflect.EnumNumber {
+func (x ItemType) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
-// Deprecated: Use User_Role.Descriptor instead.
-func (User_Role) EnumDescriptor() ([]byte, []int) {
-	return file_test_proto_rawDescGZIP(), []int{0, 0}
+// Deprecated: Use ItemType.Descriptor instead.
+func (ItemType) EnumDescriptor() ([]byte, []int) {
+	return file_test_proto_rawDescGZIP(), []int{0}
 }
 
-type User struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Name  string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	Email string                 `protobuf:"bytes,3,opt,name=email,proto3" json:"email,omitempty"`
-	// Numeric data for efficiency demo
-	Age           uint32    `protobuf:"varint,4,opt,name=age,proto3" json:"age,omitempty"`
-	HeightCm      float32   `protobuf:"fixed32,5,opt,name=height_cm,json=heightCm,proto3" json:"height_cm,omitempty"`
-	WeightKg      float64   `protobuf:"fixed64,6,opt,name=weight_kg,json=weightKg,proto3" json:"weight_kg,omitempty"`
-	Role          User_Role `protobuf:"varint,7,opt,name=role,proto3,enum=demo.v1.User_Role" json:"role,omitempty"`
-	BirthDate     *Date     `protobuf:"bytes,8,opt,name=birth_date,json=birthDate,proto3" json:"birth_date,omitempty"`
-	Manager       *User     `protobuf:"bytes,9,opt,name=manager,proto3" json:"manager,omitempty"`
+type GetItemRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *User) Reset() {
-	*x = User{}
+func (x *GetItemRequest) Reset() {
+	*x = GetItemRequest{}
 	mi := &file_test_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *User) String() string {
+func (x *GetItemRequest) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*User) ProtoMessage() {}
+func (*GetItemRequest) ProtoMessage() {}
 
-func (x *User) ProtoReflect() protoreflect.Message {
+func (x *GetItemRequest) ProtoReflect() protoreflect.Message {
 	mi := &file_test_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -112,97 +106,51 @@ func (x *User) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use User.ProtoReflect.Descriptor instead.
-func (*User) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetItemRequest.ProtoReflect.Descriptor instead.
+func (*GetItemRequest) Descriptor() ([]byte, []int) {
 	return file_test_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *User) GetId() string {
+func (x *GetItemRequest) GetId() string {
 	if x != nil {
 		return x.Id
 	}
 	return ""
 }
 
-func (x *User) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
-func (x *User) GetEmail() string {
-	if x != nil {
-		return x.Email
-	}
-	return ""
-}
-
-func (x *User) GetAge() uint32 {
-	if x != nil {
-		return x.Age
-	}
-	return 0
-}
-
-func (x *User) GetHeightCm() float32 {
-	if x != nil {
-		return x.HeightCm
-	}
-	return 0
-}
-
-func (x *User) GetWeightKg() float64 {
-	if x != nil {
-		return x.WeightKg
-	}
-	return 0
-}
-
-func (x *User) GetRole() User_Role {
-	if x != nil {
-		return x.Role
-	}
-	return User_ROLE_UNSPECIFIED
-}
-
-func (x *User) GetBirthDate() *Date {
-	if x != nil {
-		return x.BirthDate
-	}
-	return nil
-}
-
-func (x *User) GetManager() *User {
-	if x != nil {
-		return x.Manager
-	}
-	return nil
-}
-
-type Date struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Year          int32                  `protobuf:"varint,1,opt,name=year,proto3" json:"year,omitempty"`
-	Month         int32                  `protobuf:"varint,2,opt,name=month,proto3" json:"month,omitempty"`
-	Day           int32                  `protobuf:"varint,3,opt,name=day,proto3" json:"day,omitempty"`
+type GetItemResponse struct {
+	state      protoimpl.MessageState     `protogen:"open.v1"`
+	Name       string                     `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	Quantity   int32                      `protobuf:"varint,2,opt,name=quantity,proto3" json:"quantity,omitempty"`
+	Type       ItemType                   `protobuf:"varint,3,opt,name=type,proto3,enum=examples.demo.ItemType" json:"type,omitempty"`
+	Tags       []string                   `protobuf:"bytes,4,rep,name=tags,proto3" json:"tags,omitempty"`
+	Attributes map[string]string          `protobuf:"bytes,5,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	CreatedAt  *timestamppb.Timestamp     `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	Duration   *durationpb.Duration       `protobuf:"bytes,7,opt,name=duration,proto3" json:"duration,omitempty"`
+	ExtraInfo  map[string]*structpb.Value `protobuf:"bytes,8,rep,name=extra_info,json=extraInfo,proto3" json:"extra_info,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// Types that are valid to be assigned to Status:
+	//
+	//	*GetItemResponse_StatusMessage
+	//	*GetItemResponse_StatusCode
+	Status        isGetItemResponse_Status `protobuf_oneof:"status"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *Date) Reset() {
-	*x = Date{}
+func (x *GetItemResponse) Reset() {
+	*x = GetItemResponse{}
 	mi := &file_test_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *Date) String() string {
+func (x *GetItemResponse) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*Date) ProtoMessage() {}
+func (*GetItemResponse) ProtoMessage() {}
 
-func (x *Date) ProtoReflect() protoreflect.Message {
+func (x *GetItemResponse) ProtoReflect() protoreflect.Message {
 	mi := &file_test_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -214,61 +162,145 @@ func (x *Date) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use Date.ProtoReflect.Descriptor instead.
-func (*Date) Descriptor() ([]byte, []int) {
+// Deprecated: Use GetItemResponse.ProtoReflect.Descriptor instead.
+func (*GetItemResponse) Descriptor() ([]byte, []int) {
 	return file_test_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *Date) GetYear() int32 {
+func (x *GetItemResponse) GetName() string {
 	if x != nil {
-		return x.Year
+		return x.Name
+	}
+	return ""
+}
+
+func (x *GetItemResponse) GetQuantity() int32 {
+	if x != nil {
+		return x.Quantity
 	}
 	return 0
 }
 
-func (x *Date) GetMonth() int32 {
+func (x *GetItemResponse) GetType() ItemType {
 	if x != nil {
-		return x.Month
+		return x.Type
+	}
+	return ItemType_ITEM_TYPE_UNSPECIFIED
+}
+
+func (x *GetItemResponse) GetTags() []string {
+	if x != nil {
+		return x.Tags
+	}
+	return nil
+}
+
+func (x *GetItemResponse) GetAttributes() map[string]string {
+	if x != nil {
+		return x.Attributes
+	}
+	return nil
+}
+
+func (x *GetItemResponse) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *GetItemResponse) GetDuration() *durationpb.Duration {
+	if x != nil {
+		return x.Duration
+	}
+	return nil
+}
+
+func (x *GetItemResponse) GetExtraInfo() map[string]*structpb.Value {
+	if x != nil {
+		return x.ExtraInfo
+	}
+	return nil
+}
+
+func (x *GetItemResponse) GetStatus() isGetItemResponse_Status {
+	if x != nil {
+		return x.Status
+	}
+	return nil
+}
+
+func (x *GetItemResponse) GetStatusMessage() string {
+	if x != nil {
+		if x, ok := x.Status.(*GetItemResponse_StatusMessage); ok {
+			return x.StatusMessage
+		}
+	}
+	return ""
+}
+
+func (x *GetItemResponse) GetStatusCode() int32 {
+	if x != nil {
+		if x, ok := x.Status.(*GetItemResponse_StatusCode); ok {
+			return x.StatusCode
+		}
 	}
 	return 0
 }
 
-func (x *Date) GetDay() int32 {
-	if x != nil {
-		return x.Day
-	}
-	return 0
+type isGetItemResponse_Status interface {
+	isGetItemResponse_Status()
 }
+
+type GetItemResponse_StatusMessage struct {
+	StatusMessage string `protobuf:"bytes,9,opt,name=status_message,json=statusMessage,proto3,oneof"`
+}
+
+type GetItemResponse_StatusCode struct {
+	StatusCode int32 `protobuf:"varint,10,opt,name=status_code,json=statusCode,proto3,oneof"`
+}
+
+func (*GetItemResponse_StatusMessage) isGetItemResponse_Status() {}
+
+func (*GetItemResponse_StatusCode) isGetItemResponse_Status() {}
 
 var File_test_proto protoreflect.FileDescriptor
 
 const file_test_proto_rawDesc = "" +
 	"\n" +
 	"\n" +
-	"test.proto\x12\ademo.v1\x1a\x1bbuf/validate/validate.proto\"\x98\x03\n" +
-	"\x04User\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12\x1b\n" +
-	"\x04name\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x10\x01R\x04name\x12\x1d\n" +
-	"\x05email\x18\x03 \x01(\tB\a\xbaH\x04r\x02`\x01R\x05email\x12\x1a\n" +
-	"\x03age\x18\x04 \x01(\rB\b\xbaH\x05*\x03\x10\x96\x01R\x03age\x12,\n" +
-	"\theight_cm\x18\x05 \x01(\x02B\x0f\xbaH\f\n" +
+	"test.proto\x12\rexamples.demo\x1a\x1bbuf/validate/validate.proto\x1a\x1egoogle/protobuf/duration.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"*\n" +
+	"\x0eGetItemRequest\x12\x18\n" +
+	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\xf8\x05\n" +
+	"\x0fGetItemResponse\x12\x1b\n" +
+	"\x04name\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x03R\x04name\x12#\n" +
+	"\bquantity\x18\x02 \x01(\x05B\a\xbaH\x04\x1a\x02 \x00R\bquantity\x12+\n" +
+	"\x04type\x18\x03 \x01(\x0e2\x17.examples.demo.ItemTypeR\x04type\x125\n" +
+	"\x04tags\x18\x04 \x03(\tB!\xbaH\x1e\x92\x01\x1b\b\x01\"\x17r\x152\x13^[a-z][a-z_]+[a-z]$R\x04tags\x12q\n" +
 	"\n" +
-	"\x1d\x00\x00\xfaC-\x00\x00\x00\x00R\bheightCm\x124\n" +
-	"\tweight_kg\x18\x06 \x01(\x01B\x17\xbaH\x14\x12\x12\x19\x00\x00\x00\x00\x00@\x9f@)\x00\x00\x00\x00\x00\x00\x00\x00R\bweightKg\x12&\n" +
-	"\x04role\x18\a \x01(\x0e2\x12.demo.v1.User.RoleR\x04role\x12,\n" +
+	"attributes\x18\x05 \x03(\v2..examples.demo.GetItemResponse.AttributesEntryB!\xbaH\x1e\x9a\x01\x1b\b\x01\"\x17r\x152\x13^[a-z][a-z_]+[a-z]$R\n" +
+	"attributes\x129\n" +
 	"\n" +
-	"birth_date\x18\b \x01(\v2\r.demo.v1.DateR\tbirthDate\x12'\n" +
-	"\amanager\x18\t \x01(\v2\r.demo.v1.UserR\amanager\";\n" +
-	"\x04Role\x12\x14\n" +
-	"\x10ROLE_UNSPECIFIED\x10\x00\x12\r\n" +
-	"\tROLE_USER\x10\x01\x12\x0e\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x125\n" +
+	"\bduration\x18\a \x01(\v2\x19.google.protobuf.DurationR\bduration\x12o\n" +
 	"\n" +
-	"ROLE_ADMIN\x10\x02\"e\n" +
-	"\x04Date\x12\x1f\n" +
-	"\x04year\x18\x01 \x01(\x05B\v\xbaH\b\x1a\x06\x18\xb4\x10(\xec\x0eR\x04year\x12\x1f\n" +
-	"\x05month\x18\x02 \x01(\x05B\t\xbaH\x06\x1a\x04\x18\f(\x01R\x05month\x12\x1b\n" +
-	"\x03day\x18\x03 \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x1f(\x01R\x03dayB\x87\x01\n" +
-	"\vcom.demo.v1B\tTestProtoP\x01Z0github.com/sudorandom/fauxrpc/private/gen;demov1\xa2\x02\x03DXX\xaa\x02\aDemo.V1\xca\x02\aDemo\\V1\xe2\x02\x13Demo\\V1\\GPBMetadata\xea\x02\bDemo::V1b\x06proto3"
+	"extra_info\x18\b \x03(\v2-.examples.demo.GetItemResponse.ExtraInfoEntryB!\xbaH\x1e\x9a\x01\x1b\b\x01\"\x17r\x152\x13^[a-z][a-z_]+[a-z]$R\textraInfo\x12'\n" +
+	"\x0estatus_message\x18\t \x01(\tH\x00R\rstatusMessage\x12!\n" +
+	"\vstatus_code\x18\n" +
+	" \x01(\x05H\x00R\n" +
+	"statusCode\x1a=\n" +
+	"\x0fAttributesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1aT\n" +
+	"\x0eExtraInfoEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12,\n" +
+	"\x05value\x18\x02 \x01(\v2\x16.google.protobuf.ValueR\x05value:\x028\x01B\b\n" +
+	"\x06status*T\n" +
+	"\bItemType\x12\x19\n" +
+	"\x15ITEM_TYPE_UNSPECIFIED\x10\x00\x12\x16\n" +
+	"\x12ITEM_TYPE_PHYSICAL\x10\x01\x12\x15\n" +
+	"\x11ITEM_TYPE_DIGITAL\x10\x02B\x9e\x01\n" +
+	"\x11com.examples.demoB\tTestProtoP\x01Z)github.com/sudorandom/fauxrpc/private/gen\xa2\x02\x03EDX\xaa\x02\rExamples.Demo\xca\x02\rExamples\\Demo\xe2\x02\x19Examples\\Demo\\GPBMetadata\xea\x02\x0eExamples::Demob\x06proto3"
 
 var (
 	file_test_proto_rawDescOnce sync.Once
@@ -283,21 +315,29 @@ func file_test_proto_rawDescGZIP() []byte {
 }
 
 var file_test_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_test_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_test_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_test_proto_goTypes = []any{
-	(User_Role)(0), // 0: demo.v1.User.Role
-	(*User)(nil),   // 1: demo.v1.User
-	(*Date)(nil),   // 2: demo.v1.Date
+	(ItemType)(0),                 // 0: examples.demo.ItemType
+	(*GetItemRequest)(nil),        // 1: examples.demo.GetItemRequest
+	(*GetItemResponse)(nil),       // 2: examples.demo.GetItemResponse
+	nil,                           // 3: examples.demo.GetItemResponse.AttributesEntry
+	nil,                           // 4: examples.demo.GetItemResponse.ExtraInfoEntry
+	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
+	(*durationpb.Duration)(nil),   // 6: google.protobuf.Duration
+	(*structpb.Value)(nil),        // 7: google.protobuf.Value
 }
 var file_test_proto_depIdxs = []int32{
-	0, // 0: demo.v1.User.role:type_name -> demo.v1.User.Role
-	2, // 1: demo.v1.User.birth_date:type_name -> demo.v1.Date
-	1, // 2: demo.v1.User.manager:type_name -> demo.v1.User
-	3, // [3:3] is the sub-list for method output_type
-	3, // [3:3] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	0, // 0: examples.demo.GetItemResponse.type:type_name -> examples.demo.ItemType
+	3, // 1: examples.demo.GetItemResponse.attributes:type_name -> examples.demo.GetItemResponse.AttributesEntry
+	5, // 2: examples.demo.GetItemResponse.created_at:type_name -> google.protobuf.Timestamp
+	6, // 3: examples.demo.GetItemResponse.duration:type_name -> google.protobuf.Duration
+	4, // 4: examples.demo.GetItemResponse.extra_info:type_name -> examples.demo.GetItemResponse.ExtraInfoEntry
+	7, // 5: examples.demo.GetItemResponse.ExtraInfoEntry.value:type_name -> google.protobuf.Value
+	6, // [6:6] is the sub-list for method output_type
+	6, // [6:6] is the sub-list for method input_type
+	6, // [6:6] is the sub-list for extension type_name
+	6, // [6:6] is the sub-list for extension extendee
+	0, // [0:6] is the sub-list for field type_name
 }
 
 func init() { file_test_proto_init() }
@@ -305,13 +345,17 @@ func file_test_proto_init() {
 	if File_test_proto != nil {
 		return
 	}
+	file_test_proto_msgTypes[1].OneofWrappers = []any{
+		(*GetItemResponse_StatusMessage)(nil),
+		(*GetItemResponse_StatusCode)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_test_proto_rawDesc), len(file_test_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

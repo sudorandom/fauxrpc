@@ -43,6 +43,7 @@ type Server interface {
 	IncrementTotalRequests()
 	IncrementErrors()
 	GetLogger() *fauxlog.Logger
+	GetMaxDepth() int
 }
 
 type ServerOpts struct {
@@ -55,6 +56,7 @@ type ServerOpts struct {
 	NoCORS        bool
 	Addr          string
 	WithDashboard bool
+	MaxDepth      int
 }
 
 type server struct {
@@ -179,6 +181,10 @@ func (s *server) IncrementErrors() {
 	s.stats.IncrementErrors()
 }
 
+func (s *server) GetMaxDepth() int {
+	return s.opts.MaxDepth
+}
+
 func (s *server) rebuildHandlers() error {
 	slog.Debug("Rebuilding handlers")
 	defer slog.Debug("Rebuilding handlers complete")
@@ -204,8 +210,12 @@ func (s *server) rebuildHandlers() error {
 	faker := fauxrpc.NewMultiFaker(fakers)
 
 	s.ForEachService(func(sd protoreflect.ServiceDescriptor) bool {
+		maxDepth := s.opts.MaxDepth
+		if maxDepth <= 0 {
+			maxDepth = 5
+		}
 		vgservice := vanguard.NewServiceWithSchema(
-			sd, NewHandler(sd, faker, validate, s, s.logger), // Pass the server instance here
+			sd, NewHandler(sd, faker, validate, s, s.logger, maxDepth), // Pass the server instance here
 			vanguard.WithTargetProtocols(vanguard.ProtocolGRPC),
 			vanguard.WithTargetCodecs(vanguard.CodecProto))
 		vgservices = append(vgservices, vgservice)

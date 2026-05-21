@@ -41,13 +41,13 @@ var bufferPool = sync.Pool{
 	},
 }
 
-func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker, validate protovalidate.Validator, s Server, logger *fauxlog.Logger) http.Handler {
+func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker, validate protovalidate.Validator, s Server, logger *fauxlog.Logger, maxDepth int) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		startTime := time.Now()
 		s.IncrementTotalRequests()
 
 		var finalStatus *status.Status
-		var requestBody proto.Message
+		var requestBody releasableMessage
 		var responseBody proto.Message
 		var stubsUsed []fauxrpc.StubEntry
 		reqFrameTracker := NewFrameTracker(10)
@@ -120,6 +120,9 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 				ResponseFrames:  resFrameTracker.Frames(),
 				StubsUsed:       stubsUsed,
 			})
+			if requestBody != nil {
+				requestBody.Release()
+			}
 		}()
 
 		w.Header().Set("Trailer", "Grpc-Status,Grpc-Message,Grpc-Status-Details-Bin")
@@ -152,7 +155,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 		readMessageBuf := bufferPool.Get().(*[]byte)
 		defer bufferPool.Put(readMessageBuf)
 
-		readMessage := func() (proto.Message, *status.Status) {
+		readMessage := func() (releasableMessage, *status.Status) {
 			size, err := grpc.ReadGRPCMessage(r.Body, *readMessageBuf)
 			if err != nil {
 				if errors.Is(err, io.EOF) {
@@ -161,8 +164,9 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 				s.IncrementErrors()
 				return nil, status.New(codes.NotFound, err.Error())
 			}
-			msg := registry.NewMessage(method.Input()).Interface()
-			if err := proto.Unmarshal((*readMessageBuf)[:size], msg); err != nil {
+
+			msg, err := unmarshalRequest(method.Input(), (*readMessageBuf)[:size])
+			if err != nil {
 				s.IncrementErrors()
 				return nil, status.New(codes.NotFound, err.Error())
 			}
@@ -196,12 +200,13 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 						return nil
 					}
 					reqFrameTracker.Add(msg)
+					msg.Release()
 				}
 			})
 		} else {
 			var st *status.Status
-			input, st = readMessage()
-			requestBody = input
+			requestBody, st = readMessage()
+			input = requestBody
 			if st != nil {
 				s.IncrementErrors()
 				finalStatus = st
@@ -239,7 +244,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 
 			out := registry.NewMessage(method.Output()).Interface()
 			genOpts := fauxrpc.GenOptions{
-				MaxDepth: 20,
+				MaxDepth: maxDepth,
 				Context: protocel.WithCELContext(ctx, &protocel.CELContext{
 					MethodDescriptor: method,
 					Req:              input,
@@ -283,7 +288,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 				return
 			} else if st, ok := status.FromError(err); ok {
 				finalStatus = st
-				grpcWriteStatus(w, st)
+				grpcWriteStatus(w, finalStatus)
 				return
 			} else {
 				finalStatus = status.New(codes.Internal, err.Error())

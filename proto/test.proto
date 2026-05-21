@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package examples.demo;
+
+import "buf/validate/validate.proto";
+import "google/protobuf/duration.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+message GetItemRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+message GetItemResponse {
+  string name = 1 [(buf.validate.field).string.min_len = 3];
+  int32 quantity = 2 [(buf.validate.field).int32.gt = 0];
+  ItemType type = 3;
+  repeated string tags = 4 [(buf.validate.field).repeated = {
+    min_items: 1
+    items: {
+      string: {pattern: "^[a-z][a-z_]+[a-z]$"}
+    }
+  }];
+
+  map<string, string> attributes = 5 [(buf.validate.field).map = {
+    min_pairs: 1
+    keys: {
+      string: {pattern: "^[a-z][a-z_]+[a-z]$"}
+    }
+  }];
+
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Duration duration = 7;
+  map<string, google.protobuf.Value> extra_info = 8 [(buf.validate.field).map = {
+    min_pairs: 1
+    keys: {
+      string: {pattern: "^[a-z][a-z_]+[a-z]$"}
+    }
+  }];
+
+  oneof status {
+    string status_message = 9;
+    int32 status_code = 10;
+  }
+}
+
+enum ItemType {
+  ITEM_TYPE_UNSPECIFIED = 0;
+  ITEM_TYPE_PHYSICAL = 1;
+  ITEM_TYPE_DIGITAL = 2;
+}

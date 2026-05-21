@@ -32,6 +32,7 @@ type RunCmd struct {
 	OnlyStubs    bool     `help:"Only use pre-defined stubs and don't make up fake data."`
 	Stubs        []string `help:"Directories or file paths for JSON files."`
 	Dashboard    bool     `help:"Enable the admin dashboard."`
+	Depth        int      `help:"Max depth for generated messages." default:"5"`
 }
 
 func (c *RunCmd) Run(globals *Globals) error {
@@ -44,6 +45,7 @@ func (c *RunCmd) Run(globals *Globals) error {
 		OnlyStubs:     c.OnlyStubs,
 		Addr:          c.Addr,
 		WithDashboard: c.Dashboard,
+		MaxDepth:      c.Depth,
 	})
 	if err != nil {
 		return err

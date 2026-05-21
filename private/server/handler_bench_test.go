@@ -37,7 +37,7 @@ func BenchmarkHandler_RequestAllocation(b *testing.B) {
 	service := file.Services().ByName("ElizaService")
 	require.NotNil(b, service)
 
-	handler := NewHandler(service, faker, validator, s, logger)
+	handler := NewHandler(service, faker, validator, s, logger, 20)
 
 	// Use Converse method
 	method := service.Methods().ByName("Converse")
@@ -56,10 +56,9 @@ func BenchmarkHandler_RequestAllocation(b *testing.B) {
 	binary.BigEndian.PutUint32(framedMsg[1:], uint32(length))
 	copy(framedMsg[5:], msgBytes)
 
-	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		req := httptest.NewRequest("POST", url, bytes.NewReader(framedMsg))
 		req.Header.Set("Content-Type", "application/grpc")
 		w := httptest.NewRecorder()
@@ -86,10 +85,9 @@ func BenchmarkGRPCWriteStatus(b *testing.B) {
 	st := status.New(codes.NotFound, "not found")
 	w := &mockWriter{h: make(http.Header)}
 
-	b.ResetTimer()
 	b.ReportAllocs()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		grpcWriteStatus(w, st)
 		// Reset header
 		for k := range w.h {

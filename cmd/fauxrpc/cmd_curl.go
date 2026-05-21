@@ -34,6 +34,7 @@ type CurlCmd struct {
 	HTTP3               bool     `help:"Enables HTTP/3."`
 	Stubs               []string `help:"Directories or file paths for JSON files."`
 	Method              string   `arg:"" help:"Service or method name." optional:""`
+	Depth               int      `help:"Max depth for generated messages." default:"5"`
 }
 
 func (c *CurlCmd) Run(globals *Globals) error {
@@ -199,7 +200,7 @@ func (c *CurlCmd) callRPC(
 		Req:              reqMsg,
 	}
 	genOpts := fauxrpc.GenOptions{
-		MaxDepth: 20,
+		MaxDepth: c.Depth,
 		Faker:    gofakeit.New(0),
 		Context:  protocel.WithCELContext(ctx, celCtx),
 	}
