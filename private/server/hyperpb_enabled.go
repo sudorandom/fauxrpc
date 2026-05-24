@@ -11,7 +11,12 @@ import (
 )
 
 var (
-	hyperpbTypes sync.Map // map[protoreflect.FullName]*hyperpb.MessageType
+	hyperpbTypes      sync.Map // map[protoreflect.FullName]*hyperpb.MessageType
+	hyperpbSharedPool = sync.Pool{
+		New: func() any {
+			return new(hyperpb.Shared)
+		},
+	}
 )
 
 type releasableMessage interface {
@@ -33,12 +38,13 @@ type hyperPBShared struct {
 }
 
 func newHyperPBShared() *hyperPBShared {
-	return &hyperPBShared{new(hyperpb.Shared)}
+	return &hyperPBShared{hyperpbSharedPool.Get().(*hyperpb.Shared)}
 }
 
 func (s *hyperPBShared) Release() {
 	if s.Shared != nil {
 		s.Free()
+		hyperpbSharedPool.Put(s.Shared)
 		s.Shared = nil
 	}
 }
