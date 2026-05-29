@@ -1,23 +1,22 @@
 package fauxrpc
 
 import (
-	"github.com/brianvoe/gofakeit/v7"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-func generateBytesSimple() []byte {
-	return []byte(gofakeit.HipsterSentence())
+func generateBytesSimple(opts GenOptions) []byte {
+	return []byte(opts.fake().HipsterSentence())
 }
 
 // Bytes returns a fake []byte value given a field descriptor.
 func Bytes(fd protoreflect.FieldDescriptor, opts GenOptions) []byte {
 	constraints := getFieldConstraints(fd, opts)
 	if constraints == nil {
-		return generateBytesSimple()
+		return generateBytesSimple(opts)
 	}
 	rules := constraints.GetBytes()
 	if rules == nil {
-		return generateBytesSimple()
+		return generateBytesSimple(opts)
 	}
 
 	if rules.Const != nil {
