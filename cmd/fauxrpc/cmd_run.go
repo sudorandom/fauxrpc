@@ -8,9 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/quic-go/quic-go/http3"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
+	"github.com/quic-go/quic-go/http3" //nolint:staticcheck
 	"golang.org/x/sync/errgroup"
 
 	"github.com/sudorandom/fauxrpc/private/registry"
@@ -89,8 +87,11 @@ func (c *RunCmd) Run(globals *Globals) error {
 	}
 	server := &http.Server{
 		Addr:    c.Addr,
-		Handler: h2c.NewHandler(handler, &http2.Server{}),
+		Handler: handler,
 	}
+	server.Protocols = new(http.Protocols)
+	server.Protocols.SetHTTP1(true)
+	server.Protocols.SetUnencryptedHTTP2(true)
 
 	fmt.Printf("FauxRPC (%s) - %d services loaded, %d stubs loaded\n", fullVersion(), srv.ServiceCount(), srv.NumStubs())
 	fmt.Printf("Listening on http://%s\n", c.Addr)
