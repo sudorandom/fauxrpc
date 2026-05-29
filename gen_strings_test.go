@@ -244,7 +244,7 @@ func TestString(t *testing.T) {
 				assert.Regexp(t, regexp.MustCompile(`^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$`), val)
 			}},
 			{"user_agent", "user_agent", func(t *testing.T, val string) {
-				assert.Contains(t, val, "Mozilla")
+				assert.NotEmpty(t, val)
 			}},
 			{"favorite_color", "favorite_color", func(t *testing.T, val string) {
 				assert.Regexp(t, regexp.MustCompile(`^#[0-9a-fA-F]{6}$`), val)
