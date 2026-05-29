@@ -79,6 +79,25 @@ fauxrpc run --schema=eliza.binpb --stubs=example/stubs.eliza/say.json
 fauxrpc run --schema=eliza.binpb --stubs=example/stubs.eliza/
 ```
 
+## Proxying and Ingesting Real Traffic
+
+FauxRPC can act as an intercepting proxy to ingest real gRPC/Connect traffic and automatically generate stateful, predictable mock profiles (stubs) on disk.
+
+When in proxy mode, FauxRPC forwards incoming requests to an upstream server, captures the request and response payloads, translates them into the stub format, and writes/appends them to files under a structured directory by service/method (e.g., `<record-dir>/<service>/<method>.json`).
+
+To run FauxRPC in proxy mode:
+
+```shell
+fauxrpc run --proxy-to=127.0.0.1:8080 --record-dir=stubs/
+```
+
+* `--proxy-to`: The address of the upstream gRPC or Connect server to forward requests to.
+* `--record-dir`: The directory path where the recorded stubs should be saved, structured by service and method.
+
+### Unimplemented Fallback
+
+If the upstream server returns an `UNIMPLEMENTED` status code (indicating that the endpoint is not yet implemented), FauxRPC will automatically catch the error and fall back to serving a mock response (from stubs or random fake generation). This allows frontend and backend teams to co-develop APIs incrementally.
+
 ## Making Requests with `fauxrpc curl`
 
 FauxRPC includes a handy built-in client, `fauxrpc curl`, for making requests to your services without needing external tools. It automatically sources the schema to provide a seamless testing experience.

@@ -9,13 +9,17 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
 	"time"
 
 	"connectrpc.com/connect"
+	"github.com/google/uuid"
 	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/tailscale/hujson"
 	"go.yaml.in/yaml/v3"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
@@ -214,4 +218,115 @@ func standardizeJSON(b []byte) ([]byte, error) {
 	ast.Standardize()
 	return ast.Pack(), nil
 
+}
+
+var recordLock sync.Mutex
+
+func AppendStubToFile(filePath string, entry StubFileEntry) error {
+	recordLock.Lock()
+	defer recordLock.Unlock()
+
+	var stubFile StubFile
+
+	// Ensure the parent directory exists
+	dir := filepath.Dir(filePath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create directory %s: %w", dir, err)
+	}
+
+	ext := strings.ToLower(filepath.Ext(filePath))
+	isFileExists := false
+	if _, err := os.Stat(filePath); err == nil {
+		isFileExists = true
+	}
+
+	if isFileExists {
+		data, err := os.ReadFile(filePath)
+		if err != nil {
+			return fmt.Errorf("failed to read stub file: %w", err)
+		}
+		if len(bytes.TrimSpace(data)) > 0 {
+			if ext == ".yaml" || ext == ".yml" {
+				if err := yaml.Unmarshal(data, &stubFile); err != nil {
+					return fmt.Errorf("failed to unmarshal yaml: %w", err)
+				}
+			} else {
+				// Handle potential JSONC or standard JSON
+				standardized := data
+				if ext == ".jsonc" {
+					if std, err := standardizeJSON(data); err == nil {
+						standardized = std
+					}
+				}
+				if err := json.Unmarshal(standardized, &stubFile); err != nil {
+					return fmt.Errorf("failed to unmarshal json: %w", err)
+				}
+			}
+		}
+	}
+
+	stubFile.Stubs = append(stubFile.Stubs, entry)
+
+	var out []byte
+	var err error
+	if ext == ".yaml" || ext == ".yml" {
+		out, err = yaml.Marshal(stubFile)
+	} else {
+		out, err = json.MarshalIndent(stubFile, "", "  ")
+	}
+	if err != nil {
+		return fmt.Errorf("failed to marshal stub file: %w", err)
+	}
+
+	if err := os.WriteFile(filePath, out, 0644); err != nil {
+		return fmt.Errorf("failed to write stub file: %w", err)
+	}
+
+	return nil
+}
+
+func RecordSuccessStub(filePath string, target string, activeIf string, respMsg proto.Message) error {
+	var content any
+	if respMsg != nil {
+		b, err := protojson.Marshal(respMsg)
+		if err != nil {
+			return err
+		}
+		if err := json.Unmarshal(b, &content); err != nil {
+			return err
+		}
+	}
+	entry := StubFileEntry{
+		ID:       uuid.New().String(),
+		Target:   target,
+		ActiveIf: activeIf,
+		Content:  content,
+		Priority: 10,
+	}
+	return AppendStubToFile(filePath, entry)
+}
+
+func RecordStreamStub(filePath string, target string, activeIf string, items []StubFileStreamItemEntry) error {
+	entry := StubFileEntry{
+		ID:       uuid.New().String(),
+		Target:   target,
+		ActiveIf: activeIf,
+		Stream: &StubFileStreamEntry{
+			Items: items,
+		},
+		Priority: 10,
+	}
+	return AppendStubToFile(filePath, entry)
+}
+
+func RecordErrorStub(filePath string, target string, activeIf string, code int, message string) error {
+	entry := StubFileEntry{
+		ID:           uuid.New().String(),
+		Target:       target,
+		ActiveIf:     activeIf,
+		ErrorCode:    code,
+		ErrorMessage: message,
+		Priority:     10,
+	}
+	return AppendStubToFile(filePath, entry)
 }

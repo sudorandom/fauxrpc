@@ -261,6 +261,7 @@ func (c *CurlCmd) callRPC(
 
 		var connectErr *connect.Error
 		if errors.As(err, &connectErr) {
+			fmt.Printf("<- [%s] (error) %s: %s\n", fullMethodName, connectErr.Code(), connectErr.Message())
 			for _, detail := range connectErr.Details() {
 				msg, err := detail.Value()
 				if err != nil {
@@ -275,8 +276,9 @@ func (c *CurlCmd) callRPC(
 					slog.Error("Failed to marshal error detail to JSON", "error", err)
 					continue
 				}
-				fmt.Printf("<- [%s] (error) \n%s\n\n", fullMethodName, string(jsonBytes))
+				fmt.Printf("Detail:\n%s\n", string(jsonBytes))
 			}
+			fmt.Println()
 		} else {
 			fmt.Printf("<- [%s] (error) \n%s\n\n", fullMethodName, err)
 		}

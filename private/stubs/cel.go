@@ -3,12 +3,14 @@ package stubs
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/ext"
 	"github.com/sudorandom/fauxrpc/celfakeit"
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/protocel"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -69,4 +71,46 @@ func (r *ActiveIf) Eval(ctx context.Context, celCtx *protocel.CELContext) (bool,
 
 func (r *ActiveIf) GetString() string {
 	return r.expr
+}
+
+func ActiveIfFromProto(msg proto.Message) string {
+	if msg == nil {
+		return ""
+	}
+	var conds []string
+	msg.ProtoReflect().Range(func(fd protoreflect.FieldDescriptor, val protoreflect.Value) bool {
+		if fd.IsMap() || fd.IsList() || fd.Kind() == protoreflect.MessageKind {
+			return true
+		}
+		valStr := formatCELValue(val, fd)
+		if valStr != "" {
+			conds = append(conds, fmt.Sprintf("req.%s == %s", fd.Name(), valStr))
+		}
+		return true
+	})
+	if len(conds) == 0 {
+		return ""
+	}
+	return strings.Join(conds, " && ")
+}
+
+func formatCELValue(val protoreflect.Value, fd protoreflect.FieldDescriptor) string {
+	switch fd.Kind() {
+	case protoreflect.BoolKind:
+		return fmt.Sprintf("%t", val.Bool())
+	case protoreflect.StringKind:
+		return fmt.Sprintf("%q", val.String())
+	case protoreflect.BytesKind:
+		return fmt.Sprintf("b%q", val.Bytes())
+	case protoreflect.Int32Kind, protoreflect.Int64Kind, protoreflect.Sint32Kind, protoreflect.Sint64Kind, protoreflect.Sfixed32Kind, protoreflect.Sfixed64Kind:
+		return fmt.Sprintf("%d", val.Int())
+	case protoreflect.Uint32Kind, protoreflect.Uint64Kind, protoreflect.Fixed32Kind, protoreflect.Fixed64Kind:
+		return fmt.Sprintf("%du", val.Uint())
+	case protoreflect.FloatKind, protoreflect.DoubleKind:
+		return fmt.Sprintf("%g", val.Float())
+	case protoreflect.EnumKind:
+		return fmt.Sprintf("%d", val.Enum())
+	default:
+		return ""
+	}
 }

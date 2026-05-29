@@ -8,9 +8,11 @@ require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260209202127-80ab13bee0bf.1
 	buf.build/gen/go/bufbuild/registry/connectrpc/go v1.19.1-20251027152159-f1066ce064ca.2
 	buf.build/gen/go/bufbuild/registry/protocolbuffers/go v1.36.10-20251027152159-f1066ce064ca.1
+	buf.build/gen/go/connectrpc/eliza/connectrpc/go v1.19.1-20230913231627-233fca715f49.2
 	buf.build/gen/go/connectrpc/eliza/protocolbuffers/go v1.36.11-20230913231627-233fca715f49.1
 	buf.build/gen/go/grpc/grpc/connectrpc/go v1.19.1-20260203201457-e126be52bace.2
 	buf.build/gen/go/grpc/grpc/protocolbuffers/go v1.36.10-20260203201457-e126be52bace.1
+	buf.build/go/hyperpb v0.1.3
 	buf.build/go/protovalidate v1.1.2
 	buf.build/go/protoyaml v0.6.0
 	connectrpc.com/connect v1.19.1
@@ -41,7 +43,6 @@ require (
 )
 
 require (
-	buf.build/go/hyperpb v0.1.3 // indirect
 	cel.dev/expr v0.25.1 // indirect
 	github.com/TylerBrock/colorjson v0.0.0-20200706003622-8a50f05110d2 // indirect
 	github.com/a-h/parse v0.0.0-20250122154542-74294addb73e // indirect
