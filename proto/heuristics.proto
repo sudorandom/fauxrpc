@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package examples.heuristics;
+
+option go_package = "github.com/sudorandom/fauxrpc/private/gen/examples/heuristics/v1;heuristicsv1";
+
+message ContactProfile {
+  // Identification
+  string user_id = 1;
+  string session_token = 2;
+
+  // Name
+  string full_name = 3;
+  string first_name = 4;
+  string last_name = 5;
+
+  // Contact Info
+  string email_address = 6;
+  string phone_number = 7;
+
+  // Address Info
+  string home_address = 8;
+  string street_name = 9;
+  string city = 10;
+  string country = 11;
+  string postal_code = 12;
+
+  // System & Network Info
+  string client_ip = 13;
+  string device_mac = 14;
+  string user_agent = 15;
+
+  // Preferences & Appearance
+  string favorite_color = 16;
+
+  // Descriptions & Bio
+  string profile_bio = 17;
+  string experience_summary = 18;
+
+  // Tags & Attributes
+  string tag = 19;
+  repeated string tags = 20;
+  map<string, string> attributes = 21;
+  string created_at = 22;
+  string updated_at = 23;
+  string company_name = 24;
+  string job_title = 25;
+  string currency_code = 26;
+  string language_code = 27;
+  string user_locale = 28;
+}
