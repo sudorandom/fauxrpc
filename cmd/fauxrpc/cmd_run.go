@@ -6,12 +6,14 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/quic-go/quic-go/http3"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/private/server"
 	"github.com/sudorandom/fauxrpc/private/stubs"
 )
@@ -33,6 +35,8 @@ type RunCmd struct {
 	Stubs        []string `help:"Directories or file paths for JSON files."`
 	Dashboard    bool     `help:"Enable the admin dashboard."`
 	Depth        int      `help:"Max depth for generated messages." default:"5"`
+	ProxyTo      string   `help:"Address of the upstream gRPC/Connect server to proxy requests to."`
+	RecordDir    string   `help:"Directory path to write/append the recorded stubs structured by service/method (e.g. stubs/)."`
 }
 
 func (c *RunCmd) Run(globals *Globals) error {
@@ -46,6 +50,8 @@ func (c *RunCmd) Run(globals *Globals) error {
 		Addr:          c.Addr,
 		WithDashboard: c.Dashboard,
 		MaxDepth:      c.Depth,
+		ProxyTo:       c.ProxyTo,
+		RecordDir:     c.RecordDir,
 	})
 	if err != nil {
 		return err
@@ -53,6 +59,17 @@ func (c *RunCmd) Run(globals *Globals) error {
 	for _, schema := range c.Schema {
 		if err := srv.AddFileFromPath(context.Background(), schema); err != nil {
 			return err
+		}
+	}
+
+	if c.ProxyTo != "" && len(c.Schema) == 0 {
+		upstream := c.ProxyTo
+		if !strings.HasPrefix(upstream, "http://") && !strings.HasPrefix(upstream, "https://") {
+			upstream = "http://" + upstream
+		}
+		upstream = strings.TrimSuffix(upstream, "/")
+		if err := registry.AddServicesFromReflection(srv, srv.GetProxyClient(), upstream); err != nil {
+			slog.Warn("Failed to load schema from upstream reflection", "error", err)
 		}
 	}
 

@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"io"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -31,6 +32,9 @@ func (m *mockServer) IncrementTotalRequests()    {}
 func (m *mockServer) IncrementErrors()           {}
 func (m *mockServer) GetLogger() *fauxlog.Logger { return m.logger }
 func (m *mockServer) GetMaxDepth() int           { return 20 }
+func (m *mockServer) GetProxyTo() string         { return "" }
+func (m *mockServer) GetRecordDir() string     { return "" }
+func (m *mockServer) GetProxyClient() *http.Client { return nil }
 
 func TestHandler_Logging_Streaming(t *testing.T) {
 	// Setup

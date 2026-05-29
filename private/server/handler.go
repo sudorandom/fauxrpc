@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"buf.build/go/protovalidate"
+	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"github.com/sudorandom/fauxrpc"
 	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
@@ -148,6 +149,38 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 			grpcWriteStatus(w, finalStatus)
 			return
 		}
+
+		var isFallback bool
+		if s.GetProxyTo() != "" {
+			err := handleProxy(r.Context(), w, r, s, method, serviceName, methodName, reqFrameTracker, resFrameTracker, &requestBody, &responseBody)
+			if err != nil {
+				var connectErr *connect.Error
+				isUnimplemented := false
+				if errors.As(err, &connectErr) && connectErr.Code() == connect.CodeUnimplemented {
+					isUnimplemented = true
+				} else if st, ok := status.FromError(err); ok && st.Code() == codes.Unimplemented {
+					isUnimplemented = true
+				}
+
+				if isUnimplemented {
+					isFallback = true
+				} else {
+					s.IncrementErrors()
+					if st, ok := status.FromError(err); ok {
+						finalStatus = st
+					} else {
+						finalStatus = status.New(codes.Internal, err.Error())
+					}
+					grpcWriteStatus(w, finalStatus)
+					return
+				}
+			} else {
+				finalStatus = status.New(codes.OK, "")
+				grpcWriteStatus(w, finalStatus)
+				return
+			}
+		}
+
 		defer func() {
 			_ = r.Body.Close()
 		}()
@@ -188,30 +221,34 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 
 		// Handle reading requests
 		var input proto.Message
-		if method.IsStreamingClient() {
-			// completely ignore the body. Maybe later we'll need it as input to the response message
-			eg.Go(func() error {
-				for {
-					msg, st := readMessage()
-					if st != nil {
-						return st.Err()
-					}
-					if msg == nil {
-						return nil
-					}
-					reqFrameTracker.Add(msg)
-					msg.Release()
-				}
-			})
-		} else {
-			var st *status.Status
-			requestBody, st = readMessage()
+		if isFallback {
 			input = requestBody
-			if st != nil {
-				s.IncrementErrors()
-				finalStatus = st
-				grpcWriteStatus(w, st)
-				return
+		} else {
+			if method.IsStreamingClient() {
+				// completely ignore the body. Maybe later we'll need it as input to the response message
+				eg.Go(func() error {
+					for {
+						msg, st := readMessage()
+						if st != nil {
+							return st.Err()
+						}
+						if msg == nil {
+							return nil
+						}
+						reqFrameTracker.Add(msg)
+						msg.Release()
+					}
+				})
+			} else {
+				var st *status.Status
+				requestBody, st = readMessage()
+				input = requestBody
+				if st != nil {
+					s.IncrementErrors()
+					finalStatus = st
+					grpcWriteStatus(w, st)
+					return
+				}
 			}
 		}
 
@@ -229,6 +266,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 
 			if stubEntry != nil && stubEntry.Stream != nil {
 				stubsUsed = append(stubsUsed, stubEntry.Key)
+				setFauxRPCHeaders(w, stubsUsed)
 				return stubs.ExecuteStream(ctx, stubEntry.Stream, method.Output(), celCtx, func(msg proto.Message) error {
 					b, err := proto.Marshal(msg)
 					if err != nil {
@@ -275,6 +313,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 				slog.Error(fmt.Sprintf("error marshalling msg: %s", err))
 				return status.New(codes.Internal, err.Error()).Err()
 			}
+			setFauxRPCHeaders(w, stubsUsed)
 			return grpc.WriteGRPCMessage(w, b)
 		})
 
@@ -333,3 +372,21 @@ func grpcStatusFromError(e *stubsv1.Error) *status.Status {
 	}
 	return status
 }
+
+func setFauxRPCHeaders(w http.ResponseWriter, stubsUsed []fauxrpc.StubEntry) {
+	if len(stubsUsed) > 0 {
+		w.Header().Set("x-fauxrpc-source", "stub")
+		var ids []string
+		for _, stub := range stubsUsed {
+			if id := stub.GetID(); id != "" {
+				ids = append(ids, id)
+			}
+		}
+		if len(ids) > 0 {
+			w.Header().Set("x-fauxrpc-mock-ids", strings.Join(ids, ", "))
+		}
+	} else {
+		w.Header().Set("x-fauxrpc-source", "fake")
+	}
+}
+

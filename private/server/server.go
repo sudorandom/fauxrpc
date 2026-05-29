@@ -7,6 +7,8 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+	"net/url"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -30,7 +32,9 @@ import (
 	"github.com/sudorandom/fauxrpc/private/metrics"
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/private/stubs"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/types/dynamicpb"
 )
 
 var _ registry.ServiceRegistry = (*server)(nil)
@@ -44,6 +48,9 @@ type Server interface {
 	IncrementErrors()
 	GetLogger() *fauxlog.Logger
 	GetMaxDepth() int
+	GetProxyTo() string
+	GetRecordDir() string
+	GetProxyClient() *http.Client
 }
 
 type ServerOpts struct {
@@ -57,6 +64,8 @@ type ServerOpts struct {
 	Addr          string
 	WithDashboard bool
 	MaxDepth      int
+	ProxyTo       string
+	RecordDir     string
 }
 
 type server struct {
@@ -69,9 +78,10 @@ type server struct {
 	handlerReflectorV1Alpha *wrappedHandler
 	handlerTranscoder       *wrappedHandler
 
-	opts   ServerOpts
-	stats  *metrics.Stats
-	logger *fauxlog.Logger
+	opts        ServerOpts
+	stats       *metrics.Stats
+	logger      *fauxlog.Logger
+	proxyClient *http.Client
 }
 
 func NewServer(opts ServerOpts) (*server, error) {
@@ -97,6 +107,10 @@ func NewServer(opts ServerOpts) (*server, error) {
 			RequestCounts:  make(map[time.Time]int64),
 		},
 		logger: fauxlog.NewLogger(),
+		proxyClient: newProxyClient(),
+	}
+	if opts.RecordDir != "" {
+		go s.startRecordDirWorker()
 	}
 	return s, nil
 }
@@ -183,6 +197,18 @@ func (s *server) IncrementErrors() {
 
 func (s *server) GetMaxDepth() int {
 	return s.opts.MaxDepth
+}
+
+func (s *server) GetProxyTo() string {
+	return s.opts.ProxyTo
+}
+
+func (s *server) GetRecordDir() string {
+	return s.opts.RecordDir
+}
+
+func (s *server) GetProxyClient() *http.Client {
+	return s.proxyClient
 }
 
 func (s *server) rebuildHandlers() error {
@@ -371,4 +397,130 @@ func maskHeaders(headers http.Header) http.Header {
 		}
 	}
 	return maskedHeaders
+}
+
+func (s *server) startRecordDirWorker() {
+	ch, unsubscribe := s.logger.Subscribe()
+	defer unsubscribe()
+
+	for entry := range ch {
+		// 1. Check if the request was proxied
+		var headers http.Header
+		if err := json.Unmarshal(entry.ResponseHeaders, &headers); err != nil {
+			continue
+		}
+		if headers.Get("X-Fauxrpc-Source") == "" {
+			continue
+		}
+
+		// 2. Locate the service and method descriptor
+		sd := s.Get(entry.Service)
+		if sd == nil {
+			continue
+		}
+		method := sd.Methods().ByName(protoreflect.Name(entry.Method))
+		if method == nil {
+			continue
+		}
+
+		// 3. Construct target and filepath
+		target := entry.Service + "/" + entry.Method
+		filePath := filepath.Join(s.opts.RecordDir, target+".json")
+
+		// 4. Determine if it is a streaming request or response
+		isClientStream := method.IsStreamingClient()
+		isServerStream := method.IsStreamingServer()
+
+		// 5. Generate active_if from the request(s)
+		var activeIf string
+		if !isClientStream {
+			if len(entry.RequestBody) > 0 {
+				reqMsg := dynamicpb.NewMessage(method.Input())
+				if err := protojson.Unmarshal(entry.RequestBody, reqMsg); err == nil {
+					activeIf = stubs.ActiveIfFromProto(reqMsg)
+				}
+			}
+		} else {
+			if len(entry.RequestFrames) > 0 {
+				reqMsg := dynamicpb.NewMessage(method.Input())
+				if err := protojson.Unmarshal(entry.RequestFrames[0], reqMsg); err == nil {
+					activeIf = stubs.ActiveIfFromProto(reqMsg)
+				}
+			}
+		}
+
+		// 6. Record the stub based on type
+		if !isClientStream && !isServerStream {
+			// Unary success/error
+			if entry.Status != 0 {
+				errMsg := headers.Get("Grpc-Message")
+				if decoded, err := url.QueryUnescape(errMsg); err == nil {
+					errMsg = decoded
+				}
+				if errMsg == "" && len(entry.ResponseBody) > 0 {
+					var errObj struct {
+						Message string `json:"message"`
+					}
+					if err := json.Unmarshal(entry.ResponseBody, &errObj); err == nil {
+						errMsg = errObj.Message
+					}
+				}
+				_ = stubs.RecordErrorStub(filePath, target, activeIf, entry.Status, errMsg)
+			} else {
+				respMsg := dynamicpb.NewMessage(method.Output())
+				if err := protojson.Unmarshal(entry.ResponseBody, respMsg); err == nil {
+					_ = stubs.RecordSuccessStub(filePath, target, activeIf, respMsg)
+				}
+			}
+		} else if isClientStream && !isServerStream {
+			// Client streaming success/error
+			if entry.Status != 0 {
+				errMsg := headers.Get("Grpc-Message")
+				if decoded, err := url.QueryUnescape(errMsg); err == nil {
+					errMsg = decoded
+				}
+				if errMsg == "" && len(entry.ResponseBody) > 0 {
+					var errObj struct {
+						Message string `json:"message"`
+					}
+					if err := json.Unmarshal(entry.ResponseBody, &errObj); err == nil {
+						errMsg = errObj.Message
+					}
+				}
+				_ = stubs.RecordErrorStub(filePath, target, activeIf, entry.Status, errMsg)
+			} else {
+				respMsg := dynamicpb.NewMessage(method.Output())
+				if err := protojson.Unmarshal(entry.ResponseBody, respMsg); err == nil {
+					_ = stubs.RecordSuccessStub(filePath, target, activeIf, respMsg)
+				}
+			}
+		} else {
+			// Server streaming or Bidi streaming (uses RecordStreamStub)
+			var items []stubs.StubFileStreamItemEntry
+			for _, frame := range entry.ResponseFrames {
+				var content any
+				if err := json.Unmarshal(frame, &content); err == nil {
+					items = append(items, stubs.StubFileStreamItemEntry{
+						Content: content,
+						Delay:   "100ms",
+					})
+				}
+			}
+
+			// If it ended with error
+			if entry.Status != 0 {
+				errMsg := headers.Get("Grpc-Message")
+				if decoded, err := url.QueryUnescape(errMsg); err == nil {
+					errMsg = decoded
+				}
+				items = append(items, stubs.StubFileStreamItemEntry{
+					Error: &stubs.StubFileErrorEntry{
+						Code:    entry.Status,
+						Message: errMsg,
+					},
+				})
+			}
+			_ = stubs.RecordStreamStub(filePath, target, activeIf, items)
+		}
+	}
 }

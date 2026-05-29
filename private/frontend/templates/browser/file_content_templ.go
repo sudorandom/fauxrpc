@@ -84,20 +84,20 @@ func FileContent(packageName string, fileName string, content string) templ.Comp
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</span></li></ul></div><pre class=\"p-4 bg-gray-800 rounded-lg overflow-auto text-gray-200 text-sm\"><code>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</span></li></ul></div><pre class=\"p-4 bg-gray-800 rounded-lg overflow-auto text-gray-200 text-sm\"><code class=\"language-protobuf\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(content)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/browser/file_content.templ`, Line: 17, Col: 103}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/browser/file_content.templ`, Line: 17, Col: 129}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</code></pre></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</code></pre></div><script>\n            if (typeof hljs !== 'undefined') {\n                document.querySelectorAll('pre code').forEach((el) => {\n                    hljs.highlightElement(el);\n                });\n            }\n        </script></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
