@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	"github.com/brianvoe/gofakeit/v7"
@@ -270,6 +271,49 @@ func TestString(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				fd := md.Fields().ByName(protoreflect.Name(tc.fieldName))
 				require.NotNil(t, fd, "field %s should exist", tc.fieldName)
+				s := fauxrpc.String(fd, opts)
+				tc.validate(t, s)
+			})
+		}
+	})
+
+	t.Run("additional heuristics", func(t *testing.T) {
+		opts := fauxrpc.GenOptions{Faker: gofakeit.New(0)}
+		tests := []struct {
+			name     string
+			validate func(t *testing.T, val string)
+		}{
+			{"created_at", func(t *testing.T, val string) {
+				_, err := time.Parse(time.RFC3339, val)
+				assert.NoError(t, err, "value %q should be RFC3339 timestamp", val)
+			}},
+			{"birth_date", func(t *testing.T, val string) {
+				_, err := time.Parse(time.RFC3339, val)
+				assert.NoError(t, err, "value %q should be RFC3339 timestamp", val)
+			}},
+			{"company", func(t *testing.T, val string) {
+				assert.NotEmpty(t, val)
+			}},
+			{"job_title", func(t *testing.T, val string) {
+				assert.NotEmpty(t, val)
+			}},
+			{"currency", func(t *testing.T, val string) {
+				assert.Len(t, val, 3)
+			}},
+			{"lang", func(t *testing.T, val string) {
+				assert.Len(t, val, 2)
+			}},
+			{"locale", func(t *testing.T, val string) {
+				assert.Contains(t, val, "-")
+			}},
+		}
+
+		for _, tc := range tests {
+			t.Run(tc.name, func(t *testing.T) {
+				fd := &mockFieldDescriptor{
+					name: protoreflect.Name(tc.name),
+					kind: protoreflect.StringKind,
+				}
 				s := fauxrpc.String(fd, opts)
 				tc.validate(t, s)
 			})

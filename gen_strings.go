@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -56,6 +57,18 @@ func stringByHeuristics(fd protoreflect.FieldDescriptor, opts GenOptions) (strin
 		f = func(opts GenOptions) string { return opts.fake().UserAgent() }
 	case strings.Contains(lowerName, "color") || strings.Contains(lowerName, "hex"):
 		f = func(opts GenOptions) string { return opts.fake().HexColor() }
+	case isTimeField(lowerName):
+		f = func(opts GenOptions) string { return opts.fake().Date().Format(time.RFC3339) }
+	case lowerName == "company" || strings.Contains(lowerName, "company_name") || lowerName == "organization" || lowerName == "org":
+		f = func(opts GenOptions) string { return opts.fake().Company() }
+	case lowerName == "job_title" || lowerName == "title" || strings.Contains(lowerName, "job_title"):
+		f = func(opts GenOptions) string { return opts.fake().JobTitle() }
+	case lowerName == "currency" || strings.Contains(lowerName, "currency_code"):
+		f = func(opts GenOptions) string { return opts.fake().CurrencyShort() }
+	case lowerName == "language" || lowerName == "lang" || strings.HasSuffix(lowerName, "_lang"):
+		f = func(opts GenOptions) string { return opts.fake().LanguageAbbreviation() }
+	case lowerName == "locale" || lowerName == "bcp47" || strings.HasSuffix(lowerName, "_locale"):
+		f = func(opts GenOptions) string { return opts.fake().LanguageBCP() }
 	case strings.Contains(lowerName, "address"):
 		f = func(opts GenOptions) string { return opts.fake().Address().Address }
 	case strings.Contains(lowerName, "street"):
@@ -332,3 +345,10 @@ func isPhoneField(lowerName string) bool {
 		strings.HasSuffix(lowerName, "-tel")
 }
 
+func isTimeField(lowerName string) bool {
+	return strings.HasSuffix(lowerName, "_at") ||
+		lowerName == "date" ||
+		strings.HasSuffix(lowerName, "_date") ||
+		lowerName == "timestamp" ||
+		strings.HasSuffix(lowerName, "_timestamp")
+}

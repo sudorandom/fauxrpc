@@ -52,6 +52,13 @@ type ContactProfile struct {
 	Tag           string            `protobuf:"bytes,19,opt,name=tag,proto3" json:"tag,omitempty"`
 	Tags          []string          `protobuf:"bytes,20,rep,name=tags,proto3" json:"tags,omitempty"`
 	Attributes    map[string]string `protobuf:"bytes,21,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	CreatedAt     string            `protobuf:"bytes,22,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	UpdatedAt     string            `protobuf:"bytes,23,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	CompanyName   string            `protobuf:"bytes,24,opt,name=company_name,json=companyName,proto3" json:"company_name,omitempty"`
+	JobTitle      string            `protobuf:"bytes,25,opt,name=job_title,json=jobTitle,proto3" json:"job_title,omitempty"`
+	CurrencyCode  string            `protobuf:"bytes,26,opt,name=currency_code,json=currencyCode,proto3" json:"currency_code,omitempty"`
+	LanguageCode  string            `protobuf:"bytes,27,opt,name=language_code,json=languageCode,proto3" json:"language_code,omitempty"`
+	UserLocale    string            `protobuf:"bytes,28,opt,name=user_locale,json=userLocale,proto3" json:"user_locale,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -233,11 +240,60 @@ func (x *ContactProfile) GetAttributes() map[string]string {
 	return nil
 }
 
+func (x *ContactProfile) GetCreatedAt() string {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return ""
+}
+
+func (x *ContactProfile) GetUpdatedAt() string {
+	if x != nil {
+		return x.UpdatedAt
+	}
+	return ""
+}
+
+func (x *ContactProfile) GetCompanyName() string {
+	if x != nil {
+		return x.CompanyName
+	}
+	return ""
+}
+
+func (x *ContactProfile) GetJobTitle() string {
+	if x != nil {
+		return x.JobTitle
+	}
+	return ""
+}
+
+func (x *ContactProfile) GetCurrencyCode() string {
+	if x != nil {
+		return x.CurrencyCode
+	}
+	return ""
+}
+
+func (x *ContactProfile) GetLanguageCode() string {
+	if x != nil {
+		return x.LanguageCode
+	}
+	return ""
+}
+
+func (x *ContactProfile) GetUserLocale() string {
+	if x != nil {
+		return x.UserLocale
+	}
+	return ""
+}
+
 var File_heuristics_proto protoreflect.FileDescriptor
 
 const file_heuristics_proto_rawDesc = "" +
 	"\n" +
-	"\x10heuristics.proto\x12\x13examples.heuristics\"\x8e\x06\n" +
+	"\x10heuristics.proto\x12\x13examples.heuristics\"\xf7\a\n" +
 	"\x0eContactProfile\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\x12#\n" +
 	"\rsession_token\x18\x02 \x01(\tR\fsessionToken\x12\x1b\n" +
@@ -268,7 +324,17 @@ const file_heuristics_proto_rawDesc = "" +
 	"\x04tags\x18\x14 \x03(\tR\x04tags\x12S\n" +
 	"\n" +
 	"attributes\x18\x15 \x03(\v23.examples.heuristics.ContactProfile.AttributesEntryR\n" +
-	"attributes\x1a=\n" +
+	"attributes\x12\x1d\n" +
+	"\n" +
+	"created_at\x18\x16 \x01(\tR\tcreatedAt\x12\x1d\n" +
+	"\n" +
+	"updated_at\x18\x17 \x01(\tR\tupdatedAt\x12!\n" +
+	"\fcompany_name\x18\x18 \x01(\tR\vcompanyName\x12\x1b\n" +
+	"\tjob_title\x18\x19 \x01(\tR\bjobTitle\x12#\n" +
+	"\rcurrency_code\x18\x1a \x01(\tR\fcurrencyCode\x12#\n" +
+	"\rlanguage_code\x18\x1b \x01(\tR\flanguageCode\x12\x1f\n" +
+	"\vuser_locale\x18\x1c \x01(\tR\n" +
+	"userLocale\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01B\xc2\x01\n" +
