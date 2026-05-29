@@ -38,6 +38,36 @@ func stringByHeuristics(fd protoreflect.FieldDescriptor, opts GenOptions) (strin
 	lowerName := strings.ToLower(string(fd.Name()))
 	var f heuristicFunc
 	switch {
+	case isTagOrAttributesKey(fd):
+		f = func(opts GenOptions) string { return strings.ToLower(opts.fake().Word()) }
+	case strings.Contains(lowerName, "id"):
+		f = func(opts GenOptions) string { return opts.fake().UUID() }
+	case strings.Contains(lowerName, "token"):
+		f = func(opts GenOptions) string { return opts.fake().UUID() }
+	case strings.Contains(lowerName, "email") || strings.Contains(lowerName, "mail"):
+		f = func(opts GenOptions) string { return strings.ToLower(opts.fake().Email()) }
+	case isPhoneField(lowerName):
+		f = func(opts GenOptions) string { return opts.fake().Phone() }
+	case isIPField(lowerName):
+		f = func(opts GenOptions) string { return opts.fake().IPv4Address() }
+	case isMacField(lowerName):
+		f = func(opts GenOptions) string { return opts.fake().MacAddress() }
+	case strings.Contains(lowerName, "user_agent") || lowerName == "ua":
+		f = func(opts GenOptions) string { return opts.fake().UserAgent() }
+	case strings.Contains(lowerName, "color") || strings.Contains(lowerName, "hex"):
+		f = func(opts GenOptions) string { return opts.fake().HexColor() }
+	case strings.Contains(lowerName, "address"):
+		f = func(opts GenOptions) string { return opts.fake().Address().Address }
+	case strings.Contains(lowerName, "street"):
+		f = func(opts GenOptions) string { return opts.fake().Address().Street }
+	case isCityField(lowerName):
+		f = func(opts GenOptions) string { return opts.fake().City() }
+	case strings.Contains(lowerName, "country"):
+		f = func(opts GenOptions) string { return opts.fake().Country() }
+	case strings.Contains(lowerName, "zip") || strings.Contains(lowerName, "postcode") || strings.Contains(lowerName, "postal"):
+		f = func(opts GenOptions) string { return opts.fake().Zip() }
+	case strings.Contains(lowerName, "description") || strings.Contains(lowerName, "bio") || strings.Contains(lowerName, "summary") || strings.Contains(lowerName, "comment") || strings.Contains(lowerName, "body") || strings.Contains(lowerName, "content"):
+		f = func(opts GenOptions) string { return opts.fake().Paragraph() }
 	case strings.Contains(lowerName, "name"):
 		if strings.Contains(lowerName, "firstname") {
 			f = func(opts GenOptions) string { return opts.fake().FirstName() }
@@ -48,10 +78,6 @@ func stringByHeuristics(fd protoreflect.FieldDescriptor, opts GenOptions) (strin
 		} else {
 			f = func(opts GenOptions) string { return opts.fake().FirstName() }
 		}
-	case strings.Contains(lowerName, "id"):
-		f = func(opts GenOptions) string { return opts.fake().UUID() }
-	case strings.Contains(lowerName, "token"):
-		f = func(opts GenOptions) string { return opts.fake().UUID() }
 	case strings.Contains(lowerName, "url"):
 		if strings.Contains(lowerName, "photo") {
 			f = func(opts GenOptions) string { return "https://picsum.photos/400" }
@@ -66,11 +92,10 @@ func stringByHeuristics(fd protoreflect.FieldDescriptor, opts GenOptions) (strin
 		}
 	}
 
+	heuristicCache.Store(fd, f)
 	if f == nil {
-		heuristicCache.Store(fd, nil)
 		return "", false
 	}
-	heuristicCache.Store(fd, f)
 	return f(opts), true
 }
 
@@ -213,6 +238,11 @@ func String(fd protoreflect.FieldDescriptor, opts GenOptions) string {
 			generatedString = generatedString[:maxLen]
 		}
 	}
+	if isTagOrAttributesKey(fd) {
+		if rules == nil || rules.Pattern == nil {
+			generatedString = strings.ToLower(generatedString)
+		}
+	}
 	return generatedString
 }
 
@@ -230,3 +260,75 @@ func generateHipsterText(minLen, maxLen uint64, opts GenOptions) string {
 	}
 	return b.String()
 }
+
+func isTagOrAttributesKey(fd protoreflect.FieldDescriptor) bool {
+	lowerName := strings.ToLower(string(fd.Name()))
+	if strings.Contains(lowerName, "tag") {
+		return true
+	}
+	if fd.Name() != "key" || fd.Kind() != protoreflect.StringKind {
+		return false
+	}
+	md := fd.ContainingMessage()
+	if md == nil || !md.IsMapEntry() {
+		return false
+	}
+	parent := md.Parent()
+	if parent == nil {
+		return false
+	}
+	outerMsg, ok := parent.(protoreflect.MessageDescriptor)
+	if !ok {
+		return false
+	}
+	for i := range outerMsg.Fields().Len() {
+		field := outerMsg.Fields().Get(i)
+		if field.IsMap() && field.Message() == md {
+			lowerMapName := strings.ToLower(string(field.Name()))
+			return strings.Contains(lowerMapName, "attribute") || strings.Contains(lowerMapName, "attr")
+		}
+	}
+	return false
+}
+
+func isIPField(lowerName string) bool {
+	return lowerName == "ip" ||
+		strings.Contains(lowerName, "ip_address") ||
+		strings.HasPrefix(lowerName, "ip_") ||
+		strings.HasPrefix(lowerName, "ip-") ||
+		strings.HasSuffix(lowerName, "_ip") ||
+		strings.HasSuffix(lowerName, "-ip") ||
+		strings.Contains(lowerName, "_ip_") ||
+		strings.Contains(lowerName, "-ip-")
+}
+
+func isMacField(lowerName string) bool {
+	return lowerName == "mac" ||
+		strings.Contains(lowerName, "mac_address") ||
+		strings.HasPrefix(lowerName, "mac_") ||
+		strings.HasPrefix(lowerName, "mac-") ||
+		strings.HasSuffix(lowerName, "_mac") ||
+		strings.HasSuffix(lowerName, "-mac") ||
+		strings.Contains(lowerName, "_mac_") ||
+		strings.Contains(lowerName, "-mac-")
+}
+
+func isCityField(lowerName string) bool {
+	return lowerName == "city" ||
+		strings.HasPrefix(lowerName, "city_") ||
+		strings.HasPrefix(lowerName, "city-") ||
+		strings.HasSuffix(lowerName, "_city") ||
+		strings.HasSuffix(lowerName, "-city")
+}
+
+func isPhoneField(lowerName string) bool {
+	return strings.Contains(lowerName, "phone") ||
+		strings.Contains(lowerName, "mobile") ||
+		strings.Contains(lowerName, "fax") ||
+		lowerName == "tel" ||
+		strings.HasPrefix(lowerName, "tel_") ||
+		strings.HasPrefix(lowerName, "tel-") ||
+		strings.HasSuffix(lowerName, "_tel") ||
+		strings.HasSuffix(lowerName, "-tel")
+}
+

@@ -2,9 +2,11 @@ package fauxrpc_test
 
 import (
 	"regexp"
+	"strings"
 	"testing"
 
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
+	"github.com/brianvoe/gofakeit/v7"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/sudorandom/fauxrpc"
@@ -64,4 +66,36 @@ func TestMapKeyValidation(t *testing.T) {
 		assert.Regexp(t, re, k.String(), "Key %q does not match pattern %q", k.String(), pattern)
 		return true
 	})
+}
+
+func TestMapAttributesHeuristics(t *testing.T) {
+	md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
+	opts := fauxrpc.GenOptions{
+		Faker:    gofakeit.New(0),
+		MaxDepth: 2,
+	}
+
+	for _, name := range []string{"attributes", "attrs", "custom_attr"} {
+		fd := md.Fields().ByName(protoreflect.Name(name))
+		require.NotNil(t, fd, "field %s should exist", name)
+
+		msg := dynamicpb.NewMessage(md)
+		var val *protoreflect.Value
+		for range 10 {
+			val = fauxrpc.Map(msg.ProtoReflect(), fd, opts)
+			if val != nil && val.Map().Len() > 0 {
+				break
+			}
+		}
+		require.NotNil(t, val)
+		m := val.Map()
+		assert.Greater(t, m.Len(), 0)
+		m.Range(func(k protoreflect.MapKey, v protoreflect.Value) bool {
+			keyStr := k.String()
+			assert.NotEmpty(t, keyStr)
+			assert.Equal(t, strings.ToLower(keyStr), keyStr)
+			assert.NotContains(t, keyStr, " ")
+			return true
+		})
+	}
 }

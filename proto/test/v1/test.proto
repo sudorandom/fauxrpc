@@ -200,6 +200,23 @@ message AllTypes {
     AllTypes msg_option = 96;
     Enum enum_option = 97;
   }
+  string tag = 98;
+  repeated string tags = 99;
+  map<string, string> attributes = 100;
+  map<string, string> attrs = 101;
+  map<string, string> custom_attr = 102;
+  string custom_tag = 103;
+  string email = 104;
+  string phone = 105;
+  string client_ip = 106;
+  string device_mac = 107;
+  string user_agent = 108;
+  string favorite_color = 109;
+  string home_address = 110;
+  string city = 111;
+  string country = 112;
+  string postal_code = 113;
+  string profile_bio = 114;
 }
 
 message EnumTest {

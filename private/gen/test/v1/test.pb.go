@@ -1549,8 +1549,25 @@ type AllTypes struct {
 	xxx_hidden_MsgMap              map[string]*AllTypes     `protobuf:"bytes,79,rep,name=msg_map,json=msgMap" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	xxx_hidden_EnumMap             map[string]AllTypes_Enum `protobuf:"bytes,80,rep,name=enum_map,json=enumMap" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value,enum=test.v1.AllTypes_Enum"`
 	xxx_hidden_Option              isAllTypes_Option        `protobuf_oneof:"option"`
+	xxx_hidden_Tag                 *string                  `protobuf:"bytes,98,opt,name=tag"`
+	xxx_hidden_Tags                []string                 `protobuf:"bytes,99,rep,name=tags"`
+	xxx_hidden_Attributes          map[string]string        `protobuf:"bytes,100,rep,name=attributes" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	xxx_hidden_Attrs               map[string]string        `protobuf:"bytes,101,rep,name=attrs" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	xxx_hidden_CustomAttr          map[string]string        `protobuf:"bytes,102,rep,name=custom_attr,json=customAttr" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	xxx_hidden_CustomTag           *string                  `protobuf:"bytes,103,opt,name=custom_tag,json=customTag"`
+	xxx_hidden_Email               *string                  `protobuf:"bytes,104,opt,name=email"`
+	xxx_hidden_Phone               *string                  `protobuf:"bytes,105,opt,name=phone"`
+	xxx_hidden_ClientIp            *string                  `protobuf:"bytes,106,opt,name=client_ip,json=clientIp"`
+	xxx_hidden_DeviceMac           *string                  `protobuf:"bytes,107,opt,name=device_mac,json=deviceMac"`
+	xxx_hidden_UserAgent           *string                  `protobuf:"bytes,108,opt,name=user_agent,json=userAgent"`
+	xxx_hidden_FavoriteColor       *string                  `protobuf:"bytes,109,opt,name=favorite_color,json=favoriteColor"`
+	xxx_hidden_HomeAddress         *string                  `protobuf:"bytes,110,opt,name=home_address,json=homeAddress"`
+	xxx_hidden_City                *string                  `protobuf:"bytes,111,opt,name=city"`
+	xxx_hidden_Country             *string                  `protobuf:"bytes,112,opt,name=country"`
+	xxx_hidden_PostalCode          *string                  `protobuf:"bytes,113,opt,name=postal_code,json=postalCode"`
+	xxx_hidden_ProfileBio          *string                  `protobuf:"bytes,114,opt,name=profile_bio,json=profileBio"`
 	XXX_raceDetectHookData         protoimpl.RaceDetectHookData
-	XXX_presence                   [3]uint32
+	XXX_presence                   [4]uint32
 	unknownFields                  protoimpl.UnknownFields
 	sizeCache                      protoimpl.SizeCache
 }
@@ -2305,74 +2322,232 @@ func (x *AllTypes) GetEnumOption() AllTypes_Enum {
 	return AllTypes_ENUM_UNSPECIFIED
 }
 
+func (x *AllTypes) GetTag() string {
+	if x != nil {
+		if x.xxx_hidden_Tag != nil {
+			return *x.xxx_hidden_Tag
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *AllTypes) GetTags() []string {
+	if x != nil {
+		return x.xxx_hidden_Tags
+	}
+	return nil
+}
+
+func (x *AllTypes) GetAttributes() map[string]string {
+	if x != nil {
+		return x.xxx_hidden_Attributes
+	}
+	return nil
+}
+
+func (x *AllTypes) GetAttrs() map[string]string {
+	if x != nil {
+		return x.xxx_hidden_Attrs
+	}
+	return nil
+}
+
+func (x *AllTypes) GetCustomAttr() map[string]string {
+	if x != nil {
+		return x.xxx_hidden_CustomAttr
+	}
+	return nil
+}
+
+func (x *AllTypes) GetCustomTag() string {
+	if x != nil {
+		if x.xxx_hidden_CustomTag != nil {
+			return *x.xxx_hidden_CustomTag
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *AllTypes) GetEmail() string {
+	if x != nil {
+		if x.xxx_hidden_Email != nil {
+			return *x.xxx_hidden_Email
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *AllTypes) GetPhone() string {
+	if x != nil {
+		if x.xxx_hidden_Phone != nil {
+			return *x.xxx_hidden_Phone
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *AllTypes) GetClientIp() string {
+	if x != nil {
+		if x.xxx_hidden_ClientIp != nil {
+			return *x.xxx_hidden_ClientIp
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *AllTypes) GetDeviceMac() string {
+	if x != nil {
+		if x.xxx_hidden_DeviceMac != nil {
+			return *x.xxx_hidden_DeviceMac
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *AllTypes) GetUserAgent() string {
+	if x != nil {
+		if x.xxx_hidden_UserAgent != nil {
+			return *x.xxx_hidden_UserAgent
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *AllTypes) GetFavoriteColor() string {
+	if x != nil {
+		if x.xxx_hidden_FavoriteColor != nil {
+			return *x.xxx_hidden_FavoriteColor
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *AllTypes) GetHomeAddress() string {
+	if x != nil {
+		if x.xxx_hidden_HomeAddress != nil {
+			return *x.xxx_hidden_HomeAddress
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *AllTypes) GetCity() string {
+	if x != nil {
+		if x.xxx_hidden_City != nil {
+			return *x.xxx_hidden_City
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *AllTypes) GetCountry() string {
+	if x != nil {
+		if x.xxx_hidden_Country != nil {
+			return *x.xxx_hidden_Country
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *AllTypes) GetPostalCode() string {
+	if x != nil {
+		if x.xxx_hidden_PostalCode != nil {
+			return *x.xxx_hidden_PostalCode
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *AllTypes) GetProfileBio() string {
+	if x != nil {
+		if x.xxx_hidden_ProfileBio != nil {
+			return *x.xxx_hidden_ProfileBio
+		}
+		return ""
+	}
+	return ""
+}
+
 func (x *AllTypes) SetDoubleValue(v float64) {
 	x.xxx_hidden_DoubleValue = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 98)
 }
 
 func (x *AllTypes) SetFloatValue(v float32) {
 	x.xxx_hidden_FloatValue = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 98)
 }
 
 func (x *AllTypes) SetInt32Value(v int32) {
 	x.xxx_hidden_Int32Value = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 98)
 }
 
 func (x *AllTypes) SetInt64Value(v int64) {
 	x.xxx_hidden_Int64Value = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 98)
 }
 
 func (x *AllTypes) SetUint32Value(v uint32) {
 	x.xxx_hidden_Uint32Value = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 98)
 }
 
 func (x *AllTypes) SetUint64Value(v uint64) {
 	x.xxx_hidden_Uint64Value = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 5, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 5, 98)
 }
 
 func (x *AllTypes) SetSint32Value(v int32) {
 	x.xxx_hidden_Sint32Value = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 6, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 6, 98)
 }
 
 func (x *AllTypes) SetSint64Value(v int64) {
 	x.xxx_hidden_Sint64Value = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 7, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 7, 98)
 }
 
 func (x *AllTypes) SetFixed32Value(v uint32) {
 	x.xxx_hidden_Fixed32Value = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 8, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 8, 98)
 }
 
 func (x *AllTypes) SetFixed64Value(v uint64) {
 	x.xxx_hidden_Fixed64Value = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 9, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 9, 98)
 }
 
 func (x *AllTypes) SetSfixed32Value(v int32) {
 	x.xxx_hidden_Sfixed32Value = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 10, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 10, 98)
 }
 
 func (x *AllTypes) SetSfixed64Value(v int64) {
 	x.xxx_hidden_Sfixed64Value = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 11, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 11, 98)
 }
 
 func (x *AllTypes) SetBoolValue(v bool) {
 	x.xxx_hidden_BoolValue = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 12, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 12, 98)
 }
 
 func (x *AllTypes) SetStringValue(v string) {
 	x.xxx_hidden_StringValue = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 13, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 13, 98)
 }
 
 func (x *AllTypes) SetBytesValue(v []byte) {
@@ -2380,7 +2555,7 @@ func (x *AllTypes) SetBytesValue(v []byte) {
 		v = []byte{}
 	}
 	x.xxx_hidden_BytesValue = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 14, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 14, 98)
 }
 
 func (x *AllTypes) SetDoubleList(v []float64) {
@@ -2553,72 +2728,72 @@ func (x *AllTypes) SetBytesMap(v map[string][]byte) {
 
 func (x *AllTypes) SetOptDoubleValue(v float64) {
 	x.xxx_hidden_OptDoubleValue = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[1]), 57, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[1]), 57, 98)
 }
 
 func (x *AllTypes) SetOptFloatValue(v float32) {
 	x.xxx_hidden_OptFloatValue = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[1]), 58, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[1]), 58, 98)
 }
 
 func (x *AllTypes) SetOptInt32Value(v int32) {
 	x.xxx_hidden_OptInt32Value = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[1]), 59, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[1]), 59, 98)
 }
 
 func (x *AllTypes) SetOptInt64Value(v int64) {
 	x.xxx_hidden_OptInt64Value = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[1]), 60, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[1]), 60, 98)
 }
 
 func (x *AllTypes) SetOptUint32Value(v uint32) {
 	x.xxx_hidden_OptUint32Value = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[1]), 61, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[1]), 61, 98)
 }
 
 func (x *AllTypes) SetOptUint64Value(v uint64) {
 	x.xxx_hidden_OptUint64Value = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[1]), 62, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[1]), 62, 98)
 }
 
 func (x *AllTypes) SetOptSint32Value(v int32) {
 	x.xxx_hidden_OptSint32Value = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[1]), 63, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[1]), 63, 98)
 }
 
 func (x *AllTypes) SetOptSint64Value(v int64) {
 	x.xxx_hidden_OptSint64Value = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 64, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 64, 98)
 }
 
 func (x *AllTypes) SetOptFixed32Value(v uint32) {
 	x.xxx_hidden_OptFixed32Value = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 65, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 65, 98)
 }
 
 func (x *AllTypes) SetOptFixed64Value(v uint64) {
 	x.xxx_hidden_OptFixed64Value = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 66, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 66, 98)
 }
 
 func (x *AllTypes) SetOptSfixed32Value(v int32) {
 	x.xxx_hidden_OptSfixed32Value = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 67, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 67, 98)
 }
 
 func (x *AllTypes) SetOptSfixed64Value(v int64) {
 	x.xxx_hidden_OptSfixed64Value = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 68, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 68, 98)
 }
 
 func (x *AllTypes) SetOptBoolValue(v bool) {
 	x.xxx_hidden_OptBoolValue = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 69, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 69, 98)
 }
 
 func (x *AllTypes) SetOptStringValue(v string) {
 	x.xxx_hidden_OptStringValue = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 70, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 70, 98)
 }
 
 func (x *AllTypes) SetOptBytesValue(v []byte) {
@@ -2626,7 +2801,7 @@ func (x *AllTypes) SetOptBytesValue(v []byte) {
 		v = []byte{}
 	}
 	x.xxx_hidden_OptBytesValue = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 71, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 71, 98)
 }
 
 func (x *AllTypes) SetMsgValue(v *AllTypes) {
@@ -2635,7 +2810,7 @@ func (x *AllTypes) SetMsgValue(v *AllTypes) {
 
 func (x *AllTypes) SetEnumValue(v AllTypes_Enum) {
 	x.xxx_hidden_EnumValue = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 73, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 73, 98)
 }
 
 func (x *AllTypes) SetOptMsgValue(v *AllTypes) {
@@ -2644,7 +2819,7 @@ func (x *AllTypes) SetOptMsgValue(v *AllTypes) {
 
 func (x *AllTypes) SetOptEnumValue(v AllTypes_Enum) {
 	x.xxx_hidden_OptEnumValue = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 75, 81)
+	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 75, 98)
 }
 
 func (x *AllTypes) SetMsgList(v []*AllTypes) {
@@ -2736,6 +2911,87 @@ func (x *AllTypes) SetMsgOption(v *AllTypes) {
 
 func (x *AllTypes) SetEnumOption(v AllTypes_Enum) {
 	x.xxx_hidden_Option = &allTypes_EnumOption{v}
+}
+
+func (x *AllTypes) SetTag(v string) {
+	x.xxx_hidden_Tag = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 81, 98)
+}
+
+func (x *AllTypes) SetTags(v []string) {
+	x.xxx_hidden_Tags = v
+}
+
+func (x *AllTypes) SetAttributes(v map[string]string) {
+	x.xxx_hidden_Attributes = v
+}
+
+func (x *AllTypes) SetAttrs(v map[string]string) {
+	x.xxx_hidden_Attrs = v
+}
+
+func (x *AllTypes) SetCustomAttr(v map[string]string) {
+	x.xxx_hidden_CustomAttr = v
+}
+
+func (x *AllTypes) SetCustomTag(v string) {
+	x.xxx_hidden_CustomTag = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 86, 98)
+}
+
+func (x *AllTypes) SetEmail(v string) {
+	x.xxx_hidden_Email = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 87, 98)
+}
+
+func (x *AllTypes) SetPhone(v string) {
+	x.xxx_hidden_Phone = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 88, 98)
+}
+
+func (x *AllTypes) SetClientIp(v string) {
+	x.xxx_hidden_ClientIp = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 89, 98)
+}
+
+func (x *AllTypes) SetDeviceMac(v string) {
+	x.xxx_hidden_DeviceMac = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 90, 98)
+}
+
+func (x *AllTypes) SetUserAgent(v string) {
+	x.xxx_hidden_UserAgent = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 91, 98)
+}
+
+func (x *AllTypes) SetFavoriteColor(v string) {
+	x.xxx_hidden_FavoriteColor = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 92, 98)
+}
+
+func (x *AllTypes) SetHomeAddress(v string) {
+	x.xxx_hidden_HomeAddress = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 93, 98)
+}
+
+func (x *AllTypes) SetCity(v string) {
+	x.xxx_hidden_City = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 94, 98)
+}
+
+func (x *AllTypes) SetCountry(v string) {
+	x.xxx_hidden_Country = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[2]), 95, 98)
+}
+
+func (x *AllTypes) SetPostalCode(v string) {
+	x.xxx_hidden_PostalCode = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[3]), 96, 98)
+}
+
+func (x *AllTypes) SetProfileBio(v string) {
+	x.xxx_hidden_ProfileBio = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[3]), 97, 98)
 }
 
 func (x *AllTypes) HasDoubleValue() bool {
@@ -3119,6 +3375,97 @@ func (x *AllTypes) HasEnumOption() bool {
 	return ok
 }
 
+func (x *AllTypes) HasTag() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[2]), 81)
+}
+
+func (x *AllTypes) HasCustomTag() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[2]), 86)
+}
+
+func (x *AllTypes) HasEmail() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[2]), 87)
+}
+
+func (x *AllTypes) HasPhone() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[2]), 88)
+}
+
+func (x *AllTypes) HasClientIp() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[2]), 89)
+}
+
+func (x *AllTypes) HasDeviceMac() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[2]), 90)
+}
+
+func (x *AllTypes) HasUserAgent() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[2]), 91)
+}
+
+func (x *AllTypes) HasFavoriteColor() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[2]), 92)
+}
+
+func (x *AllTypes) HasHomeAddress() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[2]), 93)
+}
+
+func (x *AllTypes) HasCity() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[2]), 94)
+}
+
+func (x *AllTypes) HasCountry() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[2]), 95)
+}
+
+func (x *AllTypes) HasPostalCode() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[3]), 96)
+}
+
+func (x *AllTypes) HasProfileBio() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[3]), 97)
+}
+
 func (x *AllTypes) ClearDoubleValue() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
 	x.xxx_hidden_DoubleValue = 0
@@ -3393,6 +3740,71 @@ func (x *AllTypes) ClearEnumOption() {
 	}
 }
 
+func (x *AllTypes) ClearTag() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[2]), 81)
+	x.xxx_hidden_Tag = nil
+}
+
+func (x *AllTypes) ClearCustomTag() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[2]), 86)
+	x.xxx_hidden_CustomTag = nil
+}
+
+func (x *AllTypes) ClearEmail() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[2]), 87)
+	x.xxx_hidden_Email = nil
+}
+
+func (x *AllTypes) ClearPhone() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[2]), 88)
+	x.xxx_hidden_Phone = nil
+}
+
+func (x *AllTypes) ClearClientIp() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[2]), 89)
+	x.xxx_hidden_ClientIp = nil
+}
+
+func (x *AllTypes) ClearDeviceMac() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[2]), 90)
+	x.xxx_hidden_DeviceMac = nil
+}
+
+func (x *AllTypes) ClearUserAgent() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[2]), 91)
+	x.xxx_hidden_UserAgent = nil
+}
+
+func (x *AllTypes) ClearFavoriteColor() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[2]), 92)
+	x.xxx_hidden_FavoriteColor = nil
+}
+
+func (x *AllTypes) ClearHomeAddress() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[2]), 93)
+	x.xxx_hidden_HomeAddress = nil
+}
+
+func (x *AllTypes) ClearCity() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[2]), 94)
+	x.xxx_hidden_City = nil
+}
+
+func (x *AllTypes) ClearCountry() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[2]), 95)
+	x.xxx_hidden_Country = nil
+}
+
+func (x *AllTypes) ClearPostalCode() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[3]), 96)
+	x.xxx_hidden_PostalCode = nil
+}
+
+func (x *AllTypes) ClearProfileBio() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[3]), 97)
+	x.xxx_hidden_ProfileBio = nil
+}
+
 const AllTypes_Option_not_set_case case_AllTypes_Option = 0
 const AllTypes_DoubleOption_case case_AllTypes_Option = 81
 const AllTypes_FloatOption_case case_AllTypes_Option = 82
@@ -3565,6 +3977,23 @@ type AllTypes_builder struct {
 	MsgOption      *AllTypes
 	EnumOption     *AllTypes_Enum
 	// -- end of xxx_hidden_Option
+	Tag           *string
+	Tags          []string
+	Attributes    map[string]string
+	Attrs         map[string]string
+	CustomAttr    map[string]string
+	CustomTag     *string
+	Email         *string
+	Phone         *string
+	ClientIp      *string
+	DeviceMac     *string
+	UserAgent     *string
+	FavoriteColor *string
+	HomeAddress   *string
+	City          *string
+	Country       *string
+	PostalCode    *string
+	ProfileBio    *string
 }
 
 func (b0 AllTypes_builder) Build() *AllTypes {
@@ -3572,63 +4001,63 @@ func (b0 AllTypes_builder) Build() *AllTypes {
 	b, x := &b0, m0
 	_, _ = b, x
 	if b.DoubleValue != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 98)
 		x.xxx_hidden_DoubleValue = *b.DoubleValue
 	}
 	if b.FloatValue != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 98)
 		x.xxx_hidden_FloatValue = *b.FloatValue
 	}
 	if b.Int32Value != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 98)
 		x.xxx_hidden_Int32Value = *b.Int32Value
 	}
 	if b.Int64Value != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 98)
 		x.xxx_hidden_Int64Value = *b.Int64Value
 	}
 	if b.Uint32Value != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 98)
 		x.xxx_hidden_Uint32Value = *b.Uint32Value
 	}
 	if b.Uint64Value != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 5, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 5, 98)
 		x.xxx_hidden_Uint64Value = *b.Uint64Value
 	}
 	if b.Sint32Value != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 6, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 6, 98)
 		x.xxx_hidden_Sint32Value = *b.Sint32Value
 	}
 	if b.Sint64Value != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 7, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 7, 98)
 		x.xxx_hidden_Sint64Value = *b.Sint64Value
 	}
 	if b.Fixed32Value != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 8, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 8, 98)
 		x.xxx_hidden_Fixed32Value = *b.Fixed32Value
 	}
 	if b.Fixed64Value != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 9, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 9, 98)
 		x.xxx_hidden_Fixed64Value = *b.Fixed64Value
 	}
 	if b.Sfixed32Value != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 10, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 10, 98)
 		x.xxx_hidden_Sfixed32Value = *b.Sfixed32Value
 	}
 	if b.Sfixed64Value != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 11, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 11, 98)
 		x.xxx_hidden_Sfixed64Value = *b.Sfixed64Value
 	}
 	if b.BoolValue != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 12, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 12, 98)
 		x.xxx_hidden_BoolValue = *b.BoolValue
 	}
 	if b.StringValue != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 13, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 13, 98)
 		x.xxx_hidden_StringValue = b.StringValue
 	}
 	if b.BytesValue != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 14, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 14, 98)
 		x.xxx_hidden_BytesValue = b.BytesValue
 	}
 	x.xxx_hidden_DoubleList = b.DoubleList
@@ -3674,73 +4103,73 @@ func (b0 AllTypes_builder) Build() *AllTypes {
 	x.xxx_hidden_StringMap = b.StringMap
 	x.xxx_hidden_BytesMap = b.BytesMap
 	if b.OptDoubleValue != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[1]), 57, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[1]), 57, 98)
 		x.xxx_hidden_OptDoubleValue = *b.OptDoubleValue
 	}
 	if b.OptFloatValue != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[1]), 58, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[1]), 58, 98)
 		x.xxx_hidden_OptFloatValue = *b.OptFloatValue
 	}
 	if b.OptInt32Value != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[1]), 59, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[1]), 59, 98)
 		x.xxx_hidden_OptInt32Value = *b.OptInt32Value
 	}
 	if b.OptInt64Value != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[1]), 60, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[1]), 60, 98)
 		x.xxx_hidden_OptInt64Value = *b.OptInt64Value
 	}
 	if b.OptUint32Value != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[1]), 61, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[1]), 61, 98)
 		x.xxx_hidden_OptUint32Value = *b.OptUint32Value
 	}
 	if b.OptUint64Value != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[1]), 62, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[1]), 62, 98)
 		x.xxx_hidden_OptUint64Value = *b.OptUint64Value
 	}
 	if b.OptSint32Value != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[1]), 63, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[1]), 63, 98)
 		x.xxx_hidden_OptSint32Value = *b.OptSint32Value
 	}
 	if b.OptSint64Value != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 64, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 64, 98)
 		x.xxx_hidden_OptSint64Value = *b.OptSint64Value
 	}
 	if b.OptFixed32Value != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 65, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 65, 98)
 		x.xxx_hidden_OptFixed32Value = *b.OptFixed32Value
 	}
 	if b.OptFixed64Value != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 66, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 66, 98)
 		x.xxx_hidden_OptFixed64Value = *b.OptFixed64Value
 	}
 	if b.OptSfixed32Value != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 67, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 67, 98)
 		x.xxx_hidden_OptSfixed32Value = *b.OptSfixed32Value
 	}
 	if b.OptSfixed64Value != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 68, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 68, 98)
 		x.xxx_hidden_OptSfixed64Value = *b.OptSfixed64Value
 	}
 	if b.OptBoolValue != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 69, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 69, 98)
 		x.xxx_hidden_OptBoolValue = *b.OptBoolValue
 	}
 	if b.OptStringValue != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 70, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 70, 98)
 		x.xxx_hidden_OptStringValue = b.OptStringValue
 	}
 	if b.OptBytesValue != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 71, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 71, 98)
 		x.xxx_hidden_OptBytesValue = b.OptBytesValue
 	}
 	x.xxx_hidden_MsgValue = b.MsgValue
 	if b.EnumValue != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 73, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 73, 98)
 		x.xxx_hidden_EnumValue = *b.EnumValue
 	}
 	x.xxx_hidden_OptMsgValue = b.OptMsgValue
 	if b.OptEnumValue != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 75, 81)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 75, 98)
 		x.xxx_hidden_OptEnumValue = *b.OptEnumValue
 	}
 	x.xxx_hidden_MsgList = &b.MsgList
@@ -3797,6 +4226,62 @@ func (b0 AllTypes_builder) Build() *AllTypes {
 	}
 	if b.EnumOption != nil {
 		x.xxx_hidden_Option = &allTypes_EnumOption{*b.EnumOption}
+	}
+	if b.Tag != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 81, 98)
+		x.xxx_hidden_Tag = b.Tag
+	}
+	x.xxx_hidden_Tags = b.Tags
+	x.xxx_hidden_Attributes = b.Attributes
+	x.xxx_hidden_Attrs = b.Attrs
+	x.xxx_hidden_CustomAttr = b.CustomAttr
+	if b.CustomTag != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 86, 98)
+		x.xxx_hidden_CustomTag = b.CustomTag
+	}
+	if b.Email != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 87, 98)
+		x.xxx_hidden_Email = b.Email
+	}
+	if b.Phone != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 88, 98)
+		x.xxx_hidden_Phone = b.Phone
+	}
+	if b.ClientIp != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 89, 98)
+		x.xxx_hidden_ClientIp = b.ClientIp
+	}
+	if b.DeviceMac != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 90, 98)
+		x.xxx_hidden_DeviceMac = b.DeviceMac
+	}
+	if b.UserAgent != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 91, 98)
+		x.xxx_hidden_UserAgent = b.UserAgent
+	}
+	if b.FavoriteColor != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 92, 98)
+		x.xxx_hidden_FavoriteColor = b.FavoriteColor
+	}
+	if b.HomeAddress != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 93, 98)
+		x.xxx_hidden_HomeAddress = b.HomeAddress
+	}
+	if b.City != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 94, 98)
+		x.xxx_hidden_City = b.City
+	}
+	if b.Country != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[2]), 95, 98)
+		x.xxx_hidden_Country = b.Country
+	}
+	if b.PostalCode != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[3]), 96, 98)
+		x.xxx_hidden_PostalCode = b.PostalCode
+	}
+	if b.ProfileBio != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[3]), 97, 98)
+		x.xxx_hidden_ProfileBio = b.ProfileBio
 	}
 	return m0
 }
@@ -4396,7 +4881,7 @@ const file_test_v1_test_proto_rawDesc = "" +
 	"\x10ENUM_UNSPECIFIED\x10\x00\x12\x0e\n" +
 	"\n" +
 	"ENUM_VALUE\x10\x01B\a\n" +
-	"\x05oneof\"\xd46\n" +
+	"\x05oneof\"\xcd<\n" +
 	"\bAllTypes\x12!\n" +
 	"\fdouble_value\x18\x01 \x01(\x01R\vdoubleValue\x12\x1f\n" +
 	"\vfloat_value\x18\x02 \x01(\x02R\n" +
@@ -4523,7 +5008,32 @@ const file_test_v1_test_proto_rawDesc = "" +
 	"\n" +
 	"msg_option\x18` \x01(\v2\x11.test.v1.AllTypesH\x00R\tmsgOption\x129\n" +
 	"\venum_option\x18a \x01(\x0e2\x16.test.v1.AllTypes.EnumH\x00R\n" +
-	"enumOption\x1aC\n" +
+	"enumOption\x12\x10\n" +
+	"\x03tag\x18b \x01(\tR\x03tag\x12\x12\n" +
+	"\x04tags\x18c \x03(\tR\x04tags\x12A\n" +
+	"\n" +
+	"attributes\x18d \x03(\v2!.test.v1.AllTypes.AttributesEntryR\n" +
+	"attributes\x122\n" +
+	"\x05attrs\x18e \x03(\v2\x1c.test.v1.AllTypes.AttrsEntryR\x05attrs\x12B\n" +
+	"\vcustom_attr\x18f \x03(\v2!.test.v1.AllTypes.CustomAttrEntryR\n" +
+	"customAttr\x12\x1d\n" +
+	"\n" +
+	"custom_tag\x18g \x01(\tR\tcustomTag\x12\x14\n" +
+	"\x05email\x18h \x01(\tR\x05email\x12\x14\n" +
+	"\x05phone\x18i \x01(\tR\x05phone\x12\x1b\n" +
+	"\tclient_ip\x18j \x01(\tR\bclientIp\x12\x1d\n" +
+	"\n" +
+	"device_mac\x18k \x01(\tR\tdeviceMac\x12\x1d\n" +
+	"\n" +
+	"user_agent\x18l \x01(\tR\tuserAgent\x12%\n" +
+	"\x0efavorite_color\x18m \x01(\tR\rfavoriteColor\x12!\n" +
+	"\fhome_address\x18n \x01(\tR\vhomeAddress\x12\x12\n" +
+	"\x04city\x18o \x01(\tR\x04city\x12\x18\n" +
+	"\acountry\x18p \x01(\tR\acountry\x12\x1f\n" +
+	"\vpostal_code\x18q \x01(\tR\n" +
+	"postalCode\x12\x1f\n" +
+	"\vprofile_bio\x18r \x01(\tR\n" +
+	"profileBio\x1aC\n" +
 	"\x15Int32ToStringMapEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\x05R\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1aC\n" +
@@ -4610,7 +5120,17 @@ const file_test_v1_test_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\v2\x11.test.v1.AllTypesR\x05value:\x028\x01\x1aR\n" +
 	"\fEnumMapEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12,\n" +
-	"\x05value\x18\x02 \x01(\x0e2\x16.test.v1.AllTypes.EnumR\x05value:\x028\x01\"8\n" +
+	"\x05value\x18\x02 \x01(\x0e2\x16.test.v1.AllTypes.EnumR\x05value:\x028\x01\x1a=\n" +
+	"\x0fAttributesEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a8\n" +
+	"\n" +
+	"AttrsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a=\n" +
+	"\x0fCustomAttrEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"8\n" +
 	"\x04Enum\x12\x14\n" +
 	"\x10ENUM_UNSPECIFIED\x10\x00\x12\f\n" +
 	"\bENUM_ONE\x10\x01\x12\f\n" +
@@ -4640,7 +5160,7 @@ const file_test_v1_test_proto_rawDesc = "" +
 	"\vcom.test.v1B\tTestProtoP\x01Z8github.com/sudorandom/fauxrpc/private/gen/test/v1;testv1\xa2\x02\x03TXX\xaa\x02\aTest.V1\xca\x02\aTest\\V1\xe2\x02\x13Test\\V1\\GPBMetadata\xea\x02\bTest::V1\x92\x03\x05\xd2>\x02\x10\x03b\beditionsp\xe8\a"
 
 var file_test_v1_test_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
-var file_test_v1_test_proto_msgTypes = make([]protoimpl.MessageInfo, 38)
+var file_test_v1_test_proto_msgTypes = make([]protoimpl.MessageInfo, 41)
 var file_test_v1_test_proto_goTypes = []any{
 	(ParameterValues_Enum)(0),        // 0: test.v1.ParameterValues.Enum
 	(ParameterValues_Nested_Enum)(0), // 1: test.v1.ParameterValues.Nested.Enum
@@ -4685,38 +5205,41 @@ var file_test_v1_test_proto_goTypes = []any{
 	nil,                              // 40: test.v1.AllTypes.BytesMapEntry
 	nil,                              // 41: test.v1.AllTypes.MsgMapEntry
 	nil,                              // 42: test.v1.AllTypes.EnumMapEntry
-	(*timestamppb.Timestamp)(nil),    // 43: google.protobuf.Timestamp
-	(*durationpb.Duration)(nil),      // 44: google.protobuf.Duration
-	(*wrapperspb.BoolValue)(nil),     // 45: google.protobuf.BoolValue
-	(*wrapperspb.Int32Value)(nil),    // 46: google.protobuf.Int32Value
-	(*wrapperspb.Int64Value)(nil),    // 47: google.protobuf.Int64Value
-	(*wrapperspb.UInt32Value)(nil),   // 48: google.protobuf.UInt32Value
-	(*wrapperspb.UInt64Value)(nil),   // 49: google.protobuf.UInt64Value
-	(*wrapperspb.FloatValue)(nil),    // 50: google.protobuf.FloatValue
-	(*wrapperspb.DoubleValue)(nil),   // 51: google.protobuf.DoubleValue
-	(*wrapperspb.BytesValue)(nil),    // 52: google.protobuf.BytesValue
-	(*wrapperspb.StringValue)(nil),   // 53: google.protobuf.StringValue
-	(*fieldmaskpb.FieldMask)(nil),    // 54: google.protobuf.FieldMask
-	(*structpb.Struct)(nil),          // 55: google.protobuf.Struct
-	(*structpb.Value)(nil),           // 56: google.protobuf.Value
+	nil,                              // 43: test.v1.AllTypes.AttributesEntry
+	nil,                              // 44: test.v1.AllTypes.AttrsEntry
+	nil,                              // 45: test.v1.AllTypes.CustomAttrEntry
+	(*timestamppb.Timestamp)(nil),    // 46: google.protobuf.Timestamp
+	(*durationpb.Duration)(nil),      // 47: google.protobuf.Duration
+	(*wrapperspb.BoolValue)(nil),     // 48: google.protobuf.BoolValue
+	(*wrapperspb.Int32Value)(nil),    // 49: google.protobuf.Int32Value
+	(*wrapperspb.Int64Value)(nil),    // 50: google.protobuf.Int64Value
+	(*wrapperspb.UInt32Value)(nil),   // 51: google.protobuf.UInt32Value
+	(*wrapperspb.UInt64Value)(nil),   // 52: google.protobuf.UInt64Value
+	(*wrapperspb.FloatValue)(nil),    // 53: google.protobuf.FloatValue
+	(*wrapperspb.DoubleValue)(nil),   // 54: google.protobuf.DoubleValue
+	(*wrapperspb.BytesValue)(nil),    // 55: google.protobuf.BytesValue
+	(*wrapperspb.StringValue)(nil),   // 56: google.protobuf.StringValue
+	(*fieldmaskpb.FieldMask)(nil),    // 57: google.protobuf.FieldMask
+	(*structpb.Struct)(nil),          // 58: google.protobuf.Struct
+	(*structpb.Value)(nil),           // 59: google.protobuf.Value
 }
 var file_test_v1_test_proto_depIdxs = []int32{
-	43, // 0: test.v1.ParameterValues.timestamp:type_name -> google.protobuf.Timestamp
-	44, // 1: test.v1.ParameterValues.duration:type_name -> google.protobuf.Duration
-	45, // 2: test.v1.ParameterValues.bool_value_wrapper:type_name -> google.protobuf.BoolValue
-	46, // 3: test.v1.ParameterValues.int32_value_wrapper:type_name -> google.protobuf.Int32Value
-	47, // 4: test.v1.ParameterValues.int64_value_wrapper:type_name -> google.protobuf.Int64Value
-	48, // 5: test.v1.ParameterValues.uint32_value_wrapper:type_name -> google.protobuf.UInt32Value
-	49, // 6: test.v1.ParameterValues.uint64_value_wrapper:type_name -> google.protobuf.UInt64Value
-	50, // 7: test.v1.ParameterValues.float_value_wrapper:type_name -> google.protobuf.FloatValue
-	51, // 8: test.v1.ParameterValues.double_value_wrapper:type_name -> google.protobuf.DoubleValue
-	52, // 9: test.v1.ParameterValues.bytes_value_wrapper:type_name -> google.protobuf.BytesValue
-	53, // 10: test.v1.ParameterValues.string_value_wrapper:type_name -> google.protobuf.StringValue
-	54, // 11: test.v1.ParameterValues.field_mask:type_name -> google.protobuf.FieldMask
+	46, // 0: test.v1.ParameterValues.timestamp:type_name -> google.protobuf.Timestamp
+	47, // 1: test.v1.ParameterValues.duration:type_name -> google.protobuf.Duration
+	48, // 2: test.v1.ParameterValues.bool_value_wrapper:type_name -> google.protobuf.BoolValue
+	49, // 3: test.v1.ParameterValues.int32_value_wrapper:type_name -> google.protobuf.Int32Value
+	50, // 4: test.v1.ParameterValues.int64_value_wrapper:type_name -> google.protobuf.Int64Value
+	51, // 5: test.v1.ParameterValues.uint32_value_wrapper:type_name -> google.protobuf.UInt32Value
+	52, // 6: test.v1.ParameterValues.uint64_value_wrapper:type_name -> google.protobuf.UInt64Value
+	53, // 7: test.v1.ParameterValues.float_value_wrapper:type_name -> google.protobuf.FloatValue
+	54, // 8: test.v1.ParameterValues.double_value_wrapper:type_name -> google.protobuf.DoubleValue
+	55, // 9: test.v1.ParameterValues.bytes_value_wrapper:type_name -> google.protobuf.BytesValue
+	56, // 10: test.v1.ParameterValues.string_value_wrapper:type_name -> google.protobuf.StringValue
+	57, // 11: test.v1.ParameterValues.field_mask:type_name -> google.protobuf.FieldMask
 	0,  // 12: test.v1.ParameterValues.enum_value:type_name -> test.v1.ParameterValues.Enum
 	0,  // 13: test.v1.ParameterValues.enum_list:type_name -> test.v1.ParameterValues.Enum
-	51, // 14: test.v1.ParameterValues.double_value_list:type_name -> google.protobuf.DoubleValue
-	51, // 15: test.v1.ParameterValues.oneof_double_value_wrapper:type_name -> google.protobuf.DoubleValue
+	54, // 14: test.v1.ParameterValues.double_value_list:type_name -> google.protobuf.DoubleValue
+	54, // 15: test.v1.ParameterValues.oneof_double_value_wrapper:type_name -> google.protobuf.DoubleValue
 	0,  // 16: test.v1.ParameterValues.oneof_enum_value:type_name -> test.v1.ParameterValues.Enum
 	9,  // 17: test.v1.ParameterValues.nested:type_name -> test.v1.ParameterValues.Nested
 	5,  // 18: test.v1.ParameterValues.recursive:type_name -> test.v1.ParameterValues
@@ -4724,8 +5247,8 @@ var file_test_v1_test_proto_depIdxs = []int32{
 	11, // 20: test.v1.ParameterValues.string_value_map:type_name -> test.v1.ParameterValues.StringValueMapEntry
 	12, // 21: test.v1.ParameterValues.enum_map:type_name -> test.v1.ParameterValues.EnumMapEntry
 	13, // 22: test.v1.ParameterValues.nested_map:type_name -> test.v1.ParameterValues.NestedMapEntry
-	55, // 23: test.v1.ParameterValues.struct_value:type_name -> google.protobuf.Struct
-	56, // 24: test.v1.ParameterValues.value:type_name -> google.protobuf.Value
+	58, // 23: test.v1.ParameterValues.struct_value:type_name -> google.protobuf.Struct
+	59, // 24: test.v1.ParameterValues.value:type_name -> google.protobuf.Value
 	5,  // 25: test.v1.ParameterValues.recursive_list:type_name -> test.v1.ParameterValues
 	14, // 26: test.v1.AllTypes.int32_to_string_map:type_name -> test.v1.AllTypes.Int32ToStringMapEntry
 	15, // 27: test.v1.AllTypes.int64_to_string_map:type_name -> test.v1.AllTypes.Int64ToStringMapEntry
@@ -4764,24 +5287,27 @@ var file_test_v1_test_proto_depIdxs = []int32{
 	42, // 60: test.v1.AllTypes.enum_map:type_name -> test.v1.AllTypes.EnumMapEntry
 	6,  // 61: test.v1.AllTypes.msg_option:type_name -> test.v1.AllTypes
 	2,  // 62: test.v1.AllTypes.enum_option:type_name -> test.v1.AllTypes.Enum
-	3,  // 63: test.v1.EnumTest.enum_in:type_name -> test.v1.EnumTest.TestEnum
-	3,  // 64: test.v1.EnumTest.enum_not_in:type_name -> test.v1.EnumTest.TestEnum
-	3,  // 65: test.v1.EnumTest.enum_in_and_not_in:type_name -> test.v1.EnumTest.TestEnum
-	3,  // 66: test.v1.EnumTest.enum_const:type_name -> test.v1.EnumTest.TestEnum
-	3,  // 67: test.v1.EnumTest.enum_required:type_name -> test.v1.EnumTest.TestEnum
-	4,  // 68: test.v1.RepeatedEnumTest.repeated_enum_in:type_name -> test.v1.RepeatedEnumTest.TestEnum
-	51, // 69: test.v1.ParameterValues.Nested.double_value_wrapper:type_name -> google.protobuf.DoubleValue
-	1,  // 70: test.v1.ParameterValues.Nested.enum_value:type_name -> test.v1.ParameterValues.Nested.Enum
-	53, // 71: test.v1.ParameterValues.StringValueMapEntry.value:type_name -> google.protobuf.StringValue
-	0,  // 72: test.v1.ParameterValues.EnumMapEntry.value:type_name -> test.v1.ParameterValues.Enum
-	9,  // 73: test.v1.ParameterValues.NestedMapEntry.value:type_name -> test.v1.ParameterValues.Nested
-	6,  // 74: test.v1.AllTypes.MsgMapEntry.value:type_name -> test.v1.AllTypes
-	2,  // 75: test.v1.AllTypes.EnumMapEntry.value:type_name -> test.v1.AllTypes.Enum
-	76, // [76:76] is the sub-list for method output_type
-	76, // [76:76] is the sub-list for method input_type
-	76, // [76:76] is the sub-list for extension type_name
-	76, // [76:76] is the sub-list for extension extendee
-	0,  // [0:76] is the sub-list for field type_name
+	43, // 63: test.v1.AllTypes.attributes:type_name -> test.v1.AllTypes.AttributesEntry
+	44, // 64: test.v1.AllTypes.attrs:type_name -> test.v1.AllTypes.AttrsEntry
+	45, // 65: test.v1.AllTypes.custom_attr:type_name -> test.v1.AllTypes.CustomAttrEntry
+	3,  // 66: test.v1.EnumTest.enum_in:type_name -> test.v1.EnumTest.TestEnum
+	3,  // 67: test.v1.EnumTest.enum_not_in:type_name -> test.v1.EnumTest.TestEnum
+	3,  // 68: test.v1.EnumTest.enum_in_and_not_in:type_name -> test.v1.EnumTest.TestEnum
+	3,  // 69: test.v1.EnumTest.enum_const:type_name -> test.v1.EnumTest.TestEnum
+	3,  // 70: test.v1.EnumTest.enum_required:type_name -> test.v1.EnumTest.TestEnum
+	4,  // 71: test.v1.RepeatedEnumTest.repeated_enum_in:type_name -> test.v1.RepeatedEnumTest.TestEnum
+	54, // 72: test.v1.ParameterValues.Nested.double_value_wrapper:type_name -> google.protobuf.DoubleValue
+	1,  // 73: test.v1.ParameterValues.Nested.enum_value:type_name -> test.v1.ParameterValues.Nested.Enum
+	56, // 74: test.v1.ParameterValues.StringValueMapEntry.value:type_name -> google.protobuf.StringValue
+	0,  // 75: test.v1.ParameterValues.EnumMapEntry.value:type_name -> test.v1.ParameterValues.Enum
+	9,  // 76: test.v1.ParameterValues.NestedMapEntry.value:type_name -> test.v1.ParameterValues.Nested
+	6,  // 77: test.v1.AllTypes.MsgMapEntry.value:type_name -> test.v1.AllTypes
+	2,  // 78: test.v1.AllTypes.EnumMapEntry.value:type_name -> test.v1.AllTypes.Enum
+	79, // [79:79] is the sub-list for method output_type
+	79, // [79:79] is the sub-list for method input_type
+	79, // [79:79] is the sub-list for extension type_name
+	79, // [79:79] is the sub-list for extension extendee
+	0,  // [0:79] is the sub-list for field type_name
 }
 
 func init() { file_test_v1_test_proto_init() }
@@ -4819,7 +5345,7 @@ func file_test_v1_test_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_test_v1_test_proto_rawDesc), len(file_test_v1_test_proto_rawDesc)),
 			NumEnums:      5,
-			NumMessages:   38,
+			NumMessages:   41,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
