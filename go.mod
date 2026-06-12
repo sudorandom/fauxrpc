@@ -29,7 +29,7 @@ require (
 	github.com/google/cel-go v0.28.1
 	github.com/google/uuid v1.6.0
 	github.com/jhump/protoreflect v1.17.0
-	github.com/quic-go/quic-go v0.59.0
+	github.com/quic-go/quic-go v0.59.1
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.11.1
 	github.com/sudorandom/protoc-gen-connect-openapi v0.25.2
@@ -49,7 +49,7 @@ require (
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
-	github.com/buger/jsonparser v1.1.1 // indirect
+	github.com/buger/jsonparser v1.1.2 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cli/browser v1.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
