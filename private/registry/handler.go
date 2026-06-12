@@ -31,7 +31,7 @@ func (h *handler) AddDescriptors(ctx context.Context, req *connect.Request[regis
 		return nil, err
 	}
 
-	sortedFiles, err := sortFilesByDependency(files)
+	sortedFiles, err := SortFilesByDependency(files)
 	if err != nil {
 		return nil, err
 	}

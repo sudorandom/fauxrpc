@@ -33,7 +33,7 @@ func BenchmarkSortFilesByDependency(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, err := sortFilesByDependency(files)
+		_, err := SortFilesByDependency(files)
 		if err != nil {
 			b.Fatal(err)
 		}
@@ -62,7 +62,7 @@ func TestSortFilesByDependency(t *testing.T) {
 		}
 	}
 
-	sorted, err := sortFilesByDependency(files)
+	sorted, err := SortFilesByDependency(files)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

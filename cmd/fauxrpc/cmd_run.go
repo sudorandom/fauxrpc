@@ -99,7 +99,7 @@ func (c *RunCmd) Run(globals *Globals) error {
 		fmt.Printf("Dashboard: http://%s/fauxrpc\n", c.Addr)
 	}
 	if !c.NoDocPage {
-		fmt.Printf("OpenAPI documentation: http://%s/fauxrpc/openapi.html\n", c.Addr)
+		fmt.Printf("Documentation: http://%s/fauxrpc/docs/\n", c.Addr)
 	}
 	fmt.Println()
 	fmt.Println("Example Commands:")

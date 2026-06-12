@@ -7,7 +7,7 @@ import (
 	"google.golang.org/protobuf/reflect/protoregistry"
 )
 
-func sortFilesByDependency(files *protoregistry.Files) ([]protoreflect.FileDescriptor, error) {
+func SortFilesByDependency(files *protoregistry.Files) ([]protoreflect.FileDescriptor, error) {
 	graph := make(map[string][]string)
 	inDegree := make(map[string]int)
 

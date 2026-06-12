@@ -75,20 +75,24 @@ func AddServicesFromBSR(ctx context.Context, registry LoaderTarget, module strin
 	// 4. Register the file descriptors with the target registry.
 	// This step is now common for both cached and non-cached paths.
 	slog.Info("registering files for module", slog.String("module", module), slog.Int("count", len(fds.GetFile())))
-	files, err := protodesc.FileOptions{AllowUnresolvable: true}.NewFiles(fds)
-	if err != nil {
-		return err
+
+	protos := make(map[string]*descriptorpb.FileDescriptorProto)
+	for _, fdProto := range fds.GetFile() {
+		protos[fdProto.GetName()] = fdProto
 	}
-	var registerErr error
-	files.RangeFiles(func(fd protoreflect.FileDescriptor) bool {
-		if err := registry.RegisterFile(fd); err != nil {
-			registerErr = fmt.Errorf("RegisterFile for %s: %w", fd.Path(), err)
-			return false
+
+	compiled := make(map[string]protoreflect.FileDescriptor)
+	var compiledOrdered []protoreflect.FileDescriptor
+	for _, fdProto := range fds.GetFile() {
+		if _, err := compileFile(fdProto, protos, compiled, &compiledOrdered, registry); err != nil {
+			return err
 		}
-		return true
-	})
-	if registerErr != nil {
-		return registerErr
+	}
+
+	for _, fd := range compiledOrdered {
+		if err := registry.RegisterFile(fd); err != nil {
+			return fmt.Errorf("RegisterFile for %s: %w", fd.Path(), err)
+		}
 	}
 	return nil
 }
@@ -218,7 +222,7 @@ func bsrCachePath(module, commitID string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to get user cache dir: %w", err)
 	}
-	return filepath.Join(cacheDir, "fauxrpc", "bsr", module, fmt.Sprintf("%s.binpb.gz", commitID)), nil
+	return filepath.Join(cacheDir, "fauxrpc", "bsr-v2", module, fmt.Sprintf("%s.binpb.gz", commitID)), nil
 }
 
 func loadFromBSR(ctx context.Context, httpClient *http.Client, module, rootCommitID string) (*descriptorpb.FileDescriptorSet, error) {
@@ -239,7 +243,7 @@ func loadFromBSR(ctx context.Context, httpClient *http.Client, module, rootCommi
 			}.Build(),
 		}.Build(),
 		ExcludeImports:                false,
-		IncludeSourceCodeInfo:         false,
+		IncludeSourceCodeInfo:         true,
 		IncludeSourceRetentionOptions: true,
 	}))
 	if err != nil {
@@ -266,4 +270,63 @@ func (b *bufAuthInterceptor) RoundTrip(req *http.Request) (*http.Response, error
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
 	return b.transport.RoundTrip(req)
+}
+
+type bsrResolver struct {
+	compiled map[string]protoreflect.FileDescriptor
+	fallback protodesc.Resolver
+}
+
+func (r *bsrResolver) FindFileByPath(path string) (protoreflect.FileDescriptor, error) {
+	if fd, ok := r.compiled[path]; ok {
+		return fd, nil
+	}
+	return r.fallback.FindFileByPath(path)
+}
+
+func (r *bsrResolver) FindDescriptorByName(name protoreflect.FullName) (protoreflect.Descriptor, error) {
+	return r.fallback.FindDescriptorByName(name)
+}
+
+func compileFile(
+	fdProto *descriptorpb.FileDescriptorProto,
+	protos map[string]*descriptorpb.FileDescriptorProto,
+	compiled map[string]protoreflect.FileDescriptor,
+	compiledOrdered *[]protoreflect.FileDescriptor,
+	registry LoaderTarget,
+) (protoreflect.FileDescriptor, error) {
+	if fd, ok := compiled[fdProto.GetName()]; ok {
+		return fd, nil
+	}
+
+	// Compile dependencies first
+	for _, depPath := range fdProto.GetDependency() {
+		// If it's already in the target registry, we don't need to compile it
+		if _, err := registry.FindFileByPath(depPath); err == nil {
+			continue
+		}
+		// If it's in our newly compiled map, we're good
+		if _, ok := compiled[depPath]; ok {
+			continue
+		}
+		// Otherwise, it must be in the BSR response protos map
+		depProto, ok := protos[depPath]
+		if !ok {
+			// Let the compiler throw the missing dependency error or handle it
+			continue
+		}
+		if _, err := compileFile(depProto, protos, compiled, compiledOrdered, registry); err != nil {
+			return nil, err
+		}
+	}
+
+	// Now compile this file
+	resolver := &bsrResolver{compiled: compiled, fallback: registry}
+	fd, err := protodesc.FileOptions{AllowUnresolvable: true}.New(fdProto, resolver)
+	if err != nil {
+		return nil, err
+	}
+	compiled[fdProto.GetName()] = fd
+	*compiledOrdered = append(*compiledOrdered, fd)
+	return fd, nil
 }

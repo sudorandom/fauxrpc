@@ -77,7 +77,7 @@ func AddServicesFromReflection(registry LoaderTarget, httpClient *http.Client, a
 		return fmt.Errorf("protodesc.NewFiles: %w", err)
 	}
 
-	sortedFiles, err := sortFilesByDependency(files)
+	sortedFiles, err := SortFilesByDependency(files)
 	if err != nil {
 		return fmt.Errorf("sortFilesByDependency: %w", err)
 	}

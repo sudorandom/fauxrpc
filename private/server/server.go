@@ -32,8 +32,11 @@ import (
 	"github.com/sudorandom/fauxrpc/private/metrics"
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/private/stubs"
+	"github.com/sudorandom/protodocs"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/dynamicpb"
 )
 
@@ -73,7 +76,7 @@ type server struct {
 	stubs.StubDatabase
 	lock *sync.Mutex
 
-	handlerOpenAPI          *wrappedHandler
+	handlerDocs             *wrappedHandler
 	handlerReflectorV1      *wrappedHandler
 	handlerReflectorV1Alpha *wrappedHandler
 	handlerTranscoder       *wrappedHandler
@@ -93,7 +96,7 @@ func NewServer(opts ServerOpts) (*server, error) {
 		lock:                    &sync.Mutex{},
 		ServiceRegistry:         serviceRegistry,
 		StubDatabase:            stubs.NewStubDatabase(),
-		handlerOpenAPI:          NewWrappedHandler(),
+		handlerDocs:             NewWrappedHandler(),
 		handlerReflectorV1:      NewWrappedHandler(),
 		handlerReflectorV1Alpha: NewWrappedHandler(),
 		handlerTranscoder:       NewWrappedHandler(),
@@ -106,7 +109,7 @@ func NewServer(opts ServerOpts) (*server, error) {
 			FauxRpcVersion: opts.Version,
 			RequestCounts:  make(map[time.Time]int64),
 		},
-		logger: fauxlog.NewLogger(),
+		logger:      fauxlog.NewLogger(),
 		proxyClient: newProxyClient(),
 	}
 	if opts.RecordDir != "" {
@@ -264,11 +267,40 @@ func (s *server) rebuildHandlers() error {
 	}
 
 	if s.opts.RenderDocPage {
-		openapiSpec, err := convertToOpenAPISpec(s.ServiceRegistry, s.opts.Version)
+		descBuilder := strings.Builder{}
+		descBuilder.WriteString("# FauxRPC Service Documentation\n\n")
+		descBuilder.WriteString("This is a [FauxRPC](https://fauxrpc.com/) server that is currently hosting the following services:\n\n")
+		s.ServiceRegistry.ForEachService(func(sd protoreflect.ServiceDescriptor) bool {
+			descBuilder.WriteString("- ")
+			descBuilder.WriteString(string(sd.FullName()))
+			descBuilder.WriteByte('\n')
+			return true
+		})
+		descBuilder.WriteString("\nFauxRPC is a mock server that supports gRPC, gRPC-Web, Connect, and HTTP/JSON transcoding.")
+
+		sortedFiles, err := registry.SortFilesByDependency(s.ServiceRegistry.Files())
 		if err != nil {
 			return err
 		}
-		s.handlerOpenAPI.SetHandler(singleFileHandler(string(openapiSpec)))
+		fds := &descriptorpb.FileDescriptorSet{}
+		for _, fd := range sortedFiles {
+			fds.File = append(fds.File, protodesc.ToFileDescriptorProto(fd))
+		}
+
+		handler, err := protodocs.NewHandler(protodocs.Config{
+			Title:                     "FauxRPC",
+			LogoText:                  "FauxRPC",
+			Descriptors:               fds,
+			Prefix:                    "/fauxrpc/docs/",
+			FrontPageMarkdown:         descBuilder.String(),
+			BottomOfFrontPageMarkdown: "FauxRPC is open source and available at [github.com/sudorandom/fauxrpc](https://github.com/sudorandom/fauxrpc).",
+			BackToText:                "Back to Dashboard",
+			BackToURL:                 "/fauxrpc",
+		})
+		if err != nil {
+			return err
+		}
+		s.handlerDocs.SetHandler(handler)
 	}
 	return nil
 }
@@ -301,10 +333,10 @@ func (s *server) Handler() (http.Handler, error) {
 		mux.Mount("/grpc.reflection.v1alpha.ServerReflection/", s.handlerReflectorV1Alpha)
 	}
 
-	// OpenAPI Stuff
+	// Docs Stuff
 	if s.opts.RenderDocPage {
-		mux.Get("/fauxrpc/openapi.html", singleFileHandler(openapiHTML))
-		mux.Handle("/fauxrpc/openapi.yaml", s.handlerOpenAPI)
+		mux.Get("/fauxrpc/docs", http.RedirectHandler("/fauxrpc/docs/", http.StatusMovedPermanently).ServeHTTP)
+		mux.Handle("/fauxrpc/docs/*", s.handlerDocs)
 	}
 
 	validateInterceptor := validate.NewInterceptor()
