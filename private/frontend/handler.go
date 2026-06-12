@@ -56,7 +56,7 @@ func DashboardHandler(p Provider) http.Handler {
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Connection", "keep-alive")
 
-		ch, unsubscribe := logger.Subscribe()
+		history, ch, unsubscribe := logger.SubscribeWithHistory()
 		defer unsubscribe()
 
 		ctx := r.Context()
@@ -66,6 +66,48 @@ func DashboardHandler(p Provider) http.Handler {
 		}
 
 		filter := strings.ToLower(r.URL.Query().Get("filter"))
+
+		// Send captured history first
+		for _, entry := range history {
+			// Apply filter if present
+			if filter != "" {
+				match := false
+				switch {
+				case strings.Contains(strings.ToLower(entry.Service), filter):
+					match = true
+				case strings.Contains(strings.ToLower(entry.Method), filter):
+					match = true
+				case strings.Contains(fmt.Sprintf("%d", entry.Status), filter):
+					match = true
+				case strings.Contains(strings.ToLower(string(entry.RequestBody)), filter):
+					match = true
+				case strings.Contains(strings.ToLower(string(entry.ResponseBody)), filter):
+					match = true
+				case strings.Contains(strings.ToLower(string(entry.RequestHeaders)), filter):
+					match = true
+				case strings.Contains(strings.ToLower(string(entry.ResponseHeaders)), filter):
+					match = true
+				}
+				if !match {
+					continue // Skip this entry if it doesn't match the filter
+				}
+			}
+
+			var buf bytes.Buffer
+			if err := partials.LogEntry(entry, p).Render(ctx, &buf); err != nil {
+				slog.Error("failed to render new log entry", "err", err)
+				continue
+			}
+
+			html := buf.String()
+			formattedHTML := strings.ReplaceAll(html, "\n", "\ndata: ")
+
+			if _, err := fmt.Fprintf(w, "event: Request\ndata: %s\n\n", formattedHTML); err != nil {
+				slog.Error("failed to write new entry to SSE stream", "err", err)
+				return
+			}
+		}
+		flusher.Flush()
 
 		for {
 			select {

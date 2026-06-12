@@ -30,12 +30,14 @@ type LogEntry struct {
 type Logger struct {
 	mu          sync.RWMutex
 	subscribers map[chan *LogEntry]struct{}
+	history     []*LogEntry
 }
 
 // NewLogger creates a new Logger.
 func NewLogger() *Logger {
 	return &Logger{
 		subscribers: make(map[chan *LogEntry]struct{}),
+		history:     []*LogEntry{},
 	}
 }
 
@@ -43,6 +45,11 @@ func NewLogger() *Logger {
 func (l *Logger) Log(entry *LogEntry) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
+
+	l.history = append(l.history, entry)
+	if len(l.history) > 10 {
+		l.history = l.history[len(l.history)-10:]
+	}
 
 	for ch := range l.subscribers {
 		// Use a non-blocking send to avoid blocking the logger
@@ -69,4 +76,24 @@ func (l *Logger) Subscribe() (chan *LogEntry, func()) {
 		close(ch)
 	}
 	return ch, unsubscribe
+}
+
+// SubscribeWithHistory returns the current log history and registers a new subscriber channel.
+func (l *Logger) SubscribeWithHistory() ([]*LogEntry, chan *LogEntry, func()) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
+	ch := make(chan *LogEntry, 100) // Buffered channel
+	l.subscribers[ch] = struct{}{}
+
+	historyCopy := make([]*LogEntry, len(l.history))
+	copy(historyCopy, l.history)
+
+	unsubscribe := func() {
+		l.mu.Lock()
+		defer l.mu.Unlock()
+		delete(l.subscribers, ch)
+		close(ch)
+	}
+	return historyCopy, ch, unsubscribe
 }
