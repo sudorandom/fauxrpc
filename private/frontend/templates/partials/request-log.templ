@@ -1,15 +1,18 @@
 package partials
 
-import "github.com/sudorandom/fauxrpc/private/log"
+import (
+    "github.com/sudorandom/fauxrpc/private/log"
+    "github.com/sudorandom/fauxrpc/private/registry"
+)
 
 // in partials/requestlog.templ
-templ RequestLog(history []*log.LogEntry) {
+templ RequestLog(history []*log.LogEntry, reg registry.ServiceRegistry) {
     <div id="sse-controller" hx-ext="sse">
-        @requestLog(history)
+        @requestLog(history, reg)
     </div>
 }
 
-templ requestLog(history []*log.LogEntry) {
+templ requestLog(history []*log.LogEntry, reg registry.ServiceRegistry) {
     <div>
         <div class="flex justify-between items-center flex-shrink-0">
             <h1 class="text-3xl font-bold text-white">Request Log</h1>
@@ -67,7 +70,7 @@ templ requestLog(history []*log.LogEntry) {
                 </div>
             }
             for _, entry := range history {
-                @LogEntry(entry)
+                @LogEntry(entry, reg)
             }
         </div>
 
@@ -116,7 +119,14 @@ templ requestLog(history []*log.LogEntry) {
                 eventSource.addEventListener('Request', function(event) {
                     const tempDiv = document.createElement('div');
                     tempDiv.innerHTML = event.data;
-                    logContainer.insertAdjacentElement('afterbegin', tempDiv.firstChild);
+                    const newElt = tempDiv.firstChild;
+                    logContainer.insertAdjacentElement('afterbegin', newElt);
+
+                    if (typeof hljs !== 'undefined') {
+                        newElt.querySelectorAll('pre code').forEach((el) => {
+                            hljs.highlightElement(el);
+                        });
+                    }
 
                     // Hide placeholder
                     const placeholder = document.getElementById('no-entries-placeholder');

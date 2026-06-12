@@ -115,33 +115,33 @@ func (f StubFile) ToRequest() (*stubsv1.AddStubsRequest, error) {
 }
 
 type StubFileEntry struct {
-	ID           string              `json:"id" yaml:"id"`
+	ID           string              `json:"id" yaml:"id,omitempty"`
 	Target       string              `json:"target" yaml:"target"`
-	Content      any                 `json:"content,omitempty" yaml:"content"`
-	CelContent   string              `json:"cel_content,omitempty" yaml:"cel_content"`
-	ActiveIf     string              `json:"active_if,omitempty" yaml:"active_if"`
-	ErrorCode    int                 `json:"error_code,omitempty" yaml:"error_code"`
-	ErrorMessage string              `json:"error_message,omitempty" yaml:"error_message"`
-	Priority     int32               `json:"priority,omitempty" yaml:"priority"`
-	Stream       *StubFileStreamEntry `json:"stream,omitempty" yaml:"stream"`
+	Content      any                 `json:"content,omitempty" yaml:"content,omitempty"`
+	CelContent   string              `json:"cel_content,omitempty" yaml:"cel_content,omitempty"`
+	ActiveIf     string              `json:"active_if,omitempty" yaml:"active_if,omitempty"`
+	ErrorCode    int                 `json:"error_code,omitempty" yaml:"error_code,omitempty"`
+	ErrorMessage string              `json:"error_message,omitempty" yaml:"error_message,omitempty"`
+	Priority     int32               `json:"priority,omitempty" yaml:"priority,omitempty"`
+	Stream       *StubFileStreamEntry `json:"stream,omitempty" yaml:"stream,omitempty"`
 }
 
 type StubFileStreamEntry struct {
-	Items     []StubFileStreamItemEntry `json:"items,omitempty" yaml:"items"`
-	Repeated  bool                      `json:"repeated,omitempty" yaml:"repeated"`
-	DoneAfter string                    `json:"done_after,omitempty" yaml:"done_after"`
+	Items     []StubFileStreamItemEntry `json:"items,omitempty" yaml:"items,omitempty"`
+	Repeated  bool                      `json:"repeated,omitempty" yaml:"repeated,omitempty"`
+	DoneAfter string                    `json:"done_after,omitempty" yaml:"done_after,omitempty"`
 }
 
 type StubFileStreamItemEntry struct {
-	Content    any                 `json:"content,omitempty" yaml:"content"`
-	CelContent string              `json:"cel_content,omitempty" yaml:"cel_content"`
-	Delay      string              `json:"delay,omitempty" yaml:"delay"`
-	Error      *StubFileErrorEntry `json:"error,omitempty" yaml:"error"`
+	Content    any                 `json:"content,omitempty" yaml:"content,omitempty"`
+	CelContent string              `json:"cel_content,omitempty" yaml:"cel_content,omitempty"`
+	Delay      string              `json:"delay,omitempty" yaml:"delay,omitempty"`
+	Error      *StubFileErrorEntry `json:"error,omitempty" yaml:"error,omitempty"`
 }
 
 type StubFileErrorEntry struct {
-	Code    int    `json:"code" yaml:"code"`
-	Message string `json:"message" yaml:"message"`
+	Code    int    `json:"code" yaml:"code,omitempty"`
+	Message string `json:"message" yaml:"message,omitempty"`
 }
 
 func LoadStubsFromFile(registry registry.ServiceRegistry, stubdb StubDatabase, stubsPath string) error {

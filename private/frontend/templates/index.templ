@@ -16,9 +16,9 @@ templ Index(content templ.Component) {
 			
 			<link href="/fauxrpc/assets/inter.css" rel="stylesheet"/>
 			<!-- Highlight.js for Protobuf syntax highlighting -->
-			<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css"/>
-			<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
-			<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/protobuf.min.js"></script>
+			<link rel="stylesheet" href="/fauxrpc/assets/highlight-github-dark.min.css"/>
+			<script src="/fauxrpc/assets/highlight.min.js"></script>
+			<script src="/fauxrpc/assets/highlight-protobuf.min.js"></script>
 			<style>
         		body { font-family: 'Inter', sans-serif; }
     		</style>
@@ -115,5 +115,38 @@ templ CopyScript() {
                 console.error('Failed to copy text: ', err);
             });
         }
+
+        function switchTab(entryId, tabName) {
+            const reqRespTab = document.getElementById(`tab-reqresp-${entryId}`);
+            const stubTab = document.getElementById(`tab-stub-${entryId}`);
+            const reqRespContent = document.getElementById(`content-reqresp-${entryId}`);
+            const stubContent = document.getElementById(`content-stub-${entryId}`);
+            
+            if (tabName === 'reqresp') {
+                reqRespTab.classList.add('border-blue-500', 'text-blue-500');
+                reqRespTab.classList.remove('border-transparent', 'text-gray-400');
+                stubTab.classList.remove('border-blue-500', 'text-blue-500');
+                stubTab.classList.add('border-transparent', 'text-gray-400');
+                
+                reqRespContent.classList.remove('hidden');
+                stubContent.classList.add('hidden');
+            } else {
+                stubTab.classList.add('border-blue-500', 'text-blue-500');
+                stubTab.classList.remove('border-transparent', 'text-gray-400');
+                reqRespTab.classList.remove('border-blue-500', 'text-blue-500');
+                reqRespTab.classList.add('border-transparent', 'text-gray-400');
+                
+                stubContent.classList.remove('hidden');
+                reqRespContent.classList.add('hidden');
+            }
+        }
+
+        document.addEventListener('htmx:load', function(evt) {
+            if (typeof hljs !== 'undefined') {
+                evt.detail.elt.querySelectorAll('pre code').forEach((el) => {
+                    hljs.highlightElement(el);
+                });
+            }
+        });
 	</script>
 }

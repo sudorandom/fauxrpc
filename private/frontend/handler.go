@@ -97,8 +97,8 @@ func DashboardHandler(p Provider) http.Handler {
 				}
 
 				var buf bytes.Buffer
-				if err := partials.LogEntry(entry).Render(ctx, &buf); err != nil {
-					slog.Error("failed to render log entry partial", "err", err)
+				if err := partials.LogEntry(entry, p).Render(ctx, &buf); err != nil {
+					slog.Error("failed to render new log entry", "err", err)
 					continue
 				}
 
@@ -152,10 +152,10 @@ func DashboardHandler(p Provider) http.Handler {
 	mux.Handle("/fauxrpc/logs", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("HX-Request") == "true" {
 			// HTMX request, return only the partial
-			templ.Handler(partials.RequestLog(nil)).ServeHTTP(w, r)
+			templ.Handler(partials.RequestLog(nil, p)).ServeHTTP(w, r)
 		} else {
 			// Direct navigation, return full page with partial embedded
-			templ.Handler(templates.Index(partials.RequestLog(nil))).ServeHTTP(w, r)
+			templ.Handler(templates.Index(partials.RequestLog(nil, p))).ServeHTTP(w, r)
 		}
 	}))
 

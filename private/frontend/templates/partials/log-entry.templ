@@ -9,6 +9,7 @@ import (
     "time"
 
     "github.com/sudorandom/fauxrpc/private/log"
+    "github.com/sudorandom/fauxrpc/private/registry"
 )
 
 // grpcStatusNames maps gRPC status codes to their string names.
@@ -133,7 +134,7 @@ func prettyPrintJSON(data json.RawMessage) string {
     return indentedJSON.String()
 }
 
-templ LogEntry(entry *log.LogEntry) {
+templ LogEntry(entry *log.LogEntry, reg registry.ServiceRegistry) {
     <details class="bg-gray-800/60 border border-gray-700 rounded-lg mb-3 overflow-hidden">
         <summary class="w-full p-4 text-left flex items-center justify-between hover:bg-gray-700/50 transition-colors duration-200 cursor-pointer">
             <div class="flex items-center space-x-4 flex-wrap">
@@ -167,13 +168,31 @@ templ LogEntry(entry *log.LogEntry) {
                     <div class="font-mono text-gray-400">None</div>
                 }
             </div>
-            <div class="space-y-8">
+            <div class="border-b border-gray-700 mb-6">
+                <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                    <button
+                        id={ fmt.Sprintf("tab-reqresp-%s", entry.ID) }
+                        onclick={ templ.ComponentScript{Call: fmt.Sprintf("switchTab('%s', 'reqresp')", entry.ID)} }
+                        class="border-blue-500 text-blue-500 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm focus:outline-none"
+                    >
+                        Request / Response
+                    </button>
+                    <button
+                        id={ fmt.Sprintf("tab-stub-%s", entry.ID) }
+                        onclick={ templ.ComponentScript{Call: fmt.Sprintf("switchTab('%s', 'stub')", entry.ID)} }
+                        class="border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm focus:outline-none"
+                    >
+                        YAML Stub
+                    </button>
+                </nav>
+            </div>
+            <div id={ fmt.Sprintf("content-reqresp-%s", entry.ID) } class="space-y-8">
                 <div>
                     <h4 class="text-lg font-semibold text-gray-300 mb-3">Request</h4>
                     <div class="space-y-4">
                         <div>
                             <h5 class="text-md font-medium text-gray-400 mb-2">Headers</h5>
-                            <pre class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto"><code>{ formatHeaders(entry.RequestHeaders) }</code></pre>
+                            <pre class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto"><code class="language-http">{ formatHeaders(entry.RequestHeaders) }</code></pre>
                         </div>
                         if len(entry.RequestFrames) > 0 {
                             <div>
@@ -194,7 +213,7 @@ templ LogEntry(entry *log.LogEntry) {
                                                     <span>Copy</span>
                                                 </button>
                                             </div>
-                                            <pre id={ fmt.Sprintf("request-frame-%s-%d", entry.ID, i) } class="bg-gray-800 p-2 rounded-md text-xs text-gray-300 overflow-x-auto max-h-[150px] overflow-y-auto"><code>{ prettyPrintJSON(frame) }</code></pre>
+                                            <pre id={ fmt.Sprintf("request-frame-%s-%d", entry.ID, i) } class="bg-gray-800 p-2 rounded-md text-xs text-gray-300 overflow-x-auto max-h-[150px] overflow-y-auto"><code class="language-json">{ prettyPrintJSON(frame) }</code></pre>
                                         </div>
                                     }
                                 </div>
@@ -214,7 +233,7 @@ templ LogEntry(entry *log.LogEntry) {
                                         <span>Copy</span>
                                     </button>
                                 </div>
-                                <pre id="request-body-{ entry.ID }" class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto max-h-[200px] overflow-y-auto"><code>{ prettyPrintJSON(entry.RequestBody) }</code></pre>
+                                <pre id="request-body-{ entry.ID }" class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto max-h-[200px] overflow-y-auto"><code class="language-json">{ prettyPrintJSON(entry.RequestBody) }</code></pre>
                             </div>
                         }
                     </div>
@@ -224,7 +243,7 @@ templ LogEntry(entry *log.LogEntry) {
                     <div class="space-y-4">
                         <div>
                             <h5 class="text-md font-medium text-gray-400 mb-2">Headers</h5>
-                            <pre class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto"><code>{ formatHeaders(entry.ResponseHeaders) }</code></pre>
+                            <pre class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto"><code class="language-http">{ formatHeaders(entry.ResponseHeaders) }</code></pre>
                         </div>
                         if len(entry.ResponseFrames) > 0 {
                             <div>
@@ -245,7 +264,7 @@ templ LogEntry(entry *log.LogEntry) {
                                                     <span>Copy</span>
                                                 </button>
                                             </div>
-                                            <pre id={ fmt.Sprintf("response-frame-%s-%d", entry.ID, i) } class="bg-gray-800 p-2 rounded-md text-xs text-gray-300 overflow-x-auto max-h-[150px] overflow-y-auto"><code>{ prettyPrintJSON(frame) }</code></pre>
+                                            <pre id={ fmt.Sprintf("response-frame-%s-%d", entry.ID, i) } class="bg-gray-800 p-2 rounded-md text-xs text-gray-300 overflow-x-auto max-h-[150px] overflow-y-auto"><code class="language-json">{ prettyPrintJSON(frame) }</code></pre>
                                         </div>
                                     }
                                 </div>
@@ -269,7 +288,7 @@ templ LogEntry(entry *log.LogEntry) {
                                         </button>
                                     </div>
                                 }
-                                <pre id="response-body-{ entry.ID }" class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto max-h-[200px] overflow-y-auto"><code>{ prettyPrintJSON(entry.ResponseBody) }</code></pre>
+                                <pre id="response-body-{ entry.ID }" class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto max-h-[200px] overflow-y-auto"><code class="language-json">{ prettyPrintJSON(entry.ResponseBody) }</code></pre>
                             </div>
                         }
                     </div>
@@ -299,6 +318,22 @@ templ LogEntry(entry *log.LogEntry) {
                         </div>
                     </div>
                 }
+            </div>
+            <div id={ fmt.Sprintf("content-stub-%s", entry.ID) } class="hidden space-y-4">
+                <div class="flex items-center justify-between mb-2">
+                    <h5 class="text-md font-medium text-gray-400">YAML Stub</h5>
+                    <button
+                        class="flex items-center space-x-2 text-gray-400 hover:text-gray-200 transition-colors duration-200 text-xs"
+                        onclick={ templ.ComponentScript{Call: fmt.Sprintf("copyToClipboard('yaml-stub-%s', this)", entry.ID)} }
+                        title="Copy YAML Stub"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a2.25 2.25 0 01-2.25 2.25h-1.5a2.25 2.25 0 01-2.25-2.25v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"/>
+                        </svg>
+                        <span>Copy</span>
+                    </button>
+                </div>
+                <pre id={ fmt.Sprintf("yaml-stub-%s", entry.ID) } class="bg-gray-800 p-3 rounded-md text-sm text-gray-300 overflow-x-auto max-h-[400px] overflow-y-auto"><code class="language-yaml">{ generateStubYAML(entry, reg) }</code></pre>
             </div>
         </div>
     </details>
