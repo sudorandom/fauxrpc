@@ -270,7 +270,7 @@ func (s *server) rebuildHandlers() error {
 		descBuilder := strings.Builder{}
 		descBuilder.WriteString("# FauxRPC Service Documentation\n\n")
 		descBuilder.WriteString("This is a [FauxRPC](https://fauxrpc.com/) server that is currently hosting the following services:\n\n")
-		s.ServiceRegistry.ForEachService(func(sd protoreflect.ServiceDescriptor) bool {
+		s.ForEachService(func(sd protoreflect.ServiceDescriptor) bool {
 			descBuilder.WriteString("- ")
 			descBuilder.WriteString(string(sd.FullName()))
 			descBuilder.WriteByte('\n')
@@ -278,7 +278,7 @@ func (s *server) rebuildHandlers() error {
 		})
 		descBuilder.WriteString("\nFauxRPC is a mock server that supports gRPC, gRPC-Web, Connect, and HTTP/JSON transcoding.")
 
-		sortedFiles, err := registry.SortFilesByDependency(s.ServiceRegistry.Files())
+		sortedFiles, err := registry.SortFilesByDependency(s.Files())
 		if err != nil {
 			return err
 		}
@@ -354,11 +354,6 @@ func (n *staticNames) Names() []string {
 	return n.names
 }
 
-func singleFileHandler(content string) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		_, _ = fmt.Fprint(w, content)
-	}
-}
 
 type wrappedHandler struct {
 	lock    *sync.RWMutex
