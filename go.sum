@@ -115,6 +115,8 @@ github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
 github.com/sudorandom/protodocs v0.0.10 h1:ceCVC45KXMHTgicl604rK1i5rVM3LQeTJawXTcWShlM=
 github.com/sudorandom/protodocs v0.0.10/go.mod h1:wdJKkgikISqQ7/B9irUgNkUjnLWsQU6MRzASEsNghP8=
+github.com/sudorandom/protodocs v0.0.11 h1:A4Cijj0hA5K5EnA8nrC38GmIo5hl1G+WX/oSH4nMUCc=
+github.com/sudorandom/protodocs v0.0.11/go.mod h1:wdJKkgikISqQ7/B9irUgNkUjnLWsQU6MRzASEsNghP8=
 github.com/tailscale/hujson v0.0.0-20250226034555-ec1d1c113d33 h1:idh63uw+gsG05HwjZsAENCG4KZfyvjK03bpjxa5qRRk=
 github.com/tailscale/hujson v0.0.0-20250226034555-ec1d1c113d33/go.mod h1:EbW0wDK/qEUYI0A5bqq0C2kF8JTQwWONmGDBbzsxxHo=
 github.com/timandy/routine v1.1.6 h1:cueNRVPutK8O6387LL7dmYPLNyS6aKlPCPi5qWCLdc8=

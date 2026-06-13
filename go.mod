@@ -32,7 +32,7 @@ require (
 	github.com/quic-go/quic-go v0.59.1
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.11.1
-	github.com/sudorandom/protodocs v0.0.10
+	github.com/sudorandom/protodocs v0.0.11
 	github.com/tailscale/hujson v0.0.0-20250226034555-ec1d1c113d33
 	go.yaml.in/yaml/v3 v3.0.4
 	golang.org/x/net v0.56.0

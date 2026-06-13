@@ -46,6 +46,7 @@ func (c *RunCmd) Run(globals *Globals) error {
 		WithValidate:  !c.NoValidate,
 		OnlyStubs:     c.OnlyStubs,
 		Addr:          c.Addr,
+		HTTPS:         c.HTTPS || c.HTTP3,
 		WithDashboard: c.Dashboard,
 		MaxDepth:      c.Depth,
 		ProxyTo:       c.ProxyTo,

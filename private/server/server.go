@@ -65,6 +65,7 @@ type ServerOpts struct {
 	OnlyStubs     bool
 	NoCORS        bool
 	Addr          string
+	HTTPS         bool
 	WithDashboard bool
 	MaxDepth      int
 	ProxyTo       string
@@ -287,6 +288,25 @@ func (s *server) rebuildHandlers() error {
 			fds.File = append(fds.File, protodesc.ToFileDescriptorProto(fd))
 		}
 
+		addr := s.opts.Addr
+		if addr == "" {
+			addr = "localhost:6660"
+		}
+		scheme := "http"
+		if s.opts.HTTPS {
+			scheme = "https"
+		}
+		if strings.HasPrefix(addr, ":") {
+			addr = "localhost" + addr
+		}
+		serverURL := fmt.Sprintf("%s://%s", scheme, addr)
+
+		serviceEndpoints := make(map[string]string)
+		s.ForEachService(func(sd protoreflect.ServiceDescriptor) bool {
+			serviceEndpoints[string(sd.FullName())] = serverURL
+			return true
+		})
+
 		handler, err := protodocs.NewHandler(protodocs.Config{
 			Title:                     "FauxRPC",
 			LogoText:                  "FauxRPC",
@@ -296,6 +316,8 @@ func (s *server) rebuildHandlers() error {
 			BottomOfFrontPageMarkdown: "FauxRPC is open source and available at [github.com/sudorandom/fauxrpc](https://github.com/sudorandom/fauxrpc).",
 			BackToText:                "Back to Dashboard",
 			BackToURL:                 "/fauxrpc",
+			ServerURL:                 serverURL,
+			ServiceEndpoints:          serviceEndpoints,
 		})
 		if err != nil {
 			return err
