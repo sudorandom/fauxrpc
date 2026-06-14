@@ -301,9 +301,10 @@ func (s *server) rebuildHandlers() error {
 		}
 		serverURL := fmt.Sprintf("%s://%s", scheme, addr)
 
-		serviceEndpoints := make(map[string]string)
+		serviceEndpoints := make(map[string][]string)
 		s.ForEachService(func(sd protoreflect.ServiceDescriptor) bool {
-			serviceEndpoints[string(sd.FullName())] = serverURL
+			key := string(sd.FullName())
+			serviceEndpoints[key] = append(serviceEndpoints[key], serverURL)
 			return true
 		})
 
@@ -375,7 +376,6 @@ type staticNames struct {
 func (n *staticNames) Names() []string {
 	return n.names
 }
-
 
 type wrappedHandler struct {
 	lock    *sync.RWMutex

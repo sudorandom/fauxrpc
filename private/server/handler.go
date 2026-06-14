@@ -389,4 +389,3 @@ func setFauxRPCHeaders(w http.ResponseWriter, stubsUsed []fauxrpc.StubEntry) {
 		w.Header().Set("x-fauxrpc-source", "fake")
 	}
 }
-

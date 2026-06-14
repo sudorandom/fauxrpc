@@ -115,14 +115,14 @@ func (f StubFile) ToRequest() (*stubsv1.AddStubsRequest, error) {
 }
 
 type StubFileEntry struct {
-	ID           string              `json:"id" yaml:"id,omitempty"`
-	Target       string              `json:"target" yaml:"target"`
-	Content      any                 `json:"content,omitempty" yaml:"content,omitempty"`
-	CelContent   string              `json:"cel_content,omitempty" yaml:"cel_content,omitempty"`
-	ActiveIf     string              `json:"active_if,omitempty" yaml:"active_if,omitempty"`
-	ErrorCode    int                 `json:"error_code,omitempty" yaml:"error_code,omitempty"`
-	ErrorMessage string              `json:"error_message,omitempty" yaml:"error_message,omitempty"`
-	Priority     int32               `json:"priority,omitempty" yaml:"priority,omitempty"`
+	ID           string               `json:"id" yaml:"id,omitempty"`
+	Target       string               `json:"target" yaml:"target"`
+	Content      any                  `json:"content,omitempty" yaml:"content,omitempty"`
+	CelContent   string               `json:"cel_content,omitempty" yaml:"cel_content,omitempty"`
+	ActiveIf     string               `json:"active_if,omitempty" yaml:"active_if,omitempty"`
+	ErrorCode    int                  `json:"error_code,omitempty" yaml:"error_code,omitempty"`
+	ErrorMessage string               `json:"error_message,omitempty" yaml:"error_message,omitempty"`
+	Priority     int32                `json:"priority,omitempty" yaml:"priority,omitempty"`
 	Stream       *StubFileStreamEntry `json:"stream,omitempty" yaml:"stream,omitempty"`
 }
 

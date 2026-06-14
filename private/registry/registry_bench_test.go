@@ -2,18 +2,18 @@ package registry
 
 import (
 	"fmt"
-	"testing"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	"testing"
 )
 
 // A dummy service descriptor
 type dummyServiceDescriptor struct {
-    protoreflect.ServiceDescriptor
-    name protoreflect.FullName
+	protoreflect.ServiceDescriptor
+	name protoreflect.FullName
 }
 
 func (d dummyServiceDescriptor) FullName() protoreflect.FullName {
-    return d.name
+	return d.name
 }
 
 func BenchmarkForEachService_Current(b *testing.B) {

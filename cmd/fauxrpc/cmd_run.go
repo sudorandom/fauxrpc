@@ -94,13 +94,18 @@ func (c *RunCmd) Run(globals *Globals) error {
 	server.Protocols.SetHTTP1(true)
 	server.Protocols.SetUnencryptedHTTP2(true)
 
+	scheme := "http"
+	if c.HTTPS || c.HTTP3 {
+		scheme = "https"
+	}
+
 	fmt.Printf("FauxRPC (%s) - %d services loaded, %d stubs loaded\n", fullVersion(), srv.ServiceCount(), srv.NumStubs())
-	fmt.Printf("Listening on http://%s\n", c.Addr)
+	fmt.Printf("Listening on %s://%s\n", scheme, c.Addr)
 	if c.Dashboard {
-		fmt.Printf("Dashboard: http://%s/fauxrpc\n", c.Addr)
+		fmt.Printf("Dashboard: %s://%s/fauxrpc\n", scheme, c.Addr)
 	}
 	if !c.NoDocPage {
-		fmt.Printf("Documentation: http://%s/fauxrpc/docs/\n", c.Addr)
+		fmt.Printf("Documentation: %s://%s/fauxrpc/docs/\n", scheme, c.Addr)
 	}
 	fmt.Println()
 	fmt.Println("Example Commands:")

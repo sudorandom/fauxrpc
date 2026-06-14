@@ -34,7 +34,7 @@ func TestGenerateStubYAML(t *testing.T) {
 	}
 
 	yamlStr := generateStubYAML(entry, reg)
-	
+
 	if !strings.Contains(yamlStr, "id: test-id") {
 		t.Errorf("Expected id to be in YAML, got:\n%s", yamlStr)
 	}
@@ -54,17 +54,17 @@ func TestGenerateStubYAML(t *testing.T) {
 
 func TestGenerateStubYAML_Error(t *testing.T) {
 	entry := &log.LogEntry{
-		ID:             "test-id",
-		Timestamp:      time.Now(),
-		Service:        "my.Service",
-		Method:         "MyMethod",
-		ClientProtocol: "gRPC",
-		Status:         13, // Internal Error
+		ID:              "test-id",
+		Timestamp:       time.Now(),
+		Service:         "my.Service",
+		Method:          "MyMethod",
+		ClientProtocol:  "gRPC",
+		Status:          13, // Internal Error
 		ResponseHeaders: json.RawMessage(`{"grpc-message": ["Internal Server Error"]}`),
 	}
 
 	yamlStr := generateStubYAML(entry, nil)
-	
+
 	if !strings.Contains(yamlStr, "id: test-id") {
 		t.Errorf("Expected id to be in YAML, got:\n%s", yamlStr)
 	}
