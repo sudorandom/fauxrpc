@@ -319,6 +319,7 @@ func (s *server) rebuildHandlers() error {
 			BackToURL:                 "/fauxrpc",
 			ServerURL:                 serverURL,
 			ServiceEndpoints:          serviceEndpoints,
+			Proxy:                     true,
 		})
 		if err != nil {
 			return err
