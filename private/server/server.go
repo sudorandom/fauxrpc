@@ -33,6 +33,8 @@ import (
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/private/stubs"
 	"github.com/sudorandom/protodocs"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -309,17 +311,25 @@ func (s *server) rebuildHandlers() error {
 		})
 
 		handler, err := protodocs.NewHandler(protodocs.Config{
-			Title:                     "FauxRPC",
-			LogoText:                  "FauxRPC",
-			Descriptors:               fds,
-			Prefix:                    "/fauxrpc/docs/",
-			FrontPageMarkdown:         descBuilder.String(),
-			BottomOfFrontPageMarkdown: "FauxRPC is open source and available at [github.com/sudorandom/fauxrpc](https://github.com/sudorandom/fauxrpc).",
-			BackToText:                "Back to Dashboard",
-			BackToURL:                 "/fauxrpc",
-			ServerURL:                 serverURL,
-			ServiceEndpoints:          serviceEndpoints,
-			Proxy:                     true,
+			Title:       "FauxRPC",
+			LogoText:    "FauxRPC",
+			Descriptors: fds,
+			Prefix:      "/fauxrpc/docs/",
+			FrontPageSections: []protodocs.FrontPageSection{
+				{
+					Type:     "markdown",
+					Markdown: descBuilder.String(),
+				},
+				{
+					Type:     "markdown-small",
+					Markdown: "FauxRPC is open source and available at [github.com/sudorandom/fauxrpc](https://github.com/sudorandom/fauxrpc).",
+				},
+			},
+			BackToText:       "Back to Dashboard",
+			BackToURL:        "/fauxrpc",
+			ServerURL:        serverURL,
+			ServiceEndpoints: serviceEndpoints,
+			Proxy:            true,
 		})
 		if err != nil {
 			return err
@@ -367,7 +377,11 @@ func (s *server) Handler() (http.Handler, error) {
 	mux.Mount(stubsv1connect.NewStubsServiceHandler(stubs.NewHandler(s, s), connect.WithInterceptors(validateInterceptor)))
 	mux.Mount(registryv1connect.NewRegistryServiceHandler(registry.NewHandler(s), connect.WithInterceptors(validateInterceptor)))
 
-	return mux, nil
+	var handler http.Handler = mux
+	if !s.opts.HTTPS {
+		handler = h2c.NewHandler(mux, &http2.Server{})
+	}
+	return handler, nil
 }
 
 type staticNames struct {

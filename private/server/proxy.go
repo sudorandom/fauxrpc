@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"strings"
 
@@ -34,12 +33,10 @@ func (t *proxyTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 func newProxyClient() *http.Client {
-	httpTrans := &http2.Transport{
-		AllowHTTP: true,
-		DialTLS: func(network, addr string, _ *tls.Config) (net.Conn, error) {
-			return net.Dial(network, addr)
-		},
-	}
+	httpTrans := &http.Transport{}
+	httpTrans.Protocols = new(http.Protocols)
+	httpTrans.Protocols.SetUnencryptedHTTP2(true)
+
 	httpsTrans := &http.Transport{
 		TLSClientConfig: &tls.Config{
 			InsecureSkipVerify: true,

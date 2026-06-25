@@ -74,8 +74,14 @@ func setupFauxRPCProxyServer(t *testing.T, upstreamURL string, recordDir string)
 	require.NoError(t, err)
 	ts := httptest.NewServer(mux)
 
+	tr := &http.Transport{}
+	tr.Protocols = new(http.Protocols)
+	tr.Protocols.SetUnencryptedHTTP2(true)
+	hc := &http.Client{
+		Transport: tr,
+	}
 	client := elizav1connect.NewElizaServiceClient(
-		ts.Client(),
+		hc,
 		ts.URL,
 	)
 	return srv, ts, client
@@ -216,5 +222,21 @@ func TestProxyIntegrationUnimplementedAndImplemented(t *testing.T) {
 		assert.Equal(t, "fake", stream.ResponseHeader().Get("x-fauxrpc-source"))
 		assert.True(t, stream.Receive())
 		assert.NotEmpty(t, stream.Msg().Sentence)
+	}
+
+	// C. Unimplemented bidi streaming endpoint (Converse) - fallback
+	{
+		stream := client.Converse(context.Background())
+		err := stream.Send(&elizav1.ConverseRequest{
+			Sentence: "Hello bidi fallback",
+		})
+		require.NoError(t, err)
+		err = stream.CloseRequest()
+		require.NoError(t, err)
+
+		resp, err := stream.Receive()
+		require.NoError(t, err)
+		assert.Equal(t, "fake", stream.ResponseHeader().Get("x-fauxrpc-source"))
+		assert.NotEmpty(t, resp.Sentence)
 	}
 }
