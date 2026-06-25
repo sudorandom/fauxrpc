@@ -72,7 +72,11 @@ func setupFauxRPCProxyServer(t *testing.T, upstreamURL string, recordDir string)
 
 	mux, err := srv.Handler()
 	require.NoError(t, err)
-	ts := httptest.NewServer(mux)
+	ts := httptest.NewUnstartedServer(mux)
+	ts.Config.Protocols = new(http.Protocols)
+	ts.Config.Protocols.SetHTTP1(true)
+	ts.Config.Protocols.SetUnencryptedHTTP2(true)
+	ts.Start()
 
 	tr := &http.Transport{}
 	tr.Protocols = new(http.Protocols)

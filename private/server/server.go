@@ -33,8 +33,6 @@ import (
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/private/stubs"
 	"github.com/sudorandom/protodocs"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -377,11 +375,7 @@ func (s *server) Handler() (http.Handler, error) {
 	mux.Mount(stubsv1connect.NewStubsServiceHandler(stubs.NewHandler(s, s), connect.WithInterceptors(validateInterceptor)))
 	mux.Mount(registryv1connect.NewRegistryServiceHandler(registry.NewHandler(s), connect.WithInterceptors(validateInterceptor)))
 
-	var handler http.Handler = mux
-	if !s.opts.HTTPS {
-		handler = h2c.NewHandler(mux, &http2.Server{})
-	}
-	return handler, nil
+	return mux, nil
 }
 
 type staticNames struct {
