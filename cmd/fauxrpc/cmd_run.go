@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/quic-go/quic-go/http3" //nolint:staticcheck
@@ -17,24 +19,25 @@ import (
 )
 
 type RunCmd struct {
-	Schema       []string `help:"The modules to use for the RPC schema. It can be protobuf descriptors (binpb, json, yaml), a URL for reflection or a directory of descriptors."`
-	Addr         string   `short:"a" help:"Address to bind to." default:"127.0.0.1:6660"`
-	NoReflection bool     `help:"Disables the server reflection service."`
-	NoHTTPLog    bool     `help:"Disables the HTTP log."`
-	NoValidate   bool     `help:"Disables protovalidate."`
-	NoDocPage    bool     `help:"Disables the documentation page."`
-	NoCORS       bool     `help:"Disables CORS headers."`
-	HTTPS        bool     `help:"Enables HTTPS, requires cert and certkey"`
-	Cert         string   `help:"Path to certificate file"`
-	CertKey      string   `help:"Path to certificate key file"`
-	HTTP3        bool     `help:"Enables HTTP/3 support."`
-	Empty        bool     `help:"Allows the server to run with no services."`
-	OnlyStubs    bool     `help:"Only use pre-defined stubs and don't make up fake data."`
-	Stubs        []string `help:"Directories or file paths for JSON files."`
-	Dashboard    bool     `help:"Enable the admin dashboard."`
-	Depth        int      `help:"Max depth for generated messages." default:"5"`
-	ProxyTo      string   `help:"Address of the upstream gRPC/Connect server to proxy requests to."`
-	RecordDir    string   `help:"Directory path to write/append the recorded stubs structured by service/method (e.g. stubs/)."`
+	Schema        []string `help:"The modules to use for the RPC schema. It can be protobuf descriptors (binpb, json, yaml), a URL for reflection or a directory of descriptors."`
+	Addr          string   `short:"a" help:"Address to bind to." default:"127.0.0.1:6660"`
+	NoReflection  bool     `help:"Disables the server reflection service."`
+	NoHTTPLog     bool     `help:"Disables the HTTP log."`
+	NoValidate    bool     `help:"Disables protovalidate."`
+	NoDocPage     bool     `help:"Disables the documentation page."`
+	NoCORS        bool     `help:"Disables CORS headers."`
+	HTTPS         bool     `help:"Enables HTTPS, requires cert and certkey"`
+	Cert          string   `help:"Path to certificate file"`
+	CertKey       string   `help:"Path to certificate key file"`
+	HTTP3         bool     `help:"Enables HTTP/3 support."`
+	Empty         bool     `help:"Allows the server to run with no services."`
+	OnlyStubs     bool     `help:"Only use pre-defined stubs and don't make up fake data."`
+	Stubs         []string `help:"Directories or file paths for JSON files."`
+	Dashboard     bool     `help:"Enable the admin dashboard."`
+	Depth         int      `help:"Max depth for generated messages." default:"5"`
+	ProxyTo       string   `help:"Address of the upstream gRPC/Connect server to proxy requests to."`
+	RecordDir     string   `help:"Directory path to write/append the recorded stubs structured by service/method (e.g. stubs/)."`
+	SslKeylogFile string   `help:"Path to file for logging tls secrets, requires HTTPS or HTTP3."`
 }
 
 func (c *RunCmd) Run(globals *Globals) error {
@@ -86,9 +89,27 @@ func (c *RunCmd) Run(globals *Globals) error {
 	if err != nil {
 		return err
 	}
+
+	var tlsConfig *tls.Config
+	if len(c.SslKeylogFile) > 0 && (c.HTTPS || c.HTTP3) {
+		keyLogFile, err := os.OpenFile(c.SslKeylogFile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0600)
+		if err != nil {
+			return fmt.Errorf("failed to open key log file: %w", err)
+		}
+		defer keyLogFile.Close()
+
+		// Configure the TLS settings with the KeyLogWriter
+		tlsConfig = &tls.Config{
+			KeyLogWriter: keyLogFile,
+		}
+	} else if len(c.SslKeylogFile) > 0 && !(c.HTTPS || c.HTTP3) {
+		return errors.New("--https or --http-3 are required for --ssl-keylog-file")
+	}
+
 	server := &http.Server{
-		Addr:    c.Addr,
-		Handler: handler,
+		Addr:      c.Addr,
+		Handler:   handler,
+		TLSConfig: tlsConfig,
 	}
 	server.Protocols = new(http.Protocols)
 	server.Protocols.SetHTTP1(true)
