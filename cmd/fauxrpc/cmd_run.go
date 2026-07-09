@@ -96,13 +96,17 @@ func (c *RunCmd) Run(globals *Globals) error {
 		if err != nil {
 			return fmt.Errorf("failed to open key log file: %w", err)
 		}
-		defer keyLogFile.Close()
+		defer func() {
+			if err := keyLogFile.Close(); err != nil {
+				slog.Error("error while closing the key log file", "error", err)
+			}
+		}()
 
 		// Configure the TLS settings with the KeyLogWriter
 		tlsConfig = &tls.Config{
 			KeyLogWriter: keyLogFile,
 		}
-	} else if len(c.SslKeylogFile) > 0 && !(c.HTTPS || c.HTTP3) {
+	} else if len(c.SslKeylogFile) > 0 && !c.HTTPS && !c.HTTP3 {
 		return errors.New("--https or --http-3 are required for --ssl-keylog-file")
 	}
 
