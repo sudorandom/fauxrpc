@@ -117,6 +117,7 @@ func (c *RunCmd) Run(globals *Globals) error {
 	}
 	server.Protocols = new(http.Protocols)
 	server.Protocols.SetHTTP1(true)
+	server.Protocols.SetHTTP2(true)
 	server.Protocols.SetUnencryptedHTTP2(true)
 
 	scheme := "http"
