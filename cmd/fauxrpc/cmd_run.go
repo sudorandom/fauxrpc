@@ -117,7 +117,7 @@ func (c *RunCmd) Run(globals *Globals) error {
 	}
 	server.Protocols = new(http.Protocols)
 	server.Protocols.SetHTTP1(true)
-	server.Protocols.SetUnencryptedHTTP2(true)
+	server.Protocols.SetHTTP2(true)
 
 	scheme := "http"
 	if c.HTTPS || c.HTTP3 {
@@ -168,6 +168,7 @@ func (c *RunCmd) Run(globals *Globals) error {
 			fmt.Printf("$ buf curl --http2-prior-knowledge http://%s --list-methods\n", c.Addr)
 		}
 		fmt.Printf("$ buf curl --http2-prior-knowledge http://%s/[METHOD_NAME]\n", c.Addr)
+		server.Protocols.SetUnencryptedHTTP2(true)
 		eg.Go(server.ListenAndServe)
 	}
 

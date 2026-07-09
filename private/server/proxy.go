@@ -145,6 +145,13 @@ func handleProxy(
 		}
 	}
 
+	// Mirror grpc-encoding: gzip on responses if the client requested it.
+	useGzip := strings.EqualFold(r.Header.Get("grpc-encoding"), "gzip")
+	writeMessage := grpc.WriteGRPCMessage
+	if useGzip {
+		writeMessage = grpc.WriteGRPCMessageGzip
+	}
+
 	if !isClientStream && !isServerStream {
 		reqMsg, st := readUnaryRequest(r, method.Input())
 		if st != nil {
@@ -170,13 +177,16 @@ func handleProxy(
 
 		copyHeaders(resp.Header(), w.Header())
 		w.Header().Set("x-fauxrpc-source", "proxy")
+		if useGzip {
+			w.Header().Set("grpc-encoding", "gzip")
+		}
 		*responseBody = resp.Msg
 
 		b, err := proto.Marshal(resp.Msg)
 		if err != nil {
 			return err
 		}
-		return grpc.WriteGRPCMessage(w, b)
+		return writeMessage(w, b)
 	}
 
 	if !isClientStream && isServerStream {
@@ -204,6 +214,9 @@ func handleProxy(
 
 		copyHeaders(stream.ResponseHeader(), w.Header())
 		w.Header().Set("x-fauxrpc-source", "proxy")
+		if useGzip {
+			w.Header().Set("grpc-encoding", "gzip")
+		}
 
 		for stream.Receive() {
 			respMsg := stream.Msg()
@@ -213,7 +226,7 @@ func handleProxy(
 			if err != nil {
 				return err
 			}
-			if err := grpc.WriteGRPCMessage(w, respBytes); err != nil {
+			if err := writeMessage(w, respBytes); err != nil {
 				return err
 			}
 		}
@@ -284,13 +297,16 @@ func handleProxy(
 
 		copyHeaders(resp.Header(), w.Header())
 		w.Header().Set("x-fauxrpc-source", "proxy")
+		if useGzip {
+			w.Header().Set("grpc-encoding", "gzip")
+		}
 		*responseBody = resp.Msg
 
 		respBytes, err := proto.Marshal(resp.Msg)
 		if err != nil {
 			return err
 		}
-		return grpc.WriteGRPCMessage(w, respBytes)
+		return writeMessage(w, respBytes)
 	}
 
 	if isClientStream && isServerStream {
@@ -357,7 +373,7 @@ func handleProxy(
 				if err != nil {
 					return err
 				}
-				if err := grpc.WriteGRPCMessage(w, respBytes); err != nil {
+				if err := writeMessage(w, respBytes); err != nil {
 					return err
 				}
 			}
@@ -370,6 +386,9 @@ func handleProxy(
 
 		copyHeaders(bidiStream.ResponseHeader(), w.Header())
 		w.Header().Set("x-fauxrpc-source", "proxy")
+		if useGzip {
+			w.Header().Set("grpc-encoding", "gzip")
+		}
 
 		return err
 	}

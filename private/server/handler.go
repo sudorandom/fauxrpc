@@ -129,6 +129,13 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 		w.Header().Set("Trailer", "Grpc-Status,Grpc-Message,Grpc-Status-Details-Bin")
 		w.Header().Add("Content-Type", "application/grpc")
 
+		// Mirror the client's requested encoding (gzip) on the response.
+		useGzip := strings.EqualFold(r.Header.Get("grpc-encoding"), "gzip")
+		writeMessage := grpc.WriteGRPCMessage
+		if useGzip {
+			w.Header().Set("grpc-encoding", "gzip")
+			writeMessage = grpc.WriteGRPCMessageGzip
+		}
 		if len(parts) != 3 {
 			s.IncrementErrors()
 			finalStatus = status.New(codes.NotFound, "")
@@ -272,7 +279,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 					if err != nil {
 						return status.New(codes.Internal, err.Error()).Err()
 					}
-					if err := grpc.WriteGRPCMessage(w, b); err != nil {
+					if err := writeMessage(w, b); err != nil {
 						return err
 					}
 					resFrameTracker.Add(msg)
@@ -314,7 +321,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 				return status.New(codes.Internal, err.Error()).Err()
 			}
 			setFauxRPCHeaders(w, stubsUsed)
-			return grpc.WriteGRPCMessage(w, b)
+			return writeMessage(w, b)
 		})
 
 		// Write response
