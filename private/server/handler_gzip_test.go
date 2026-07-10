@@ -2,7 +2,9 @@ package server
 
 import (
 	"bytes"
+	"compress/flate"
 	"compress/gzip"
+	"compress/zlib"
 	"encoding/binary"
 	"io"
 	"net/http"
@@ -42,6 +44,51 @@ func writeMsgGzip(t *testing.T, w io.Writer, msg proto.Message) {
 	require.NoError(t, err)
 }
 
+// writeMsgDeflate writes a zlib-wrapped deflate gRPC frame (flag=1).
+func writeMsgDeflate(t *testing.T, w io.Writer, msg proto.Message) {
+	t.Helper()
+	b, err := proto.Marshal(msg)
+	require.NoError(t, err)
+
+	var compressed bytes.Buffer
+	zw := zlib.NewWriter(&compressed)
+	_, err = zw.Write(b)
+	require.NoError(t, err)
+	require.NoError(t, zw.Close())
+
+	payload := compressed.Bytes()
+	prefix := make([]byte, 5)
+	prefix[0] = 1 // compressed
+	binary.BigEndian.PutUint32(prefix[1:], uint32(len(payload)))
+	_, err = w.Write(prefix)
+	require.NoError(t, err)
+	_, err = w.Write(payload)
+	require.NoError(t, err)
+}
+
+// writeMsgRawDeflate writes a raw RFC 1951 deflate gRPC frame (flag=1).
+func writeMsgRawDeflate(t *testing.T, w io.Writer, msg proto.Message) {
+	t.Helper()
+	b, err := proto.Marshal(msg)
+	require.NoError(t, err)
+
+	var compressed bytes.Buffer
+	fw, err := flate.NewWriter(&compressed, flate.DefaultCompression)
+	require.NoError(t, err)
+	_, err = fw.Write(b)
+	require.NoError(t, err)
+	require.NoError(t, fw.Close())
+
+	payload := compressed.Bytes()
+	prefix := make([]byte, 5)
+	prefix[0] = 1 // compressed
+	binary.BigEndian.PutUint32(prefix[1:], uint32(len(payload)))
+	_, err = w.Write(prefix)
+	require.NoError(t, err)
+	_, err = w.Write(payload)
+	require.NoError(t, err)
+}
+
 // readGzipFrame reads one gRPC length-prefixed frame and decompresses it if flag=1.
 func readGzipFrame(t *testing.T, r io.Reader) ([]byte, bool) {
 	t.Helper()
@@ -70,6 +117,38 @@ func readGzipFrame(t *testing.T, r io.Reader) ([]byte, bool) {
 	require.NoError(t, err)
 	decompressed, err := io.ReadAll(gr)
 	require.NoError(t, err)
+	return decompressed, true
+}
+
+// readDeflateFrame reads one zlib-wrapped deflate gRPC frame.
+func readDeflateFrame(t *testing.T, r io.Reader) ([]byte, bool) {
+	t.Helper()
+	prefix := make([]byte, 5)
+	_, err := io.ReadFull(r, prefix)
+	if err == io.EOF {
+		return nil, false
+	}
+	require.NoError(t, err)
+
+	isCompressed := prefix[0] == 1
+	size := binary.BigEndian.Uint32(prefix[1:])
+	if size == 0 {
+		return nil, true
+	}
+
+	payload := make([]byte, size)
+	_, err = io.ReadFull(r, payload)
+	require.NoError(t, err)
+
+	if !isCompressed {
+		return payload, true
+	}
+
+	zr, err := zlib.NewReader(bytes.NewReader(payload))
+	require.NoError(t, err)
+	decompressed, err := io.ReadAll(zr)
+	require.NoError(t, err)
+	require.NoError(t, zr.Close())
 	return decompressed, true
 }
 
@@ -131,6 +210,30 @@ func TestHandler_GzipRequest_UnaryResponse(t *testing.T) {
 		grpcStatus = res.Header.Get("Grpc-Status")
 	}
 	assert.Equal(t, "0", grpcStatus)
+}
+
+func TestHandler_DeflateRequest_UnaryResponse(t *testing.T) {
+	handler := newElizaHandler(t)
+
+	var body bytes.Buffer
+	writeMsgDeflate(t, &body, &elizav1.SayRequest{Sentence: "hello from deflate"})
+
+	req := httptest.NewRequest("POST", "/connectrpc.eliza.v1.ElizaService/Say", &body)
+	req.Header.Set("Content-Type", "application/grpc")
+	req.Header.Set("grpc-encoding", "deflate")
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	res := w.Result()
+	assert.Equal(t, http.StatusOK, res.StatusCode)
+	assert.Equal(t, "deflate", res.Header.Get("grpc-encoding"))
+
+	respBytes, ok := readDeflateFrame(t, res.Body)
+	require.True(t, ok)
+
+	var respMsg elizav1.SayResponse
+	require.NoError(t, proto.Unmarshal(respBytes, &respMsg))
 }
 
 // TestHandler_UncompressedRequest_UncompressedResponse verifies the baseline
@@ -246,4 +349,24 @@ func TestHandler_GzipRequest_InvalidPayload(t *testing.T) {
 	assert.NotEmpty(t, grpcStatus)
 	// Specifically, this should be NotFound (4) or Internal (13), not OK (0).
 	assert.NotEqual(t, codes.OK.String(), grpcStatus)
+}
+
+func TestHandler_DeflateRequest_RejectsRawDeflatePayload(t *testing.T) {
+	handler := newElizaHandler(t)
+
+	var body bytes.Buffer
+	writeMsgRawDeflate(t, &body, &elizav1.SayRequest{Sentence: "raw deflate"})
+
+	req := httptest.NewRequest("POST", "/connectrpc.eliza.v1.ElizaService/Say",
+		bytes.NewReader(body.Bytes()))
+	req.Header.Set("Content-Type", "application/grpc")
+	req.Header.Set("grpc-encoding", "deflate")
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	res := w.Result()
+	grpcStatus := res.Header.Get("Grpc-Status")
+	assert.NotEqual(t, "0", grpcStatus, "expected non-OK grpc status for raw deflate payload")
+	assert.NotEmpty(t, grpcStatus)
 }

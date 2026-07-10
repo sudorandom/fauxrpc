@@ -2,7 +2,9 @@ package grpc
 
 import (
 	"bytes"
+	"compress/flate"
 	"compress/gzip"
+	"compress/zlib"
 	"encoding/binary"
 	"io"
 	"testing"
@@ -35,6 +37,36 @@ func makeGzipFrame(payload []byte) []byte {
 	return frame
 }
 
+// makeDeflateFrame builds a raw gRPC length-prefixed frame with flag=1 (zlib-wrapped deflate).
+func makeDeflateFrame(payload []byte) []byte {
+	var buf bytes.Buffer
+	zw := zlib.NewWriter(&buf)
+	_, _ = zw.Write(payload)
+	_ = zw.Close()
+	compressed := buf.Bytes()
+
+	frame := make([]byte, 5+len(compressed))
+	frame[0] = 1
+	binary.BigEndian.PutUint32(frame[1:], uint32(len(compressed)))
+	copy(frame[5:], compressed)
+	return frame
+}
+
+// makeRawDeflateFrame builds a compressed gRPC frame with raw RFC 1951 bytes.
+func makeRawDeflateFrame(payload []byte) []byte {
+	var buf bytes.Buffer
+	fw, _ := flate.NewWriter(&buf, flate.DefaultCompression)
+	_, _ = fw.Write(payload)
+	_ = fw.Close()
+	compressed := buf.Bytes()
+
+	frame := make([]byte, 5+len(compressed))
+	frame[0] = 1
+	binary.BigEndian.PutUint32(frame[1:], uint32(len(compressed)))
+	copy(frame[5:], compressed)
+	return frame
+}
+
 // --- ReadGRPCMessage ---
 
 func TestReadGRPCMessage_Uncompressed(t *testing.T) {
@@ -53,6 +85,16 @@ func TestReadGRPCMessage_Gzip(t *testing.T) {
 
 	buf := make([]byte, 4096)
 	n, err := ReadGRPCMessage(bytes.NewReader(frame), buf)
+	require.NoError(t, err)
+	assert.Equal(t, payload, buf[:n])
+}
+
+func TestReadGRPCMessageWithEncoding_DeflateUsesZlib(t *testing.T) {
+	payload := []byte("hello zlib-wrapped deflate world")
+	frame := makeDeflateFrame(payload)
+
+	buf := make([]byte, 4096)
+	n, err := ReadGRPCMessageWithEncoding(bytes.NewReader(frame), buf, "deflate")
 	require.NoError(t, err)
 	assert.Equal(t, payload, buf[:n])
 }
@@ -90,6 +132,15 @@ func TestReadGRPCMessage_MultipleFrames(t *testing.T) {
 	n2, err := ReadGRPCMessage(r, readBuf)
 	require.NoError(t, err)
 	assert.Equal(t, payload2, readBuf[:n2])
+}
+
+func TestReadGRPCMessageWithEncoding_DeflateRejectsRawDeflate(t *testing.T) {
+	payload := []byte("raw deflate is not grpc deflate")
+	frame := makeRawDeflateFrame(payload)
+
+	buf := make([]byte, 4096)
+	_, err := ReadGRPCMessageWithEncoding(bytes.NewReader(frame), buf, "deflate")
+	require.Error(t, err)
 }
 
 func TestReadGRPCMessage_InvalidGzip(t *testing.T) {
@@ -140,6 +191,25 @@ func TestWriteGRPCMessageGzip_SetsCompressedFlag(t *testing.T) {
 	assert.Equal(t, payload, decompressed)
 }
 
+func TestWriteGRPCMessageCompressed_DeflateUsesZlib(t *testing.T) {
+	payload := []byte("hello deflate")
+	var buf bytes.Buffer
+	require.NoError(t, WriteGRPCMessageCompressed(&buf, payload, "deflate"))
+
+	b := buf.Bytes()
+	require.GreaterOrEqual(t, len(b), 5)
+	assert.Equal(t, byte(1), b[0], "compression flag should be 1")
+
+	size := binary.BigEndian.Uint32(b[1:5])
+	compressed := b[5 : 5+size]
+	zr, err := zlib.NewReader(bytes.NewReader(compressed))
+	require.NoError(t, err)
+	decompressed, err := io.ReadAll(zr)
+	require.NoError(t, err)
+	require.NoError(t, zr.Close())
+	assert.Equal(t, payload, decompressed)
+}
+
 // --- Round-trip ---
 
 func TestRoundTrip_WriteGzip_ReadGzip(t *testing.T) {
@@ -150,6 +220,18 @@ func TestRoundTrip_WriteGzip_ReadGzip(t *testing.T) {
 
 	readBuf := make([]byte, 4096)
 	n, err := ReadGRPCMessage(&buf, readBuf)
+	require.NoError(t, err)
+	assert.Equal(t, payload, readBuf[:n])
+}
+
+func TestRoundTrip_WriteDeflate_ReadDeflate(t *testing.T) {
+	payload := []byte("round-trip zlib-wrapped deflate payload")
+	var buf bytes.Buffer
+
+	require.NoError(t, WriteGRPCMessageCompressed(&buf, payload, "deflate"))
+
+	readBuf := make([]byte, 4096)
+	n, err := ReadGRPCMessageWithEncoding(&buf, readBuf, "deflate")
 	require.NoError(t, err)
 	assert.Equal(t, payload, readBuf[:n])
 }

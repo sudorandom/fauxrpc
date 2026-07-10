@@ -20,10 +20,10 @@ import (
 
 func TestClientAcceptsGzip(t *testing.T) {
 	cases := []struct {
-		name            string
-		grpcEncoding    string
-		grpcAcceptEnc   string
-		expectAccepted  bool
+		name           string
+		grpcEncoding   string
+		grpcAcceptEnc  string
+		expectAccepted bool
 	}{
 		{
 			name:           "no headers — no gzip",
@@ -40,23 +40,23 @@ func TestClientAcceptsGzip(t *testing.T) {
 			expectAccepted: false,
 		},
 		{
-			name:          "grpc-accept-encoding: gzip only",
-			grpcAcceptEnc: "gzip",
+			name:           "grpc-accept-encoding: gzip only",
+			grpcAcceptEnc:  "gzip",
 			expectAccepted: true,
 		},
 		{
-			name:          "grpc-accept-encoding: identity,gzip",
-			grpcAcceptEnc: "identity,gzip",
+			name:           "grpc-accept-encoding: identity,gzip",
+			grpcAcceptEnc:  "identity,gzip",
 			expectAccepted: true,
 		},
 		{
-			name:          "grpc-accept-encoding: gzip,deflate",
-			grpcAcceptEnc: "gzip,deflate",
+			name:           "grpc-accept-encoding: gzip,deflate",
+			grpcAcceptEnc:  "gzip,deflate",
 			expectAccepted: true,
 		},
 		{
-			name:          "grpc-accept-encoding: identity only",
-			grpcAcceptEnc: "identity",
+			name:           "grpc-accept-encoding: identity only",
+			grpcAcceptEnc:  "identity",
 			expectAccepted: false,
 		},
 		{
@@ -68,18 +68,18 @@ func TestClientAcceptsGzip(t *testing.T) {
 			expectAccepted: false,
 		},
 		{
-			name:          "grpc-accept-encoding with whitespace around gzip",
-			grpcAcceptEnc: "identity, gzip , deflate",
+			name:           "grpc-accept-encoding with whitespace around gzip",
+			grpcAcceptEnc:  "identity, gzip , deflate",
 			expectAccepted: true,
 		},
 		{
-			name:          "grpc-accept-encoding: GZIP (case-insensitive)",
-			grpcAcceptEnc: "GZIP",
+			name:           "grpc-accept-encoding: GZIP (case-insensitive)",
+			grpcAcceptEnc:  "GZIP",
 			expectAccepted: true,
 		},
 		{
-			name:          "grpc-accept-encoding: Gzip (mixed case)",
-			grpcAcceptEnc: "Gzip",
+			name:           "grpc-accept-encoding: Gzip (mixed case)",
+			grpcAcceptEnc:  "Gzip",
 			expectAccepted: true,
 		},
 	}
@@ -95,6 +95,64 @@ func TestClientAcceptsGzip(t *testing.T) {
 				req.Header.Set("grpc-accept-encoding", tc.grpcAcceptEnc)
 			}
 			assert.Equal(t, tc.expectAccepted, clientAcceptsGzip(req))
+		})
+	}
+}
+
+func TestResponseCompressionEncoding(t *testing.T) {
+	cases := []struct {
+		name           string
+		grpcEncoding   string
+		grpcAcceptEnc  string
+		expectEncoding string
+	}{
+		{
+			name: "no compression headers",
+		},
+		{
+			name:           "mirror gzip request when accept is absent",
+			grpcEncoding:   "gzip",
+			expectEncoding: "gzip",
+		},
+		{
+			name:           "mirror deflate request when accept is absent",
+			grpcEncoding:   "deflate",
+			expectEncoding: "deflate",
+		},
+		{
+			name:           "prefer gzip over deflate when both are accepted",
+			grpcAcceptEnc:  "deflate,gzip",
+			expectEncoding: "gzip",
+		},
+		{
+			name:           "use deflate when it is the only supported accepted encoding",
+			grpcAcceptEnc:  "identity, deflate",
+			expectEncoding: "deflate",
+		},
+		{
+			name:           "accept header overrides request encoding",
+			grpcEncoding:   "deflate",
+			grpcAcceptEnc:  "identity",
+			expectEncoding: "",
+		},
+		{
+			name:           "case-insensitive deflate",
+			grpcAcceptEnc:  "DEFLATE",
+			expectEncoding: "deflate",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			req, err := http.NewRequest("POST", "/", nil)
+			require.NoError(t, err)
+			if tc.grpcEncoding != "" {
+				req.Header.Set("grpc-encoding", tc.grpcEncoding)
+			}
+			if tc.grpcAcceptEnc != "" {
+				req.Header.Set("grpc-accept-encoding", tc.grpcAcceptEnc)
+			}
+			assert.Equal(t, tc.expectEncoding, responseCompressionEncoding(req))
 		})
 	}
 }
@@ -165,6 +223,25 @@ func TestHandler_AcceptEncoding_MultipleEncodings(t *testing.T) {
 
 	res := w.Result()
 	assert.Equal(t, "gzip", res.Header.Get("grpc-encoding"))
+}
+
+func TestHandler_AcceptEncoding_DeflateOnly(t *testing.T) {
+	handler := newTestHandler(t)
+
+	req := httptest.NewRequest("POST", "/connectrpc.eliza.v1.ElizaService/Say", makeUnaryBody(t))
+	req.Header.Set("Content-Type", "application/grpc")
+	req.Header.Set("grpc-accept-encoding", "deflate")
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	res := w.Result()
+	assert.Equal(t, "deflate", res.Header.Get("grpc-encoding"))
+
+	respBytes, ok := readDeflateFrame(t, res.Body)
+	require.True(t, ok)
+	var msg elizav1.SayResponse
+	require.NoError(t, proto.Unmarshal(respBytes, &msg))
 }
 
 // TestHandler_AcceptEncoding_IdentityOnly verifies that a client advertising

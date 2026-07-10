@@ -3,18 +3,48 @@ package grpc
 import (
 	"bytes"
 	"compress/gzip"
+	"compress/zlib"
 	"encoding/binary"
 	"fmt"
 	"io"
-	"sync"
+	"strings"
 )
 
-var gzipReaderPool = sync.Pool{
-	New: func() any { return new(gzip.Reader) },
+type compressionCodec interface {
+	NewReader(io.Reader) (io.ReadCloser, error)
+	NewWriter(io.Writer) (io.WriteCloser, error)
 }
 
-var gzipWriterPool = sync.Pool{
-	New: func() any { return gzip.NewWriter(io.Discard) },
+type compressionCodecFuncs struct {
+	newReader func(io.Reader) (io.ReadCloser, error)
+	newWriter func(io.Writer) (io.WriteCloser, error)
+}
+
+func (c compressionCodecFuncs) NewReader(r io.Reader) (io.ReadCloser, error) {
+	return c.newReader(r)
+}
+
+func (c compressionCodecFuncs) NewWriter(w io.Writer) (io.WriteCloser, error) {
+	return c.newWriter(w)
+}
+
+var compressionCodecs = map[string]compressionCodec{
+	"gzip": compressionCodecFuncs{
+		newReader: func(r io.Reader) (io.ReadCloser, error) {
+			return gzip.NewReader(r)
+		},
+		newWriter: func(w io.Writer) (io.WriteCloser, error) {
+			return gzip.NewWriter(w), nil
+		},
+	},
+	"deflate": compressionCodecFuncs{
+		newReader: func(r io.Reader) (io.ReadCloser, error) {
+			return zlib.NewReader(r)
+		},
+		newWriter: func(w io.Writer) (io.WriteCloser, error) {
+			return zlib.NewWriter(w), nil
+		},
+	},
 }
 
 // WriteGRPCMessage writes an uncompressed gRPC length-prefixed message.
@@ -33,18 +63,21 @@ func WriteGRPCMessage(w io.Writer, msg []byte) error {
 // WriteGRPCMessageGzip writes a gzip-compressed gRPC length-prefixed message.
 // The compression flag byte is set to 1.
 func WriteGRPCMessageGzip(w io.Writer, msg []byte) error {
+	return WriteGRPCMessageCompressed(w, msg, "gzip")
+}
+
+// WriteGRPCMessageCompressed writes a compressed gRPC length-prefixed message.
+// The compression flag byte is set to 1.
+func WriteGRPCMessageCompressed(w io.Writer, msg []byte, encoding string) error {
+	codec, ok := lookupCompressionCodec(encoding)
+	if !ok {
+		return fmt.Errorf("grpc: unsupported compression encoding %q", encoding)
+	}
+
 	var buf bytes.Buffer
-	gz := gzipWriterPool.Get().(*gzip.Writer)
-	gz.Reset(&buf)
-	if _, err := gz.Write(msg); err != nil {
-		gzipWriterPool.Put(gz)
-		return fmt.Errorf("grpc: gzip write: %w", err)
+	if err := writeCompressedPayload(&buf, msg, codec); err != nil {
+		return fmt.Errorf("grpc: %s write: %w", encoding, err)
 	}
-	if err := gz.Close(); err != nil {
-		gzipWriterPool.Put(gz)
-		return fmt.Errorf("grpc: gzip close: %w", err)
-	}
-	gzipWriterPool.Put(gz)
 
 	compressed := buf.Bytes()
 	var prefix [5]byte
@@ -59,10 +92,35 @@ func WriteGRPCMessageGzip(w io.Writer, msg []byte) error {
 	return nil
 }
 
+func lookupCompressionCodec(encoding string) (compressionCodec, bool) {
+	codec, ok := compressionCodecs[strings.ToLower(strings.TrimSpace(encoding))]
+	return codec, ok
+}
+
+func writeCompressedPayload(w io.Writer, msg []byte, codec compressionCodec) error {
+	cw, err := codec.NewWriter(w)
+	if err != nil {
+		return err
+	}
+	if _, err := cw.Write(msg); err != nil {
+		_ = cw.Close()
+		return err
+	}
+	return cw.Close()
+}
+
 // ReadGRPCMessage reads a gRPC length-prefixed message from body into msg.
 // If the compression flag is set to 1 (gzip), the payload is decompressed
 // transparently before being written into msg.
 func ReadGRPCMessage(body io.Reader, msg []byte) (int, error) {
+	return ReadGRPCMessageWithEncoding(body, msg, "gzip")
+}
+
+// ReadGRPCMessageWithEncoding reads a gRPC length-prefixed message from body
+// into msg. If the compression flag is set to 1, the payload is decompressed
+// using encoding. The gRPC "deflate" encoding is the zlib structure from RFC
+// 1950 carrying the deflate algorithm from RFC 1951, never raw deflate data.
+func ReadGRPCMessageWithEncoding(body io.Reader, msg []byte, encoding string) (int, error) {
 	prefixes := [5]byte{}
 	if _, err := io.ReadFull(body, prefixes[:]); err != nil {
 		if err == io.EOF {
@@ -86,20 +144,28 @@ func ReadGRPCMessage(body io.Reader, msg []byte) (int, error) {
 		return n, nil
 	}
 
-	// Decompress gzip-encoded payload.
-	gr := gzipReaderPool.Get().(*gzip.Reader)
-	if resetErr := gr.Reset(bytes.NewReader(msg[:n])); resetErr != nil {
-		gzipReaderPool.Put(gr)
-		return 0, fmt.Errorf("failed to init gzip reader: %w", resetErr)
+	if strings.TrimSpace(encoding) == "" || strings.EqualFold(strings.TrimSpace(encoding), "identity") {
+		return 0, fmt.Errorf("compressed message missing grpc-encoding")
 	}
-	decompressed, readErr := io.ReadAll(gr)
-	closeErr := gr.Close()
-	gzipReaderPool.Put(gr)
+	codec, ok := lookupCompressionCodec(encoding)
+	if !ok {
+		return 0, fmt.Errorf("unsupported grpc-encoding %q", encoding)
+	}
+	return readCompressedPayload(msg, n, codec)
+}
+
+func readCompressedPayload(msg []byte, n int, codec compressionCodec) (int, error) {
+	cr, err := codec.NewReader(bytes.NewReader(msg[:n]))
+	if err != nil {
+		return 0, fmt.Errorf("failed to init compression reader: %w", err)
+	}
+	decompressed, readErr := io.ReadAll(cr)
+	closeErr := cr.Close()
 	if readErr != nil {
 		return 0, fmt.Errorf("failed to decompress message: %w", readErr)
 	}
 	if closeErr != nil {
-		return 0, fmt.Errorf("failed to close gzip reader: %w", closeErr)
+		return 0, fmt.Errorf("failed to close compression reader: %w", closeErr)
 	}
 	copy(msg, decompressed)
 	return len(decompressed), nil
