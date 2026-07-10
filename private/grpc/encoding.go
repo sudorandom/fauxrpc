@@ -5,10 +5,21 @@ import (
 	"compress/gzip"
 	"compress/zlib"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
 )
+
+var ErrMissingCompressionEncoding = errors.New("compressed message missing grpc-encoding")
+
+type UnsupportedCompressionError struct {
+	Encoding string
+}
+
+func (e *UnsupportedCompressionError) Error() string {
+	return fmt.Sprintf("unsupported grpc-encoding %q", e.Encoding)
+}
 
 type compressionCodec interface {
 	NewReader(io.Reader) (io.ReadCloser, error)
@@ -145,11 +156,11 @@ func ReadGRPCMessageWithEncoding(body io.Reader, msg []byte, encoding string) (i
 	}
 
 	if strings.TrimSpace(encoding) == "" || strings.EqualFold(strings.TrimSpace(encoding), "identity") {
-		return 0, fmt.Errorf("compressed message missing grpc-encoding")
+		return 0, ErrMissingCompressionEncoding
 	}
 	codec, ok := lookupCompressionCodec(encoding)
 	if !ok {
-		return 0, fmt.Errorf("unsupported grpc-encoding %q", encoding)
+		return 0, &UnsupportedCompressionError{Encoding: strings.TrimSpace(encoding)}
 	}
 	return readCompressedPayload(msg, n, codec)
 }

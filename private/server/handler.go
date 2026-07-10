@@ -128,6 +128,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 
 		w.Header().Set("Trailer", "Grpc-Status,Grpc-Message,Grpc-Status-Details-Bin")
 		w.Header().Add("Content-Type", "application/grpc")
+		setSupportedRequestCompression(w)
 
 		writeMessage := grpc.WriteGRPCMessage
 		if enc := responseCompressionEncoding(r); enc != "" {
@@ -203,7 +204,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 					return nil, nil
 				}
 				s.IncrementErrors()
-				return nil, status.New(codes.NotFound, err.Error())
+				return nil, grpcStatusFromReadError(err)
 			}
 
 			msg, err := unmarshalRequest(method.Input(), (*readMessageBuf)[:size])

@@ -255,7 +255,7 @@ func handleProxy(
 				if errors.Is(err, io.EOF) {
 					break
 				}
-				return err
+				return grpcStatusFromReadError(err).Err()
 			}
 			msg, err := unmarshalRequest(method.Input(), (*readMessageBuf)[:size])
 			if err != nil {
@@ -328,7 +328,7 @@ func handleProxy(
 					if errors.Is(err, io.EOF) {
 						break
 					}
-					return err
+					return grpcStatusFromReadError(err).Err()
 				}
 				msg, err := unmarshalRequest(method.Input(), (*readMessageBuf)[:size])
 				if err != nil {
@@ -407,7 +407,7 @@ func readUnaryRequest(r *http.Request, md protoreflect.MessageDescriptor, encodi
 		if errors.Is(err, io.EOF) {
 			return nil, nil
 		}
-		return nil, status.New(codes.NotFound, err.Error())
+		return nil, grpcStatusFromReadError(err)
 	}
 	msg, err := unmarshalRequest(md, (*readMessageBuf)[:size])
 	if err != nil {

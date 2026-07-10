@@ -228,6 +228,7 @@ func TestHandler_DeflateRequest_UnaryResponse(t *testing.T) {
 	res := w.Result()
 	assert.Equal(t, http.StatusOK, res.StatusCode)
 	assert.Equal(t, "deflate", res.Header.Get("grpc-encoding"))
+	assert.Contains(t, res.Header.Get("grpc-accept-encoding"), "deflate")
 
 	respBytes, ok := readDeflateFrame(t, res.Body)
 	require.True(t, ok)
@@ -349,6 +350,62 @@ func TestHandler_GzipRequest_InvalidPayload(t *testing.T) {
 	assert.NotEmpty(t, grpcStatus)
 	// Specifically, this should be NotFound (4) or Internal (13), not OK (0).
 	assert.NotEqual(t, codes.OK.String(), grpcStatus)
+}
+
+func TestHandler_UnsupportedCompressedRequestEncoding(t *testing.T) {
+	handler := newElizaHandler(t)
+
+	var body bytes.Buffer
+	writeMsgGzip(t, &body, &elizav1.SayRequest{Sentence: "unsupported encoding"})
+
+	req := httptest.NewRequest("POST", "/connectrpc.eliza.v1.ElizaService/Say", &body)
+	req.Header.Set("Content-Type", "application/grpc")
+	req.Header.Set("grpc-encoding", "br")
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	res := w.Result()
+	assert.Equal(t, "12", res.Header.Get("Grpc-Status"))
+	assert.Contains(t, res.Header.Get("Grpc-Message"), "unsupported grpc-encoding")
+	assert.Equal(t, "gzip,deflate", res.Header.Get("grpc-accept-encoding"))
+	assert.NotContains(t, res.Header.Get("grpc-accept-encoding"), "br")
+}
+
+func TestHandler_CompressedRequest_MissingGrpcEncoding(t *testing.T) {
+	handler := newElizaHandler(t)
+
+	var body bytes.Buffer
+	writeMsgGzip(t, &body, &elizav1.SayRequest{Sentence: "missing encoding"})
+
+	req := httptest.NewRequest("POST", "/connectrpc.eliza.v1.ElizaService/Say", &body)
+	req.Header.Set("Content-Type", "application/grpc")
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	res := w.Result()
+	assert.Equal(t, "13", res.Header.Get("Grpc-Status"))
+	assert.Contains(t, res.Header.Get("Grpc-Message"), "compressed message missing grpc-encoding")
+	assert.Equal(t, "gzip,deflate", res.Header.Get("grpc-accept-encoding"))
+}
+
+func TestHandler_CompressedRequest_IdentityGrpcEncoding(t *testing.T) {
+	handler := newElizaHandler(t)
+
+	var body bytes.Buffer
+	writeMsgGzip(t, &body, &elizav1.SayRequest{Sentence: "identity encoding"})
+
+	req := httptest.NewRequest("POST", "/connectrpc.eliza.v1.ElizaService/Say", &body)
+	req.Header.Set("Content-Type", "application/grpc")
+	req.Header.Set("grpc-encoding", "identity")
+
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	res := w.Result()
+	assert.Equal(t, "13", res.Header.Get("Grpc-Status"))
+	assert.Contains(t, res.Header.Get("Grpc-Message"), "compressed message missing grpc-encoding")
 }
 
 func TestHandler_DeflateRequest_RejectsRawDeflatePayload(t *testing.T) {

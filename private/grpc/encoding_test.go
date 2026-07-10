@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"compress/zlib"
 	"encoding/binary"
+	"errors"
 	"io"
 	"testing"
 
@@ -141,6 +142,26 @@ func TestReadGRPCMessageWithEncoding_DeflateRejectsRawDeflate(t *testing.T) {
 	buf := make([]byte, 4096)
 	_, err := ReadGRPCMessageWithEncoding(bytes.NewReader(frame), buf, "deflate")
 	require.Error(t, err)
+}
+
+func TestReadGRPCMessageWithEncoding_MissingEncodingError(t *testing.T) {
+	payload := []byte("compressed flag requires grpc-encoding")
+	frame := makeGzipFrame(payload)
+
+	buf := make([]byte, 4096)
+	_, err := ReadGRPCMessageWithEncoding(bytes.NewReader(frame), buf, "")
+	require.ErrorIs(t, err, ErrMissingCompressionEncoding)
+}
+
+func TestReadGRPCMessageWithEncoding_UnsupportedEncodingError(t *testing.T) {
+	payload := []byte("unsupported compression")
+	frame := makeGzipFrame(payload)
+
+	buf := make([]byte, 4096)
+	_, err := ReadGRPCMessageWithEncoding(bytes.NewReader(frame), buf, "br")
+	var unsupported *UnsupportedCompressionError
+	require.True(t, errors.As(err, &unsupported))
+	assert.Equal(t, "br", unsupported.Encoding)
 }
 
 func TestReadGRPCMessage_InvalidGzip(t *testing.T) {

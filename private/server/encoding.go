@@ -1,9 +1,20 @@
 package server
 
 import (
+	"errors"
 	"net/http"
 	"strings"
+
+	"github.com/sudorandom/fauxrpc/private/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
+
+const supportedRequestCompression = "gzip,deflate"
+
+func setSupportedRequestCompression(w http.ResponseWriter) {
+	w.Header().Set("grpc-accept-encoding", supportedRequestCompression)
+}
 
 // responseCompressionEncoding returns the compression encoding the server
 // should use for response frames, or "" for identity. Per the gRPC spec:
@@ -49,4 +60,15 @@ func responseCompressionEncoding(r *http.Request) string {
 // gzip-compressed response frames.
 func clientAcceptsGzip(r *http.Request) bool {
 	return responseCompressionEncoding(r) == "gzip"
+}
+
+func grpcStatusFromReadError(err error) *status.Status {
+	var unsupported *grpc.UnsupportedCompressionError
+	if errors.As(err, &unsupported) {
+		return status.New(codes.Unimplemented, err.Error()+": supported encodings are "+supportedRequestCompression)
+	}
+	if errors.Is(err, grpc.ErrMissingCompressionEncoding) {
+		return status.New(codes.Internal, err.Error())
+	}
+	return status.New(codes.Internal, err.Error())
 }
