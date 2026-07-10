@@ -5,9 +5,9 @@ go 1.26.3
 retract v0.15.25
 
 require (
-	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260415201107-50325440f8f2.1
-	buf.build/gen/go/bufbuild/registry/connectrpc/go v1.20.0-20260507063250-43b0c5a6cd08.1
-	buf.build/gen/go/bufbuild/registry/protocolbuffers/go v1.36.11-20260507063250-43b0c5a6cd08.1
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260709200747-435963d16310.1
+	buf.build/gen/go/bufbuild/registry/connectrpc/go v1.20.0-20260629211719-be09125d9193.1
+	buf.build/gen/go/bufbuild/registry/protocolbuffers/go v1.36.11-20260629211719-be09125d9193.1
 	buf.build/gen/go/connectrpc/eliza/connectrpc/go v1.19.1-20230913231627-233fca715f49.2
 	buf.build/gen/go/connectrpc/eliza/protocolbuffers/go v1.36.11-20230913231627-233fca715f49.1
 	buf.build/gen/go/grpc/grpc/connectrpc/go v1.20.0-20260331211127-1730f7242d0f.1
@@ -26,7 +26,7 @@ require (
 	github.com/brianvoe/gofakeit/v7 v7.15.0
 	github.com/bufbuild/protocompile v0.14.1
 	github.com/go-chi/chi/v5 v5.3.0
-	github.com/google/cel-go v0.28.1
+	github.com/google/cel-go v0.29.2
 	github.com/google/uuid v1.6.0
 	github.com/jhump/protoreflect v1.17.0
 	github.com/quic-go/quic-go v0.59.1
@@ -35,9 +35,9 @@ require (
 	github.com/sudorandom/protodocs v0.1.2
 	github.com/tailscale/hujson v0.0.0-20250226034555-ec1d1c113d33
 	go.yaml.in/yaml/v3 v3.0.4
-	golang.org/x/net v0.56.0
-	golang.org/x/sync v0.21.0
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260622175928-b703f567277d
+	golang.org/x/net v0.57.0
+	golang.org/x/sync v0.22.0
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260706201446-f0a921348800
 	google.golang.org/grpc v1.79.3
 	google.golang.org/protobuf v1.36.11
 )
@@ -61,13 +61,13 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/timandy/routine v1.1.6 // indirect
-	golang.org/x/crypto v0.53.0 // indirect
-	golang.org/x/exp v0.0.0-20260611194520-c48552f49976 // indirect
-	golang.org/x/mod v0.37.0 // indirect
-	golang.org/x/sys v0.46.0 // indirect
-	golang.org/x/text v0.38.0 // indirect
-	golang.org/x/tools v0.46.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260622175928-b703f567277d // indirect
+	golang.org/x/crypto v0.54.0 // indirect
+	golang.org/x/exp v0.0.0-20260709172345-9ea1abe57597 // indirect
+	golang.org/x/mod v0.38.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/text v0.40.0 // indirect
+	golang.org/x/tools v0.48.0 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260706201446-f0a921348800 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
