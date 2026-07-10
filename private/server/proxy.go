@@ -318,6 +318,7 @@ func handleProxy(
 		var firstReq proto.Message
 
 		eg, _ := errgroup.WithContext(ctx)
+		var receiveErr error
 		eg.Go(func() error {
 			readMessageBuf := bufferPool.Get().(*[]byte)
 			defer bufferPool.Put(readMessageBuf)
@@ -367,6 +368,7 @@ func handleProxy(
 					if errors.Is(err, io.EOF) {
 						return nil
 					}
+					receiveErr = err
 					return err
 				}
 				resFrameTracker.Add(respMsg)
@@ -384,6 +386,9 @@ func handleProxy(
 		err := eg.Wait()
 		if firstReq != nil {
 			firstReq.(releasableMessage).Release()
+		}
+		if isUnimplementedError(receiveErr) {
+			return receiveErr
 		}
 
 		copyHeaders(bidiStream.ResponseHeader(), w.Header())
@@ -414,4 +419,18 @@ func readUnaryRequest(r *http.Request, md protoreflect.MessageDescriptor, encodi
 		return nil, status.New(codes.NotFound, err.Error())
 	}
 	return msg, nil
+}
+
+func isUnimplementedError(err error) bool {
+	if err == nil {
+		return false
+	}
+	var connectErr *connect.Error
+	if errors.As(err, &connectErr) && connectErr.Code() == connect.CodeUnimplemented {
+		return true
+	}
+	if st, ok := status.FromError(err); ok && st.Code() == codes.Unimplemented {
+		return true
+	}
+	return false
 }

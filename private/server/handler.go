@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"buf.build/go/protovalidate"
-	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"github.com/sudorandom/fauxrpc"
 	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
@@ -162,15 +161,7 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 		if s.GetProxyTo() != "" {
 			err := handleProxy(r.Context(), w, r, s, method, serviceName, methodName, reqFrameTracker, resFrameTracker, &requestBody, &responseBody)
 			if err != nil {
-				var connectErr *connect.Error
-				isUnimplemented := false
-				if errors.As(err, &connectErr) && connectErr.Code() == connect.CodeUnimplemented {
-					isUnimplemented = true
-				} else if st, ok := status.FromError(err); ok && st.Code() == codes.Unimplemented {
-					isUnimplemented = true
-				}
-
-				if isUnimplemented {
+				if isUnimplementedError(err) {
 					isFallback = true
 				} else {
 					s.IncrementErrors()
