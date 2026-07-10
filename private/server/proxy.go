@@ -145,16 +145,17 @@ func handleProxy(
 		}
 	}
 
-	// Compress responses when the client advertises gzip acceptance via
-	// grpc-accept-encoding, or implicitly via grpc-encoding on the request.
-	compressResp := clientAcceptsGzip(r)
+	responseEncoding := responseCompressionEncoding(r)
 	writeMessage := grpc.WriteGRPCMessage
-	if compressResp {
-		writeMessage = grpc.WriteGRPCMessageGzip
+	if responseEncoding != "" {
+		writeMessage = func(w io.Writer, msg []byte) error {
+			return grpc.WriteGRPCMessageCompressed(w, msg, responseEncoding)
+		}
 	}
+	requestEncoding := strings.ToLower(strings.TrimSpace(r.Header.Get("grpc-encoding")))
 
 	if !isClientStream && !isServerStream {
-		reqMsg, st := readUnaryRequest(r, method.Input())
+		reqMsg, st := readUnaryRequest(r, method.Input(), requestEncoding)
 		if st != nil {
 			return st.Err()
 		}
@@ -178,8 +179,8 @@ func handleProxy(
 
 		copyHeaders(resp.Header(), w.Header())
 		w.Header().Set("x-fauxrpc-source", "proxy")
-		if compressResp {
-			w.Header().Set("grpc-encoding", "gzip")
+		if responseEncoding != "" {
+			w.Header().Set("grpc-encoding", responseEncoding)
 		}
 		*responseBody = resp.Msg
 
@@ -191,7 +192,7 @@ func handleProxy(
 	}
 
 	if !isClientStream && isServerStream {
-		reqMsg, st := readUnaryRequest(r, method.Input())
+		reqMsg, st := readUnaryRequest(r, method.Input(), requestEncoding)
 		if st != nil {
 			return st.Err()
 		}
@@ -215,8 +216,8 @@ func handleProxy(
 
 		copyHeaders(stream.ResponseHeader(), w.Header())
 		w.Header().Set("x-fauxrpc-source", "proxy")
-		if compressResp {
-			w.Header().Set("grpc-encoding", "gzip")
+		if responseEncoding != "" {
+			w.Header().Set("grpc-encoding", responseEncoding)
 		}
 
 		for stream.Receive() {
@@ -249,7 +250,7 @@ func handleProxy(
 		defer bufferPool.Put(readMessageBuf)
 
 		for {
-			size, err := grpc.ReadGRPCMessage(r.Body, *readMessageBuf)
+			size, err := grpc.ReadGRPCMessageWithEncoding(r.Body, *readMessageBuf, requestEncoding)
 			if err != nil {
 				if errors.Is(err, io.EOF) {
 					break
@@ -298,8 +299,8 @@ func handleProxy(
 
 		copyHeaders(resp.Header(), w.Header())
 		w.Header().Set("x-fauxrpc-source", "proxy")
-		if compressResp {
-			w.Header().Set("grpc-encoding", "gzip")
+		if responseEncoding != "" {
+			w.Header().Set("grpc-encoding", responseEncoding)
 		}
 		*responseBody = resp.Msg
 
@@ -322,7 +323,7 @@ func handleProxy(
 			defer bufferPool.Put(readMessageBuf)
 
 			for {
-				size, err := grpc.ReadGRPCMessage(r.Body, *readMessageBuf)
+				size, err := grpc.ReadGRPCMessageWithEncoding(r.Body, *readMessageBuf, requestEncoding)
 				if err != nil {
 					if errors.Is(err, io.EOF) {
 						break
@@ -387,8 +388,8 @@ func handleProxy(
 
 		copyHeaders(bidiStream.ResponseHeader(), w.Header())
 		w.Header().Set("x-fauxrpc-source", "proxy")
-		if compressResp {
-			w.Header().Set("grpc-encoding", "gzip")
+		if responseEncoding != "" {
+			w.Header().Set("grpc-encoding", responseEncoding)
 		}
 
 		return err
@@ -397,11 +398,11 @@ func handleProxy(
 	return nil
 }
 
-func readUnaryRequest(r *http.Request, md protoreflect.MessageDescriptor) (releasableMessage, *status.Status) {
+func readUnaryRequest(r *http.Request, md protoreflect.MessageDescriptor, encoding string) (releasableMessage, *status.Status) {
 	readMessageBuf := bufferPool.Get().(*[]byte)
 	defer bufferPool.Put(readMessageBuf)
 
-	size, err := grpc.ReadGRPCMessage(r.Body, *readMessageBuf)
+	size, err := grpc.ReadGRPCMessageWithEncoding(r.Body, *readMessageBuf, encoding)
 	if err != nil {
 		if errors.Is(err, io.EOF) {
 			return nil, nil

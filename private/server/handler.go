@@ -129,12 +129,12 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 		w.Header().Set("Trailer", "Grpc-Status,Grpc-Message,Grpc-Status-Details-Bin")
 		w.Header().Add("Content-Type", "application/grpc")
 
-		// Compress responses when the client advertises gzip acceptance via
-		// grpc-accept-encoding, or implicitly via grpc-encoding on the request.
 		writeMessage := grpc.WriteGRPCMessage
-		if clientAcceptsGzip(r) {
-			w.Header().Set("grpc-encoding", "gzip")
-			writeMessage = grpc.WriteGRPCMessageGzip
+		if enc := responseCompressionEncoding(r); enc != "" {
+			w.Header().Set("grpc-encoding", enc)
+			writeMessage = func(w io.Writer, msg []byte) error {
+				return grpc.WriteGRPCMessageCompressed(w, msg, enc)
+			}
 		}
 		if len(parts) != 3 {
 			s.IncrementErrors()
@@ -194,9 +194,10 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 
 		readMessageBuf := bufferPool.Get().(*[]byte)
 		defer bufferPool.Put(readMessageBuf)
+		requestEncoding := strings.ToLower(strings.TrimSpace(r.Header.Get("grpc-encoding")))
 
 		readMessage := func() (releasableMessage, *status.Status) {
-			size, err := grpc.ReadGRPCMessage(r.Body, *readMessageBuf)
+			size, err := grpc.ReadGRPCMessageWithEncoding(r.Body, *readMessageBuf, requestEncoding)
 			if err != nil {
 				if errors.Is(err, io.EOF) {
 					return nil, nil
