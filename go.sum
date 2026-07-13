@@ -6,8 +6,8 @@ buf.build/gen/go/bufbuild/registry/connectrpc/go v1.20.0-20260629211719-be09125d
 buf.build/gen/go/bufbuild/registry/connectrpc/go v1.20.0-20260629211719-be09125d9193.1/go.mod h1:VKtlgFOV7s6j5/wPr+d6c0Q80c8MF4OfZev4e0d9pNo=
 buf.build/gen/go/bufbuild/registry/protocolbuffers/go v1.36.11-20260629211719-be09125d9193.1 h1:JYYze3qnJZxo4PWTSZGKH+NJs0Vi2DYFo/NzUpa8Em4=
 buf.build/gen/go/bufbuild/registry/protocolbuffers/go v1.36.11-20260629211719-be09125d9193.1/go.mod h1:5QgvXU4BhJqHgkO27sFJrRQHABWN4X6QnGvL8hWCJKk=
-buf.build/gen/go/connectrpc/eliza/connectrpc/go v1.19.1-20230913231627-233fca715f49.2 h1:0UQEq6g/N5YamX5gmLo2cNCQW/aD/+PiKQ7M5CybW+Y=
-buf.build/gen/go/connectrpc/eliza/connectrpc/go v1.19.1-20230913231627-233fca715f49.2/go.mod h1:sAUZW9CK4Phon6DngFHNy30E68aYDkepz84QgXet2Hk=
+buf.build/gen/go/connectrpc/eliza/connectrpc/go v1.20.0-20230913231627-233fca715f49.1 h1:BaLf8D2o6Fv290M9NrifZEbK7RAOeGhFEgcpYVJQBKY=
+buf.build/gen/go/connectrpc/eliza/connectrpc/go v1.20.0-20230913231627-233fca715f49.1/go.mod h1:1k1P8yNAEujQtZVzYAuCaqCLRVI2LifDF0RmRR2b8KE=
 buf.build/gen/go/connectrpc/eliza/protocolbuffers/go v1.36.11-20230913231627-233fca715f49.1 h1:xjZ4zgRFd6PmzJtCNiShiaUJutlTSyMucmwI5DtdPWw=
 buf.build/gen/go/connectrpc/eliza/protocolbuffers/go v1.36.11-20230913231627-233fca715f49.1/go.mod h1:kmRSlmVl/HxXLf/g5I/cnxFc0DlcSADUrlrv0rQ3LuY=
 buf.build/gen/go/grpc/grpc/connectrpc/go v1.20.0-20260331211127-1730f7242d0f.1 h1:lVdp3o67CKA1CqQvwGmluX9hpFqYmFQO6JoXWNY3j6U=
