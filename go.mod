@@ -6,8 +6,8 @@ retract v0.15.25
 
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260709200747-435963d16310.1
-	buf.build/gen/go/bufbuild/registry/connectrpc/go v1.20.0-20260629211719-be09125d9193.1
-	buf.build/gen/go/bufbuild/registry/protocolbuffers/go v1.36.11-20260629211719-be09125d9193.1
+	buf.build/gen/go/bufbuild/registry/connectrpc/go v1.20.0-20260713175918-10d915f5b43b.1
+	buf.build/gen/go/bufbuild/registry/protocolbuffers/go v1.36.11-20260713175918-10d915f5b43b.1
 	buf.build/gen/go/connectrpc/eliza/connectrpc/go v1.19.1-20230913231627-233fca715f49.2
 	buf.build/gen/go/connectrpc/eliza/protocolbuffers/go v1.36.11-20230913231627-233fca715f49.1
 	buf.build/gen/go/grpc/grpc/connectrpc/go v1.20.0-20260331211127-1730f7242d0f.1
