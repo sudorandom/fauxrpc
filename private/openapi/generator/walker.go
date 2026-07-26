@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"hash/fnv"
 	"math/rand"
+	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
@@ -52,31 +54,7 @@ func (w *Walker) GenerateFromOperation(httpMethod, path, operationID string, op 
 		return 200, nil, map[string]any{}, nil
 	}
 
-	// Select response code (prefer 200, then 201, then default/first)
-	statusCode := 200
-	var respRef *openapi3.ResponseRef
-
-	if r := op.Responses.Value("200"); r != nil {
-		statusCode = 200
-		respRef = r
-	} else if r := op.Responses.Value("201"); r != nil {
-		statusCode = 201
-		respRef = r
-	} else if r := op.Responses.Default(); r != nil {
-		statusCode = 200
-		respRef = r
-	} else {
-		// Pick first available response status code
-		for code, ref := range op.Responses.Map() {
-			if ref != nil {
-				respRef = ref
-				if c := parseCode(code); c > 0 {
-					statusCode = c
-				}
-				break
-			}
-		}
-	}
+	statusCode, respRef := selectResponse(op.Responses)
 
 	if respRef == nil || respRef.Value == nil || respRef.Value.Content == nil {
 		if respRef == nil || respRef.Value == nil {
@@ -101,7 +79,13 @@ func (w *Walker) GenerateFromOperation(httpMethod, path, operationID string, op 
 	mediaType := respRef.Value.Content.Get("application/json")
 	if mediaType == nil || mediaType.Schema == nil || mediaType.Schema.Value == nil {
 		// Fallback to any content type if JSON not present
-		for _, mt := range respRef.Value.Content {
+		mediaTypes := make([]string, 0, len(respRef.Value.Content))
+		for name := range respRef.Value.Content {
+			mediaTypes = append(mediaTypes, name)
+		}
+		sort.Strings(mediaTypes)
+		for _, name := range mediaTypes {
+			mt := respRef.Value.Content[name]
 			if mt != nil && mt.Schema != nil && mt.Schema.Value != nil {
 				mediaType = mt
 				break
@@ -290,18 +274,48 @@ func GenerateSeed(httpMethod, path, operationID string) int64 {
 	return int64(h.Sum64())
 }
 
+func selectResponse(responses *openapi3.Responses) (int, *openapi3.ResponseRef) {
+	for _, status := range []int{http.StatusOK, http.StatusCreated} {
+		if response := responses.Value(strconv.Itoa(status)); response != nil {
+			return status, response
+		}
+	}
+	if response := responses.Default(); response != nil {
+		return http.StatusOK, response
+	}
+
+	type candidate struct {
+		status   int
+		key      string
+		response *openapi3.ResponseRef
+	}
+	responseMap := responses.Map()
+	candidates := make([]candidate, 0, len(responseMap))
+	for key, response := range responseMap {
+		status := parseCode(key)
+		if status != 0 && response != nil {
+			candidates = append(candidates, candidate{status: status, key: key, response: response})
+		}
+	}
+	sort.Slice(candidates, func(i, j int) bool {
+		if candidates[i].status != candidates[j].status {
+			return candidates[i].status < candidates[j].status
+		}
+		return candidates[i].key < candidates[j].key
+	})
+	if len(candidates) == 0 {
+		return http.StatusOK, nil
+	}
+	return candidates[0].status, candidates[0].response
+}
+
 func parseCode(code string) int {
-	if code == "200" {
-		return 200
+	if len(code) != 3 {
+		return 0
 	}
-	if code == "201" {
-		return 201
+	status, err := strconv.Atoi(code)
+	if err != nil || status < 100 || status > 599 {
+		return 0
 	}
-	if code == "202" {
-		return 202
-	}
-	if code == "204" {
-		return 204
-	}
-	return 200
+	return status
 }

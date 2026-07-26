@@ -5,6 +5,7 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestWalkerCycleSafety(t *testing.T) {
@@ -41,6 +42,62 @@ func TestWalkerCycleSafety(t *testing.T) {
 	resMap, ok := payload.(map[string]any)
 	assert.True(t, ok)
 	assert.NotNil(t, resMap["id"])
+}
+
+func TestWalkerSelectsFallbackResponseDeterministically(t *testing.T) {
+	response := func(value string) *openapi3.ResponseRef {
+		schema := openapi3.NewStringSchema()
+		schema.Example = value
+		return &openapi3.ResponseRef{Value: openapi3.NewResponse().WithJSONSchema(schema)}
+	}
+	op := &openapi3.Operation{
+		Responses: openapi3.NewResponses(
+			openapi3.WithStatus(418, response("teapot")),
+			openapi3.WithStatus(404, response("not found")),
+			openapi3.WithStatus(202, response("accepted")),
+		),
+	}
+
+	for range 20 {
+		status, _, payload, err := NewWalker(true).GenerateFromOperation("GET", "/jobs", "getJob", op, 2)
+		require.NoError(t, err)
+		assert.Equal(t, 202, status)
+		assert.Equal(t, "accepted", payload)
+	}
+}
+
+func TestWalkerPreservesSelectedErrorStatus(t *testing.T) {
+	schema := openapi3.NewStringSchema()
+	schema.Example = "not found"
+	op := &openapi3.Operation{
+		Responses: openapi3.NewResponses(
+			openapi3.WithStatus(404, &openapi3.ResponseRef{Value: openapi3.NewResponse().WithJSONSchema(schema)}),
+		),
+	}
+
+	status, _, payload, err := NewWalker(true).GenerateFromOperation("GET", "/missing", "missing", op, 2)
+	require.NoError(t, err)
+	assert.Equal(t, 404, status)
+	assert.Equal(t, "not found", payload)
+}
+
+func TestParseCode(t *testing.T) {
+	tests := map[string]int{
+		"100":     100,
+		"202":     202,
+		"404":     404,
+		"599":     599,
+		"099":     0,
+		"600":     0,
+		"default": 0,
+		"2XX":     0,
+		"20":      0,
+	}
+	for input, expected := range tests {
+		t.Run(input, func(t *testing.T) {
+			assert.Equal(t, expected, parseCode(input))
+		})
+	}
 }
 
 func TestWalkerArrayCycleSafety(t *testing.T) {

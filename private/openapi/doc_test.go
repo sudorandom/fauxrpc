@@ -47,3 +47,73 @@ func TestWithServerBasePathFromAbsoluteURL(t *testing.T) {
 		withServerBasePath("http://localhost:6660/", "https://petstore.example/api/v3"),
 	)
 }
+
+func TestScalarHandlerUsesValidDoctype(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/fauxrpc/openapi-docs/", nil)
+	ScalarHandler(nil, "/fauxrpc/openapi-docs/", "").ServeHTTP(recorder, request)
+
+	assert.NotContains(t, recorder.Body.String(), "<!utf-8>")
+	assert.Contains(t, recorder.Body.String(), "<!DOCTYPE html>")
+}
+
+func TestScalarHandlerMergesComponents(t *testing.T) {
+	loader := openapi3.NewLoader()
+	users, err := loader.LoadFromData([]byte(`
+openapi: 3.0.0
+info: {title: Users, version: 1.0.0}
+paths:
+  /users:
+    get:
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/User'}
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        name: {type: string}
+`))
+	require.NoError(t, err)
+	orders, err := loader.LoadFromData([]byte(`
+openapi: 3.0.0
+info: {title: Orders, version: 1.0.0}
+paths:
+  /orders:
+    get:
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Order'}
+components:
+  schemas:
+    Order:
+      type: object
+      properties:
+        id: {type: integer}
+`))
+	require.NoError(t, err)
+
+	recorder := httptest.NewRecorder()
+	request := httptest.NewRequest(http.MethodGet, "/fauxrpc/openapi-docs/spec.json", nil)
+	ScalarHandler(
+		[]*openapi3.T{users, orders},
+		"/fauxrpc/openapi-docs/",
+		"http://127.0.0.1:6660",
+	).ServeHTTP(recorder, request)
+
+	require.Equal(t, http.StatusOK, recorder.Code)
+	var servedDoc openapi3.T
+	require.NoError(t, json.NewDecoder(recorder.Body).Decode(&servedDoc))
+	require.NotNil(t, servedDoc.Components)
+	assert.Contains(t, servedDoc.Components.Schemas, "User")
+	assert.Contains(t, servedDoc.Components.Schemas, "Order")
+	assert.NotNil(t, servedDoc.Paths.Value("/users"))
+	assert.NotNil(t, servedDoc.Paths.Value("/orders"))
+}

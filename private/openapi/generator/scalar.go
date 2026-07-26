@@ -52,7 +52,7 @@ func (s *ScalarSynthesizer) Synthesize(schema *openapi3.Schema, r *rand.Rand) an
 	// 3. Format-driven synthesis
 	switch strings.ToLower(schema.Format) {
 	case "uuid":
-		return uuid.New().String()
+		return syntheticUUID(r)
 	case "date-time":
 		return syntheticTime(r).Format(time.RFC3339)
 	case "date":
@@ -102,9 +102,10 @@ func (s *ScalarSynthesizer) Synthesize(schema *openapi3.Schema, r *rand.Rand) an
 				maxLen = minLen
 			}
 		}
-		val := gofakeit.Word()
+		faker := gofakeit.New(uint64(r.Int63()) + 1)
+		val := faker.Word()
 		for len(val) < minLen {
-			val += gofakeit.Word()
+			val += faker.Word()
 		}
 		if len(val) > maxLen {
 			val = val[:maxLen]
@@ -150,6 +151,15 @@ func (s *ScalarSynthesizer) Synthesize(schema *openapi3.Schema, r *rand.Rand) an
 	}
 
 	return "synthetic_value"
+}
+
+func syntheticUUID(r *rand.Rand) string {
+	raw := make([]byte, 16)
+	_, _ = r.Read(raw)
+	raw[6] = raw[6]&0x0f | 0x40 // UUID version 4
+	raw[8] = raw[8]&0x3f | 0x80 // RFC 4122 variant
+	value, _ := uuid.FromBytes(raw)
+	return value.String()
 }
 
 func syntheticTime(r *rand.Rand) time.Time {

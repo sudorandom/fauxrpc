@@ -38,6 +38,7 @@ func ScalarHandler(docs []*openapi3.T, specPathPrefix string, serverURL string) 
 				targetDoc = &docCopy
 			} else {
 				// Merge multiple docs
+				components := openapi3.NewComponents()
 				targetDoc = &openapi3.T{
 					OpenAPI: docs[0].OpenAPI,
 					Info: &openapi3.Info{
@@ -45,7 +46,8 @@ func ScalarHandler(docs []*openapi3.T, specPathPrefix string, serverURL string) 
 						Version:     "1.0.0",
 						Description: "Combined documentation of loaded OpenAPI schemas",
 					},
-					Paths: openapi3.NewPaths(),
+					Paths:      openapi3.NewPaths(),
+					Components: &components,
 				}
 				for _, doc := range docs {
 					if doc == nil {
@@ -56,6 +58,7 @@ func ScalarHandler(docs []*openapi3.T, specPathPrefix string, serverURL string) 
 							targetDoc.Paths.Set(path, item)
 						}
 					}
+					mergeComponents(targetDoc.Components, doc.Components)
 				}
 			}
 
@@ -81,8 +84,7 @@ func ScalarHandler(docs []*openapi3.T, specPathPrefix string, serverURL string) 
 
 		specURL := specPathPrefix + "spec.json"
 
-		html := fmt.Sprintf(`<!utf-8>
-<!DOCTYPE html>
+		html := fmt.Sprintf(`<!DOCTYPE html>
 <html>
   <head>
     <title>FauxRPC OpenAPI Documentation</title>
@@ -106,6 +108,34 @@ func ScalarHandler(docs []*openapi3.T, specPathPrefix string, serverURL string) 
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		_, _ = w.Write([]byte(html))
 	})
+}
+
+func mergeComponents(target, source *openapi3.Components) {
+	if target == nil || source == nil {
+		return
+	}
+	mergeComponentMap(&target.Extensions, source.Extensions)
+	mergeComponentMap(&target.Schemas, source.Schemas)
+	mergeComponentMap(&target.Parameters, source.Parameters)
+	mergeComponentMap(&target.Headers, source.Headers)
+	mergeComponentMap(&target.RequestBodies, source.RequestBodies)
+	mergeComponentMap(&target.Responses, source.Responses)
+	mergeComponentMap(&target.SecuritySchemes, source.SecuritySchemes)
+	mergeComponentMap(&target.Examples, source.Examples)
+	mergeComponentMap(&target.Links, source.Links)
+	mergeComponentMap(&target.Callbacks, source.Callbacks)
+}
+
+func mergeComponentMap[M ~map[string]V, V any](target *M, source M) {
+	if len(source) == 0 {
+		return
+	}
+	if *target == nil {
+		*target = make(M, len(source))
+	}
+	for name, value := range source {
+		(*target)[name] = value
+	}
 }
 
 func withServerBasePath(serverURL, schemaServerURL string) string {

@@ -6,21 +6,31 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"go.yaml.in/yaml/v3"
 )
 
+const schemaPeekTimeout = 10 * time.Second
+
 // IsOpenAPISpec checks whether a given file path or URL content resembles an OpenAPI specification (v3 or v2/swagger).
 func IsOpenAPISpec(pathOrURL string) bool {
+	return isOpenAPISpec(pathOrURL, &http.Client{Timeout: schemaPeekTimeout})
+}
+
+func isOpenAPISpec(pathOrURL string, client *http.Client) bool {
 	var contents []byte
 	var err error
 
 	if isURL(pathOrURL) {
-		resp, httpErr := http.Get(pathOrURL)
-		if httpErr != nil || resp.StatusCode != http.StatusOK {
+		resp, httpErr := client.Get(pathOrURL)
+		if httpErr != nil {
 			return false
 		}
 		defer func() { _ = resp.Body.Close() }()
+		if resp.StatusCode != http.StatusOK {
+			return false
+		}
 		contents, err = io.ReadAll(io.LimitReader(resp.Body, 64*1024))
 		if err != nil {
 			return false
