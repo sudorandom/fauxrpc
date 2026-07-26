@@ -77,12 +77,11 @@ func (p *PolyResolver) evalBranch(walker *Walker, ctx *GenerationContext, ref *o
 		return nil, nil
 	}
 
-	// Temporarily set AdditionalPropertiesAllowed = false on branch schema
-	origAddProps := ref.Value.AdditionalProperties.Has
-	ref.Value.AdditionalProperties.Has = nil
-	defer func() {
-		ref.Value.AdditionalProperties.Has = origAddProps
-	}()
+	// Evaluate a copy with additional properties explicitly disabled. Keeping the
+	// parsed schema immutable avoids races when requests generate concurrently.
+	branch := *ref.Value
+	allowAdditionalProperties := false
+	branch.AdditionalProperties.Has = &allowAdditionalProperties
 
-	return walker.generateSchema(ctx, ref.Value)
+	return walker.generateSchema(ctx, &branch)
 }

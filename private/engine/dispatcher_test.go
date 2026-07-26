@@ -1,6 +1,8 @@
 package engine
 
 import (
+	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -148,4 +150,51 @@ paths:
 	assert.True(t, dispatcher.ServeHTTP(unstubbed, httptest.NewRequest(http.MethodGet, "/v1/users/other", nil)))
 	assert.Equal(t, http.StatusNotImplemented, unstubbed.Code)
 	assert.Contains(t, unstubbed.Body.String(), "no matching stub")
+}
+
+func TestEngineDispatcherRejectsUnreadableRequestBody(t *testing.T) {
+	loader := openapi3.NewLoader()
+	doc, err := loader.LoadFromData([]byte(`
+openapi: 3.0.0
+info: {title: Test API, version: 1.0.0}
+paths: {}
+`))
+	require.NoError(t, err)
+	router, err := openapi.NewRouter(doc)
+	require.NoError(t, err)
+	dispatcher := NewDispatcher(newMockStubRegistry(), router, 5, false, false)
+
+	bodyErr := errors.New("request body read failed")
+	body := &failingReadCloser{contents: []byte("partial"), err: bodyErr}
+	request := httptest.NewRequest(http.MethodPost, "/items", nil)
+	request.Body = body
+	recorder := httptest.NewRecorder()
+
+	assert.True(t, dispatcher.ServeHTTP(recorder, request))
+	assert.Equal(t, http.StatusBadRequest, recorder.Code)
+	assert.Contains(t, recorder.Body.String(), bodyErr.Error())
+	assert.True(t, body.closed)
+	restored, err := io.ReadAll(request.Body)
+	require.NoError(t, err)
+	assert.Equal(t, []byte("partial"), restored)
+}
+
+type failingReadCloser struct {
+	contents []byte
+	err      error
+	read     bool
+	closed   bool
+}
+
+func (b *failingReadCloser) Read(target []byte) (int, error) {
+	if b.read {
+		return 0, io.EOF
+	}
+	b.read = true
+	return copy(target, b.contents), b.err
+}
+
+func (b *failingReadCloser) Close() error {
+	b.closed = true
+	return nil
 }

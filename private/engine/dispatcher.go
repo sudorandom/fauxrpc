@@ -49,11 +49,14 @@ func (d *Dispatcher) ServeHTTP(w http.ResponseWriter, req *http.Request) bool {
 	// 1. Read request body bytes if present
 	var bodyBytes []byte
 	if req.Body != nil {
+		originalBody := req.Body
 		var err error
-		bodyBytes, err = io.ReadAll(req.Body)
-		if err == nil {
-			_ = req.Body.Close()
-			req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+		bodyBytes, err = io.ReadAll(originalBody)
+		_ = originalBody.Close()
+		req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
+		if err != nil {
+			http.Error(w, fmt.Sprintf("400 Bad Request: failed to read request body: %v", err), http.StatusBadRequest)
+			return true
 		}
 	}
 

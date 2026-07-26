@@ -169,6 +169,7 @@ func LoadStubsFromFile(registry registry.ServiceRegistry, stubdb StubDatabase, s
 				Stubs []pkgstub.StubRule `json:"stubs" yaml:"stubs"`
 			}
 			jsonDecoder := json.NewDecoder(bytes.NewReader(contents))
+			jsonDecoder.DisallowUnknownFields()
 			if err := jsonDecoder.Decode(&unifiedFile); err == nil && len(unifiedFile.Stubs) > 0 && (unifiedFile.Stubs[0].Target.OperationID != "" || unifiedFile.Stubs[0].Target.Path != "") {
 				if srv, ok := stubdb.(interface{ GetUnifiedRegistry() pkgstub.Registry }); ok {
 					reg := srv.GetUnifiedRegistry()

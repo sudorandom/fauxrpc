@@ -188,9 +188,6 @@ func (s *server) AddOpenAPISchema(ctx context.Context, pathOrURL string) error {
 		})
 	}
 
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
 	doc, err := openapi.LoadSchema(ctx, pathOrURL)
 	if err != nil {
 		return fmt.Errorf("failed to load openapi schema %s: %w", pathOrURL, err)
@@ -200,8 +197,6 @@ func (s *server) AddOpenAPISchema(ctx context.Context, pathOrURL string) error {
 		return fmt.Errorf("failed to create router for openapi schema %s: %w", pathOrURL, err)
 	}
 	dispatcher := engine.NewDispatcher(s.unifiedStubReg, router, s.opts.MaxDepth, s.opts.StaticSeed, s.opts.OnlyStubs)
-	s.openapiDispatchers = append(s.openapiDispatchers, dispatcher)
-	s.openapiDocs = append(s.openapiDocs, doc.Doc)
 
 	addr := s.opts.Addr
 	if addr == "" {
@@ -216,6 +211,11 @@ func (s *server) AddOpenAPISchema(ctx context.Context, pathOrURL string) error {
 	}
 	serverURL := fmt.Sprintf("%s://%s", scheme, addr)
 
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	s.openapiDispatchers = append(s.openapiDispatchers, dispatcher)
+	s.openapiDocs = append(s.openapiDocs, doc.Doc)
 	s.handlerOpenAPIDocs.SetHandler(openapi.ScalarHandler(s.openapiDocs, "/fauxrpc/openapi-docs/", serverURL))
 	return nil
 }
