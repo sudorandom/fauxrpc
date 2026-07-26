@@ -219,7 +219,13 @@ func (w *Walker) generateSchema(ctx *GenerationContext, schema *openapi3.Schema)
 			if propRef == nil || propRef.Value == nil {
 				continue
 			}
-			val, err := w.generateSchema(ctx, propRef.Value)
+			propCtx := &GenerationContext{
+				visited:      ctx.visited,
+				currentDepth: ctx.currentDepth,
+				maxDepth:     ctx.maxDepth,
+				seed:         ctx.seed + GenerateSeed("PROP", propName, ""),
+			}
+			val, err := w.generateSchema(propCtx, propRef.Value)
 			if err != nil {
 				return nil, err
 			}
@@ -228,7 +234,6 @@ func (w *Walker) generateSchema(ctx *GenerationContext, schema *openapi3.Schema)
 			}
 		}
 		return obj, nil
-	}
 
 	// 5. Array Schema
 	if primaryType == "array" || schema.Items != nil {
