@@ -199,7 +199,7 @@ func (s *server) AddOpenAPISchema(ctx context.Context, pathOrURL string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create router for openapi schema %s: %w", pathOrURL, err)
 	}
-	dispatcher := engine.NewDispatcher(s.unifiedStubReg, router, s.opts.MaxDepth, s.opts.StaticSeed)
+	dispatcher := engine.NewDispatcher(s.unifiedStubReg, router, s.opts.MaxDepth, s.opts.StaticSeed, s.opts.OnlyStubs)
 	s.openapiDispatchers = append(s.openapiDispatchers, dispatcher)
 	s.openapiDocs = append(s.openapiDocs, doc.Doc)
 

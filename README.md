@@ -147,6 +147,8 @@ While FauxRPC generates fake data by default, **stubs** let you define specific,
 
 You can load a single stub file or an entire directory of them.
 
+Add `--only-stubs` to disable generated fallback responses. An OpenAPI operation without a matching stub returns HTTP `501 Not Implemented`; Protobuf RPCs return an empty response message.
+
 #### Load a single stub file
 
 ```shell

@@ -24,9 +24,10 @@ type Dispatcher struct {
 	validator    *openapi.Validator
 	walker       *generator.Walker
 	maxDepth     int
+	onlyStubs    bool
 }
 
-func NewDispatcher(stubReg StubRegistry, router *openapi.Router, maxDepth int, staticSeed bool) *Dispatcher {
+func NewDispatcher(stubReg StubRegistry, router *openapi.Router, maxDepth int, staticSeed, onlyStubs bool) *Dispatcher {
 	if maxDepth <= 0 {
 		maxDepth = 5
 	}
@@ -36,6 +37,7 @@ func NewDispatcher(stubReg StubRegistry, router *openapi.Router, maxDepth int, s
 		validator:    openapi.NewValidator(),
 		walker:       generator.NewWalker(staticSeed),
 		maxDepth:     maxDepth,
+		onlyStubs:    onlyStubs,
 	}
 }
 
@@ -88,6 +90,10 @@ func (d *Dispatcher) ServeHTTP(w http.ResponseWriter, req *http.Request) bool {
 	matchedStub, found := d.stubRegistry.FindMatch(normReq)
 	if found {
 		d.writeResponse(w, matchedStub.Response.Status, matchedStub.Response.Headers, matchedStub.Response.Body)
+		return true
+	}
+	if d.onlyStubs {
+		http.Error(w, "501 Not Implemented: no matching stub", http.StatusNotImplemented)
 		return true
 	}
 

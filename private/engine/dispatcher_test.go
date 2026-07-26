@@ -1,11 +1,13 @@
 package engine
 
 import (
+	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/sudorandom/fauxrpc/private/openapi"
 )
 
@@ -74,7 +76,7 @@ paths:
 		},
 	})
 
-	dispatcher := NewDispatcher(registry, router, 5, false)
+	dispatcher := NewDispatcher(registry, router, 5, false, false)
 
 	// 1. Test stub match
 	rec1 := httptest.NewRecorder()
@@ -92,4 +94,58 @@ paths:
 	assert.Equal(t, 200, rec2.Code)
 	assert.Equal(t, "250", rec2.Header().Get("X-Rate-Limit"))
 	assert.Contains(t, rec2.Body.String(), "id")
+}
+
+func TestEngineDispatcherOnlyStubs(t *testing.T) {
+	loader := openapi3.NewLoader()
+	doc, err := loader.LoadFromData([]byte(`
+openapi: 3.0.0
+info:
+  title: Test API
+  version: 1.0.0
+paths:
+  /v1/users/{id}:
+    get:
+      operationId: getUserById
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+`))
+	require.NoError(t, err)
+	router, err := openapi.NewRouter(doc)
+	require.NoError(t, err)
+
+	registry := newMockStubRegistry()
+	registry.AddStub(StubRule{
+		Target: TargetRef{OperationID: "getUserById"},
+		Match:  StubMatch{PathParams: map[string]string{"id": "stubbed"}},
+		Response: StubResponse{
+			Status: http.StatusOK,
+			Body:   map[string]any{"id": "stubbed"},
+		},
+	})
+	dispatcher := NewDispatcher(registry, router, 5, false, true)
+
+	stubbed := httptest.NewRecorder()
+	assert.True(t, dispatcher.ServeHTTP(stubbed, httptest.NewRequest(http.MethodGet, "/v1/users/stubbed", nil)))
+	assert.Equal(t, http.StatusOK, stubbed.Code)
+	assert.Contains(t, stubbed.Body.String(), "stubbed")
+
+	unstubbed := httptest.NewRecorder()
+	assert.True(t, dispatcher.ServeHTTP(unstubbed, httptest.NewRequest(http.MethodGet, "/v1/users/other", nil)))
+	assert.Equal(t, http.StatusNotImplemented, unstubbed.Code)
+	assert.Contains(t, unstubbed.Body.String(), "no matching stub")
 }
