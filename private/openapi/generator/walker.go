@@ -234,6 +234,7 @@ func (w *Walker) generateSchema(ctx *GenerationContext, schema *openapi3.Schema)
 			}
 		}
 		return obj, nil
+	}
 
 	// 5. Array Schema
 	if primaryType == "array" || schema.Items != nil {
