@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"context"
 	"encoding/binary"
 	"encoding/json"
@@ -15,10 +16,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/sudorandom/fauxrpc"
-	"github.com/sudorandom/fauxrpc/private/stub"
 	fauxlog "github.com/sudorandom/fauxrpc/private/log"
 	"github.com/sudorandom/fauxrpc/private/metrics"
 	"github.com/sudorandom/fauxrpc/private/registry"
+	"github.com/sudorandom/fauxrpc/private/stub"
 	"github.com/sudorandom/fauxrpc/private/stubs"
 	"google.golang.org/protobuf/proto"
 )
@@ -26,20 +27,22 @@ import (
 type mockServer struct {
 	registry.ServiceRegistry
 	stubs.StubDatabase
-	logger *fauxlog.Logger
+	logger     *fauxlog.Logger
+	staticSeed bool
 }
 
-func (m *mockServer) GetStats() *metrics.Stats     { return nil }
-func (m *mockServer) IncrementTotalRequests()      {}
-func (m *mockServer) IncrementErrors()             {}
-func (m *mockServer) GetLogger() *fauxlog.Logger   { return m.logger }
-func (m *mockServer) GetMaxDepth() int             { return 20 }
-func (m *mockServer) GetProxyTo() string           { return "" }
-func (m *mockServer) GetRecordDir() string         { return "" }
-func (m *mockServer) GetProxyClient() *http.Client { return nil }
-func (m *mockServer) OpenAPIRouterCount() int      { return 0 }
+func (m *mockServer) GetStats() *metrics.Stats                                     { return nil }
+func (m *mockServer) IncrementTotalRequests()                                      {}
+func (m *mockServer) IncrementErrors()                                             {}
+func (m *mockServer) GetLogger() *fauxlog.Logger                                   { return m.logger }
+func (m *mockServer) GetMaxDepth() int                                             { return 20 }
+func (m *mockServer) GetProxyTo() string                                           { return "" }
+func (m *mockServer) GetRecordDir() string                                         { return "" }
+func (m *mockServer) GetStaticSeed() bool                                          { return m.staticSeed }
+func (m *mockServer) GetProxyClient() *http.Client                                 { return nil }
+func (m *mockServer) OpenAPIRouterCount() int                                      { return 0 }
 func (m *mockServer) AddOpenAPISchema(ctx context.Context, pathOrURL string) error { return nil }
-func (m *mockServer) GetUnifiedRegistry() stub.Registry                              { return nil }
+func (m *mockServer) GetUnifiedRegistry() stub.Registry                            { return nil }
 
 func TestHandler_Logging_Streaming(t *testing.T) {
 	// Setup
@@ -117,6 +120,32 @@ func TestHandler_Logging_Streaming(t *testing.T) {
 	case <-time.After(1 * time.Second):
 		t.Fatal("timeout waiting for log entry")
 	}
+}
+
+func TestHandler_StaticSeedProducesStableProtobufResponses(t *testing.T) {
+	logger := fauxlog.NewLogger()
+	s := &mockServer{
+		ServiceRegistry: mustNewRegistry(),
+		StubDatabase:    stubs.NewStubDatabase(),
+		logger:          logger,
+		staticSeed:      true,
+	}
+	validator, err := protovalidate.New()
+	require.NoError(t, err)
+	service := elizav1.File_connectrpc_eliza_v1_eliza_proto.Services().ByName("ElizaService")
+	handler := NewHandler(service, fauxrpc.NewFauxFaker(), validator, s, logger, 20)
+
+	request := func() []byte {
+		var body bytes.Buffer
+		writeMsg(t, &body, &elizav1.SayRequest{Sentence: "hello"})
+		req := httptest.NewRequest(http.MethodPost, "/connectrpc.eliza.v1.ElizaService/Say", &body)
+		req.Header.Set("Content-Type", "application/grpc")
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, req)
+		return response.Body.Bytes()
+	}
+
+	assert.Equal(t, request(), request())
 }
 
 func mustNewRegistry() registry.ServiceRegistry {

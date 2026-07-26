@@ -33,8 +33,8 @@ func TestWalkerCycleSafety(t *testing.T) {
 		),
 	}
 
-	walker := NewWalker()
-	status, payload, err := walker.GenerateFromOperation("GET", "/user", "getUser", op, 2)
+	walker := NewWalker(true)
+	status, _, payload, err := walker.GenerateFromOperation("GET", "/user", "getUser", op, 2)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, status)
 
@@ -73,9 +73,56 @@ func TestWalkerArrayCycleSafety(t *testing.T) {
 		),
 	}
 
-	walker := NewWalker()
-	status, payload, err := walker.GenerateFromOperation("GET", "/tree", "getTree", op, 2)
+	walker := NewWalker(true)
+	status, _, payload, err := walker.GenerateFromOperation("GET", "/tree", "getTree", op, 2)
 	assert.NoError(t, err)
 	assert.Equal(t, 200, status)
 	assert.NotNil(t, payload)
+}
+
+func TestWalkerGeneratesResponseHeaders(t *testing.T) {
+	rateLimit := openapi3.NewIntegerSchema()
+	rateLimit.Example = 250
+	expires := openapi3.NewDateTimeSchema()
+	op := &openapi3.Operation{
+		Responses: openapi3.NewResponses(
+			openapi3.WithStatus(200, &openapi3.ResponseRef{
+				Value: &openapi3.Response{
+					Headers: openapi3.Headers{
+						"X-Rate-Limit": {
+							Value: &openapi3.Header{Parameter: openapi3.Parameter{Schema: &openapi3.SchemaRef{Value: rateLimit}}},
+						},
+						"X-Expires-After": {
+							Value: &openapi3.Header{Parameter: openapi3.Parameter{Schema: &openapi3.SchemaRef{Value: expires}}},
+						},
+					},
+				},
+			}),
+		),
+	}
+
+	walker := NewWalker(false)
+	nextSeed := int64(0)
+	walker.seedSource = func() int64 {
+		nextSeed++
+		return nextSeed
+	}
+
+	status, headers, _, err := walker.GenerateFromOperation("GET", "/login", "login", op, 2)
+	assert.NoError(t, err)
+	assert.Equal(t, 200, status)
+	assert.Equal(t, "250", headers["X-Rate-Limit"])
+	assert.NotEmpty(t, headers["X-Expires-After"])
+
+	_, nextHeaders, _, err := walker.GenerateFromOperation("GET", "/login", "login", op, 2)
+	assert.NoError(t, err)
+	assert.Equal(t, "250", nextHeaders["X-Rate-Limit"], "explicit examples remain stable")
+	assert.NotEqual(t, headers["X-Expires-After"], nextHeaders["X-Expires-After"])
+
+	stableWalker := NewWalker(true)
+	_, stableHeaders, _, err := stableWalker.GenerateFromOperation("GET", "/login", "login", op, 2)
+	assert.NoError(t, err)
+	_, nextStableHeaders, _, err := stableWalker.GenerateFromOperation("GET", "/login", "login", op, 2)
+	assert.NoError(t, err)
+	assert.Equal(t, stableHeaders["X-Expires-After"], nextStableHeaders["X-Expires-After"])
 }

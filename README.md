@@ -67,6 +67,8 @@ fauxrpc run \
   --stubs=example/stubs.swagger-petstore.yaml
 ```
 
+Generated values vary between requests by default. Add `--static-seed` when you need reproducible unstubbed responses for both OpenAPI and Protobuf services.
+
 Try one of the conditional Petstore stubs:
 
 ```shell

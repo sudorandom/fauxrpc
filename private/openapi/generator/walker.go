@@ -1,8 +1,12 @@
 package generator
 
 import (
+	"encoding/json"
+	"fmt"
 	"hash/fnv"
 	"math/rand"
+	"sort"
+	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
 )
@@ -27,21 +31,25 @@ func NewGenerationContext(seed int64, maxDepth int) *GenerationContext {
 }
 
 type Walker struct {
-	scalar *ScalarSynthesizer
-	poly   *PolyResolver
+	scalar     *ScalarSynthesizer
+	poly       *PolyResolver
+	staticSeed bool
+	seedSource func() int64
 }
 
-func NewWalker() *Walker {
+func NewWalker(staticSeed bool) *Walker {
 	return &Walker{
-		scalar: NewScalarSynthesizer(),
-		poly:   NewPolyResolver(),
+		scalar:     NewScalarSynthesizer(),
+		poly:       NewPolyResolver(),
+		staticSeed: staticSeed,
+		seedSource: rand.Int63,
 	}
 }
 
 // GenerateFromOperation synthesizes realistic response payload for an OpenAPI Operation definition.
-func (w *Walker) GenerateFromOperation(httpMethod, path, operationID string, op *openapi3.Operation, maxDepth int) (int, any, error) {
+func (w *Walker) GenerateFromOperation(httpMethod, path, operationID string, op *openapi3.Operation, maxDepth int) (int, map[string]string, any, error) {
 	if op == nil || op.Responses == nil {
-		return 200, map[string]any{}, nil
+		return 200, nil, map[string]any{}, nil
 	}
 
 	// Select response code (prefer 200, then 201, then default/first)
@@ -71,7 +79,23 @@ func (w *Walker) GenerateFromOperation(httpMethod, path, operationID string, op 
 	}
 
 	if respRef == nil || respRef.Value == nil || respRef.Value.Content == nil {
-		return statusCode, map[string]any{}, nil
+		if respRef == nil || respRef.Value == nil {
+			return statusCode, nil, map[string]any{}, nil
+		}
+	}
+
+	seed := GenerateSeed(httpMethod, path, operationID)
+	if !w.staticSeed {
+		// Mix operation identity with fresh entropy so unstubbed responses vary
+		// between requests while remaining internally coherent for one response.
+		seed ^= w.seedSource()
+	}
+	headers, err := w.generateResponseHeaders(respRef.Value, seed, maxDepth)
+	if err != nil {
+		return statusCode, nil, nil, err
+	}
+	if respRef.Value.Content == nil {
+		return statusCode, headers, map[string]any{}, nil
 	}
 
 	mediaType := respRef.Value.Content.Get("application/json")
@@ -86,18 +110,78 @@ func (w *Walker) GenerateFromOperation(httpMethod, path, operationID string, op 
 	}
 
 	if mediaType == nil || mediaType.Schema == nil || mediaType.Schema.Value == nil {
-		return statusCode, map[string]any{}, nil
+		return statusCode, headers, map[string]any{}, nil
 	}
 
-	seed := GenerateSeed(httpMethod, path, operationID)
 	ctx := NewGenerationContext(seed, maxDepth)
 
 	payload, err := w.generateSchema(ctx, mediaType.Schema.Value)
 	if err != nil {
-		return statusCode, nil, err
+		return statusCode, nil, nil, err
 	}
 
-	return statusCode, payload, nil
+	return statusCode, headers, payload, nil
+}
+
+func (w *Walker) generateResponseHeaders(response *openapi3.Response, seed int64, maxDepth int) (map[string]string, error) {
+	if response == nil || len(response.Headers) == 0 {
+		return nil, nil
+	}
+
+	headers := make(map[string]string, len(response.Headers))
+	for name, headerRef := range response.Headers {
+		if headerRef == nil || headerRef.Value == nil {
+			continue
+		}
+		header := headerRef.Value
+		value := header.Example
+		if value == nil && header.Schema != nil && header.Schema.Value != nil {
+			ctx := NewGenerationContext(seed+int64(GenerateSeed("HEADER", name, "")), maxDepth)
+			generated, err := w.generateSchema(ctx, header.Schema.Value)
+			if err != nil {
+				return nil, fmt.Errorf("generate response header %s: %w", name, err)
+			}
+			value = generated
+		}
+		if value == nil {
+			continue
+		}
+		headers[name] = formatHeaderValue(value, header.Explode != nil && *header.Explode)
+	}
+	return headers, nil
+}
+
+func formatHeaderValue(value any, explode bool) string {
+	switch value := value.(type) {
+	case string:
+		return value
+	case []any:
+		parts := make([]string, len(value))
+		for i, item := range value {
+			parts[i] = fmt.Sprint(item)
+		}
+		return strings.Join(parts, ",")
+	case map[string]any:
+		keys := make([]string, 0, len(value))
+		for key := range value {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		parts := make([]string, 0, len(keys)*2)
+		for _, key := range keys {
+			if explode {
+				parts = append(parts, key+"="+fmt.Sprint(value[key]))
+			} else {
+				parts = append(parts, key, fmt.Sprint(value[key]))
+			}
+		}
+		return strings.Join(parts, ",")
+	default:
+		if encoded, err := json.Marshal(value); err == nil {
+			return string(encoded)
+		}
+		return fmt.Sprint(value)
+	}
 }
 
 func (w *Walker) generateSchema(ctx *GenerationContext, schema *openapi3.Schema) (any, error) {

@@ -59,6 +59,7 @@ type Server interface {
 	GetMaxDepth() int
 	GetProxyTo() string
 	GetRecordDir() string
+	GetStaticSeed() bool
 	GetProxyClient() *http.Client
 	OpenAPIRouterCount() int
 	AddOpenAPISchema(ctx context.Context, pathOrURL string) error
@@ -77,6 +78,7 @@ type ServerOpts struct {
 	HTTPS         bool
 	WithDashboard bool
 	MaxDepth      int
+	StaticSeed    bool
 	ProxyTo       string
 	RecordDir     string
 }
@@ -197,7 +199,7 @@ func (s *server) AddOpenAPISchema(ctx context.Context, pathOrURL string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create router for openapi schema %s: %w", pathOrURL, err)
 	}
-	dispatcher := engine.NewDispatcher(s.unifiedStubReg, router, s.opts.MaxDepth)
+	dispatcher := engine.NewDispatcher(s.unifiedStubReg, router, s.opts.MaxDepth, s.opts.StaticSeed)
 	s.openapiDispatchers = append(s.openapiDispatchers, dispatcher)
 	s.openapiDocs = append(s.openapiDocs, doc.Doc)
 
@@ -306,6 +308,10 @@ func (s *server) GetProxyTo() string {
 
 func (s *server) GetRecordDir() string {
 	return s.opts.RecordDir
+}
+
+func (s *server) GetStaticSeed() bool {
+	return s.opts.StaticSeed
 }
 
 func (s *server) GetProxyClient() *http.Client {

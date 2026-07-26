@@ -26,7 +26,7 @@ type Dispatcher struct {
 	maxDepth     int
 }
 
-func NewDispatcher(stubReg StubRegistry, router *openapi.Router, maxDepth int) *Dispatcher {
+func NewDispatcher(stubReg StubRegistry, router *openapi.Router, maxDepth int, staticSeed bool) *Dispatcher {
 	if maxDepth <= 0 {
 		maxDepth = 5
 	}
@@ -34,7 +34,7 @@ func NewDispatcher(stubReg StubRegistry, router *openapi.Router, maxDepth int) *
 		stubRegistry: stubReg,
 		router:       router,
 		validator:    openapi.NewValidator(),
-		walker:       generator.NewWalker(),
+		walker:       generator.NewWalker(staticSeed),
 		maxDepth:     maxDepth,
 	}
 }
@@ -93,7 +93,7 @@ func (d *Dispatcher) ServeHTTP(w http.ResponseWriter, req *http.Request) bool {
 
 	// 5. Auto-Generator Fallback
 	if routeMatch.Route != nil && routeMatch.Route.Operation != nil {
-		status, payload, err := d.walker.GenerateFromOperation(
+		status, headers, payload, err := d.walker.GenerateFromOperation(
 			req.Method,
 			routeMatch.Route.Path,
 			routeMatch.OperationID,
@@ -104,7 +104,7 @@ func (d *Dispatcher) ServeHTTP(w http.ResponseWriter, req *http.Request) bool {
 			http.Error(w, fmt.Sprintf("500 Internal Server Error: %v", err), http.StatusInternalServerError)
 			return true
 		}
-		d.writeResponse(w, status, nil, payload)
+		d.writeResponse(w, status, headers, payload)
 		return true
 	}
 

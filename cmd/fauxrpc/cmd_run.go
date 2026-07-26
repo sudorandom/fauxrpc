@@ -35,6 +35,7 @@ type RunCmd struct {
 	Stubs         []string `help:"Directories or file paths for JSON files."`
 	Dashboard     bool     `help:"Enable the admin dashboard."`
 	Depth         int      `help:"Max depth for generated messages." default:"5"`
+	StaticSeed    bool     `help:"Use deterministic generated values for unstubbed OpenAPI and Protobuf requests."`
 	ProxyTo       string   `help:"Address of the upstream gRPC/Connect server to proxy requests to."`
 	RecordDir     string   `help:"Directory path to write/append the recorded stubs structured by service/method (e.g. stubs/)."`
 	SslKeylogFile string   `help:"Path to file for logging tls secrets, requires HTTPS or HTTP3."`
@@ -52,6 +53,7 @@ func (c *RunCmd) Run(globals *Globals) error {
 		HTTPS:         c.HTTPS || c.HTTP3,
 		WithDashboard: c.Dashboard,
 		MaxDepth:      c.Depth,
+		StaticSeed:    c.StaticSeed,
 		ProxyTo:       c.ProxyTo,
 		RecordDir:     c.RecordDir,
 	})

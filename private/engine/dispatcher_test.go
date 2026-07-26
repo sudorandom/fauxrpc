@@ -34,6 +34,11 @@ paths:
       responses:
         '200':
           description: OK
+          headers:
+            X-Rate-Limit:
+              schema:
+                type: integer
+                example: 250
           content:
             application/json:
               schema:
@@ -69,7 +74,7 @@ paths:
 		},
 	})
 
-	dispatcher := NewDispatcher(registry, router, 5)
+	dispatcher := NewDispatcher(registry, router, 5, false)
 
 	// 1. Test stub match
 	rec1 := httptest.NewRecorder()
@@ -85,5 +90,6 @@ paths:
 	handled2 := dispatcher.ServeHTTP(rec2, req2)
 	assert.True(t, handled2)
 	assert.Equal(t, 200, rec2.Code)
+	assert.Equal(t, "250", rec2.Header().Get("X-Rate-Limit"))
 	assert.Contains(t, rec2.Body.String(), "id")
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"log/slog"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	"buf.build/go/protovalidate"
+	"github.com/brianvoe/gofakeit/v7"
 	"github.com/google/uuid"
 	"github.com/sudorandom/fauxrpc"
 	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
@@ -291,6 +293,9 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 					stubsUsed = append(stubsUsed, stub)
 				},
 			}
+			if s.GetStaticSeed() {
+				genOpts.Faker = gofakeit.New(staticSeedForMethod(method.FullName()))
+			}
 			if err := faker.SetDataOnMessage(out, genOpts); err != nil {
 				var stubErr *stubs.StatusError
 				s.IncrementErrors()
@@ -338,6 +343,12 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 		finalStatus = status.New(codes.OK, "")
 		grpcWriteStatus(w, finalStatus)
 	})
+}
+
+func staticSeedForMethod(method protoreflect.FullName) uint64 {
+	hasher := fnv.New64a()
+	_, _ = hasher.Write([]byte(method))
+	return hasher.Sum64()
 }
 
 func grpcWriteStatus(w http.ResponseWriter, st *status.Status) {

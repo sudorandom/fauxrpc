@@ -15,6 +15,11 @@ import (
 
 type ScalarSynthesizer struct{}
 
+var (
+	syntheticTimeStart = time.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
+	syntheticTimeEnd   = time.Date(2050, time.January, 1, 0, 0, 0, 0, time.UTC)
+)
+
 func NewScalarSynthesizer() *ScalarSynthesizer {
 	return &ScalarSynthesizer{}
 }
@@ -49,9 +54,9 @@ func (s *ScalarSynthesizer) Synthesize(schema *openapi3.Schema, r *rand.Rand) an
 	case "uuid":
 		return uuid.New().String()
 	case "date-time":
-		return time.Now().UTC().Format(time.RFC3339)
+		return syntheticTime(r).Format(time.RFC3339)
 	case "date":
-		return time.Now().UTC().Format("2006-01-02")
+		return syntheticTime(r).Format("2006-01-02")
 	case "email":
 		return fmt.Sprintf("user-%d@fauxrpc.local", r.Intn(10000))
 	case "hostname":
@@ -145,6 +150,11 @@ func (s *ScalarSynthesizer) Synthesize(schema *openapi3.Schema, r *rand.Rand) an
 	}
 
 	return "synthetic_value"
+}
+
+func syntheticTime(r *rand.Rand) time.Time {
+	span := syntheticTimeEnd.Sub(syntheticTimeStart)
+	return syntheticTimeStart.Add(time.Duration(r.Int63n(int64(span))))
 }
 
 func (s *ScalarSynthesizer) synthesizePattern(pattern string) string {
