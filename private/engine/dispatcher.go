@@ -125,24 +125,30 @@ func (d *Dispatcher) writeResponse(w http.ResponseWriter, status int, headers ma
 		status = http.StatusOK
 	}
 
+	var encodedBody []byte
+	if body != nil {
+		switch value := body.(type) {
+		case []byte:
+			encodedBody = value
+		case string:
+			encodedBody = []byte(value)
+		default:
+			var err error
+			encodedBody, err = json.Marshal(value)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("500 Internal Server Error: failed to encode response: %v", err), http.StatusInternalServerError)
+				return
+			}
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	for k, v := range headers {
 		w.Header().Set(k, v)
 	}
 
 	w.WriteHeader(status)
-
-	if body != nil {
-		switch v := body.(type) {
-		case []byte:
-			_, _ = w.Write(v)
-		case string:
-			_, _ = w.Write([]byte(v))
-		default:
-			b, err := json.Marshal(v)
-			if err == nil {
-				_, _ = w.Write(b)
-			}
-		}
+	if len(encodedBody) > 0 {
+		_, _ = w.Write(encodedBody)
 	}
 }

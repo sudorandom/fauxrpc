@@ -46,10 +46,16 @@ func (e *MatchEvaluator) Matches(rule *StubRule, req *engine.NormalizedRequest) 
 		specificity++
 	}
 
-	// 3. Headers matching (case-insensitive)
+	// 3. Header names are case-insensitive; values must match exactly.
 	for k, expectedVal := range rule.Match.Headers {
-		actualVal := req.Headers.Get(k)
-		if actualVal == "" || !strings.EqualFold(actualVal, expectedVal) {
+		matched := false
+		for _, actualVal := range req.Headers.Values(k) {
+			if actualVal == expectedVal {
+				matched = true
+				break
+			}
+		}
+		if !matched {
 			return false, 0
 		}
 		specificity++

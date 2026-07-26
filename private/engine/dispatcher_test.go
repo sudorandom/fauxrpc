@@ -179,6 +179,21 @@ paths: {}
 	assert.Equal(t, []byte("partial"), restored)
 }
 
+func TestDispatcherWriteResponseReturnsErrorBeforeCommittingStatus(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	NewDispatcher(nil, nil, 5, false, false).writeResponse(
+		recorder,
+		http.StatusCreated,
+		map[string]string{"X-Stub-Header": "should-not-be-written"},
+		make(chan int),
+	)
+
+	assert.Equal(t, http.StatusInternalServerError, recorder.Code)
+	assert.Contains(t, recorder.Body.String(), "failed to encode response")
+	assert.Empty(t, recorder.Header().Get("X-Stub-Header"))
+	assert.Contains(t, recorder.Header().Get("Content-Type"), "text/plain")
+}
+
 type failingReadCloser struct {
 	contents []byte
 	err      error

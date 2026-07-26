@@ -66,3 +66,39 @@ func TestStubMatcher(t *testing.T) {
 	assert.True(t, found)
 	assert.Equal(t, "Get User Admin Staging", matched.Name)
 }
+
+func TestStubMatcherMatchesAnyHeaderValueExactly(t *testing.T) {
+	rule := &StubRule{
+		Target: MatchTarget{OperationID: "getUser"},
+		Match: StubMatch{Headers: map[string]string{
+			"authorization": "Bearer SecretToken",
+		}},
+	}
+
+	headers := make(http.Header)
+	headers.Add("AUTHORIZATION", "Bearer OtherToken")
+	headers.Add("AUTHORIZATION", "Bearer SecretToken")
+	matched, specificity := NewMatchEvaluator().Matches(rule, &engine.NormalizedRequest{
+		OperationID: "getUser",
+		Headers:     headers,
+	})
+	assert.True(t, matched)
+	assert.Equal(t, 1, specificity)
+}
+
+func TestStubMatcherHeaderValuesAreCaseSensitive(t *testing.T) {
+	rule := &StubRule{
+		Target: MatchTarget{OperationID: "getUser"},
+		Match: StubMatch{Headers: map[string]string{
+			"Authorization": "Bearer SecretToken",
+		}},
+	}
+
+	headers := make(http.Header)
+	headers.Set("authorization", "bearer secrettoken")
+	matched, _ := NewMatchEvaluator().Matches(rule, &engine.NormalizedRequest{
+		OperationID: "getUser",
+		Headers:     headers,
+	})
+	assert.False(t, matched)
+}
