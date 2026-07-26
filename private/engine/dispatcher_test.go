@@ -194,6 +194,74 @@ func TestDispatcherWriteResponseReturnsErrorBeforeCommittingStatus(t *testing.T)
 	assert.Contains(t, recorder.Header().Get("Content-Type"), "text/plain")
 }
 
+func TestEngineDispatcherRejectsOversizedRequestBody(t *testing.T) {
+	loader := openapi3.NewLoader()
+	doc, err := loader.LoadFromData([]byte(`
+openapi: 3.0.0
+info: {title: Test API, version: 1.0.0}
+paths: {}
+`))
+	require.NoError(t, err)
+	router, err := openapi.NewRouter(doc)
+	require.NoError(t, err)
+	dispatcher := NewDispatcher(newMockStubRegistry(), router, 5, false, false)
+	request := httptest.NewRequest(
+		http.MethodPost,
+		"/items",
+		io.LimitReader(zeroReader{}, maxRequestBodySize+1),
+	)
+	recorder := httptest.NewRecorder()
+
+	assert.True(t, dispatcher.ServeHTTP(recorder, request))
+	assert.Equal(t, http.StatusRequestEntityTooLarge, recorder.Code)
+	assert.Contains(t, recorder.Body.String(), "request body exceeds")
+}
+
+func TestDispatcherWriteResponsePreservesContentType(t *testing.T) {
+	tests := []struct {
+		name     string
+		preset   string
+		headers  map[string]string
+		expected string
+	}{
+		{
+			name:     "response header",
+			headers:  map[string]string{"content-type": "application/xml"},
+			expected: "application/xml",
+		},
+		{
+			name:     "response writer header",
+			preset:   "text/plain; charset=utf-8",
+			expected: "text/plain; charset=utf-8",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			recorder := httptest.NewRecorder()
+			if test.preset != "" {
+				recorder.Header().Set("Content-Type", test.preset)
+			}
+			NewDispatcher(nil, nil, 5, false, false).writeResponse(
+				recorder,
+				http.StatusOK,
+				test.headers,
+				"response",
+			)
+			assert.Equal(t, test.expected, recorder.Header().Get("Content-Type"))
+		})
+	}
+}
+
+type zeroReader struct{}
+
+func (zeroReader) Read(target []byte) (int, error) {
+	for index := range target {
+		target[index] = 0
+	}
+	return len(target), nil
+}
+
 type failingReadCloser struct {
 	contents []byte
 	err      error

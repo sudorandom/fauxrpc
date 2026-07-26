@@ -74,7 +74,50 @@ func (r *inMemoryRegistry) FindMatch(req *engine.NormalizedRequest) (*StubRule, 
 		return candidates[i].index < candidates[j].index
 	})
 
-	return candidates[0].rule, true
+	matched := cloneStubRule(*candidates[0].rule)
+	return &matched, true
+}
+
+func cloneStubRule(rule StubRule) StubRule {
+	cloned := rule
+	cloned.Match.PathParams = cloneStringMap(rule.Match.PathParams)
+	cloned.Match.QueryParams = cloneStringMap(rule.Match.QueryParams)
+	cloned.Match.Headers = cloneStringMap(rule.Match.Headers)
+	cloned.Response.Headers = cloneStringMap(rule.Response.Headers)
+	cloned.Response.Body = cloneStubBody(rule.Response.Body)
+	return cloned
+}
+
+func cloneStringMap(source map[string]string) map[string]string {
+	if source == nil {
+		return nil
+	}
+	cloned := make(map[string]string, len(source))
+	for key, value := range source {
+		cloned[key] = value
+	}
+	return cloned
+}
+
+func cloneStubBody(value any) any {
+	switch value := value.(type) {
+	case map[string]any:
+		cloned := make(map[string]any, len(value))
+		for key, item := range value {
+			cloned[key] = cloneStubBody(item)
+		}
+		return cloned
+	case []any:
+		cloned := make([]any, len(value))
+		for index, item := range value {
+			cloned[index] = cloneStubBody(item)
+		}
+		return cloned
+	case []byte:
+		return append([]byte(nil), value...)
+	default:
+		return value
+	}
 }
 
 func (r *inMemoryRegistry) Clear() {

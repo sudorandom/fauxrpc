@@ -18,6 +18,8 @@ type StubRegistry interface {
 	NumStubs() int
 }
 
+const maxRequestBodySize int64 = 10 << 20
+
 type Dispatcher struct {
 	stubRegistry StubRegistry
 	router       *openapi.Router
@@ -51,11 +53,15 @@ func (d *Dispatcher) ServeHTTP(w http.ResponseWriter, req *http.Request) bool {
 	if req.Body != nil {
 		originalBody := req.Body
 		var err error
-		bodyBytes, err = io.ReadAll(originalBody)
+		bodyBytes, err = io.ReadAll(io.LimitReader(originalBody, maxRequestBodySize+1))
 		_ = originalBody.Close()
 		req.Body = io.NopCloser(bytes.NewReader(bodyBytes))
 		if err != nil {
 			http.Error(w, fmt.Sprintf("400 Bad Request: failed to read request body: %v", err), http.StatusBadRequest)
+			return true
+		}
+		if int64(len(bodyBytes)) > maxRequestBodySize {
+			http.Error(w, fmt.Sprintf("413 Request Entity Too Large: request body exceeds %d bytes", maxRequestBodySize), http.StatusRequestEntityTooLarge)
 			return true
 		}
 	}
@@ -142,9 +148,11 @@ func (d *Dispatcher) writeResponse(w http.ResponseWriter, status int, headers ma
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
 	for k, v := range headers {
 		w.Header().Set(k, v)
+	}
+	if w.Header().Get("Content-Type") == "" {
+		w.Header().Set("Content-Type", "application/json")
 	}
 
 	w.WriteHeader(status)

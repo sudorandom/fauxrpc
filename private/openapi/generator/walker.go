@@ -39,6 +39,8 @@ type Walker struct {
 	seedSource func() int64
 }
 
+const maxGeneratedArrayItems = 100
+
 func NewWalker(staticSeed bool) *Walker {
 	return &Walker{
 		scalar:     NewScalarSynthesizer(),
@@ -235,14 +237,14 @@ func (w *Walker) generateSchema(ctx *GenerationContext, schema *openapi3.Schema)
 		}
 		count := 2
 		if schema.MinItems > 0 {
-			count = int(schema.MinItems)
-		}
-		if schema.MaxItems != nil && *schema.MaxItems > 0 {
-			max := int(*schema.MaxItems)
-			if max < count {
-				max = count
+			if schema.MinItems > maxGeneratedArrayItems {
+				count = maxGeneratedArrayItems
+			} else {
+				count = int(schema.MinItems)
 			}
-			count = max
+		}
+		if schema.MaxItems != nil && uint64(count) > *schema.MaxItems {
+			count = int(*schema.MaxItems)
 		}
 		items := make([]any, 0, count)
 		for i := 0; i < count; i++ {

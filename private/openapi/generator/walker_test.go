@@ -137,6 +137,40 @@ func TestWalkerArrayCycleSafety(t *testing.T) {
 	assert.NotNil(t, payload)
 }
 
+func TestWalkerArrayLengthUsesSmallCountWithinConstraints(t *testing.T) {
+	tests := []struct {
+		name     string
+		minItems uint64
+		maxItems *uint64
+		expected int
+	}{
+		{name: "default", expected: 2},
+		{name: "minimum", minItems: 4, expected: 4},
+		{name: "minimum safety cap", minItems: 1000, expected: maxGeneratedArrayItems},
+		{name: "large maximum", maxItems: uint64Pointer(100), expected: 2},
+		{name: "maximum below default", maxItems: uint64Pointer(1), expected: 1},
+		{name: "zero maximum", maxItems: uint64Pointer(0), expected: 0},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			schema := openapi3.NewArraySchema().WithItems(openapi3.NewStringSchema())
+			schema.MinItems = test.minItems
+			schema.MaxItems = test.maxItems
+
+			value, err := NewWalker(true).generateSchema(NewGenerationContext(42, 5), schema)
+			require.NoError(t, err)
+			items, ok := value.([]any)
+			require.True(t, ok)
+			assert.Len(t, items, test.expected)
+		})
+	}
+}
+
+func uint64Pointer(value uint64) *uint64 {
+	return &value
+}
+
 func TestWalkerGeneratesResponseHeaders(t *testing.T) {
 	rateLimit := openapi3.NewIntegerSchema()
 	rateLimit.Example = 250

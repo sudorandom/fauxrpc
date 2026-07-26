@@ -35,6 +35,7 @@ func ScalarHandler(docs []*openapi3.T, specPathPrefix string, serverURL string) 
 			if len(docs) == 1 {
 				// Copy doc to avoid mutating original
 				docCopy := *docs[0]
+				docCopy.Servers = append(openapi3.Servers(nil), docs[0].Servers...)
 				targetDoc = &docCopy
 			} else {
 				// Merge multiple docs
