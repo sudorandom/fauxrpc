@@ -164,13 +164,13 @@ func LoadStubsFromFile(registry registry.ServiceRegistry, stubdb StubDatabase, s
 				}
 				contents = standardContents
 			}
-			// Try unmarshaling as Unified OpenApi / REST Stub file first if present
+			// Try unmarshaling as a unified gRPC / OpenAPI stub file first.
 			var unifiedFile struct {
 				Stubs []pkgstub.StubRule `json:"stubs" yaml:"stubs"`
 			}
 			jsonDecoder := json.NewDecoder(bytes.NewReader(contents))
 			jsonDecoder.DisallowUnknownFields()
-			if err := jsonDecoder.Decode(&unifiedFile); err == nil && len(unifiedFile.Stubs) > 0 && (unifiedFile.Stubs[0].Target.OperationID != "" || unifiedFile.Stubs[0].Target.Path != "") {
+			if err := jsonDecoder.Decode(&unifiedFile); err == nil && hasUnifiedTarget(unifiedFile.Stubs) {
 				if srv, ok := stubdb.(interface{ GetUnifiedRegistry() pkgstub.Registry }); ok {
 					reg := srv.GetUnifiedRegistry()
 					if reg != nil {
@@ -193,13 +193,13 @@ func LoadStubsFromFile(registry registry.ServiceRegistry, stubdb StubDatabase, s
 				return fmt.Errorf("%s: %w", path, err)
 			}
 
-			// Try unmarshaling as Unified OpenApi / REST Stub file first if present
+			// Try unmarshaling as a unified gRPC / OpenAPI stub file first.
 			var unifiedFile struct {
 				Stubs []pkgstub.StubRule `json:"stubs" yaml:"stubs"`
 			}
 			yamlDecoder := yaml.NewDecoder(bytes.NewReader(contents))
 			yamlDecoder.KnownFields(true)
-			if err := yamlDecoder.Decode(&unifiedFile); err == nil && len(unifiedFile.Stubs) > 0 && (unifiedFile.Stubs[0].Target.OperationID != "" || unifiedFile.Stubs[0].Target.Path != "") {
+			if err := yamlDecoder.Decode(&unifiedFile); err == nil && hasUnifiedTarget(unifiedFile.Stubs) {
 				if srv, ok := stubdb.(interface{ GetUnifiedRegistry() pkgstub.Registry }); ok {
 					reg := srv.GetUnifiedRegistry()
 					if reg != nil {
@@ -245,6 +245,16 @@ func LoadStubsFromFile(registry registry.ServiceRegistry, stubdb StubDatabase, s
 		return handleFile(stubsPath)
 	}
 	return nil
+}
+
+func hasUnifiedTarget(stubs []pkgstub.StubRule) bool {
+	for _, rule := range stubs {
+		target := rule.Target
+		if target.Service != "" || target.Method != "" || target.OperationID != "" || target.Path != "" {
+			return true
+		}
+	}
+	return false
 }
 
 func standardizeJSON(b []byte) ([]byte, error) {

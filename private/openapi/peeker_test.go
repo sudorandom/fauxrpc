@@ -55,6 +55,23 @@ paths:
 	assert.False(t, IsOpenAPISpec(nonOpenapi))
 }
 
+func TestIsOpenAPISpecRejectsInvalidOrNestedVersionKeys(t *testing.T) {
+	tests := map[string]string{
+		"invalid-openapi.yaml": "openapi: definitely-not-a-version\n",
+		"invalid-swagger.json": `{"swagger":"1.0"}`,
+		"nested-openapi.yaml":  "metadata:\n  openapi: 3.0.0\n",
+		"nested-swagger.json":  `{"metadata":{"swagger":"2.0"}}`,
+	}
+
+	for name, contents := range tests {
+		t.Run(name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), name)
+			assert.NoError(t, os.WriteFile(path, []byte(contents), 0o600))
+			assert.False(t, IsOpenAPISpec(path))
+		})
+	}
+}
+
 func TestIsOpenAPISpecClosesNonOKResponseBody(t *testing.T) {
 	body := &trackingBody{Reader: strings.NewReader("not found")}
 	client := &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {

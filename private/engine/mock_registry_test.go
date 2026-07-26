@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"sort"
 	"sync"
 )
 
@@ -50,6 +49,3 @@ func (r *mockStubRegistry) NumStubs() int {
 	defer r.mu.RUnlock()
 	return len(r.stubs)
 }
-
-// Suppress unused imports
-var _ = sort.Slice

@@ -5,13 +5,15 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"strings"
+	"regexp"
 	"time"
 
 	"go.yaml.in/yaml/v3"
 )
 
 const schemaPeekTimeout = 10 * time.Second
+
+var openAPIVersionPattern = regexp.MustCompile(`^3\.[0-9]+\.[0-9]+$`)
 
 // IsOpenAPISpec checks whether a given file path or URL content resembles an OpenAPI specification (v3 or v2/swagger).
 func IsOpenAPISpec(pathOrURL string) bool {
@@ -59,17 +61,7 @@ func isOpenAPISpec(pathOrURL string, client *http.Client) bool {
 
 	decoder := yaml.NewDecoder(bytes.NewReader(contents))
 	if err := decoder.Decode(&doc); err == nil {
-		if strings.HasPrefix(doc.OpenAPI, "3.") || strings.HasPrefix(doc.Swagger, "2.") || doc.OpenAPI != "" || doc.Swagger != "" {
-			return true
-		}
+		return openAPIVersionPattern.MatchString(doc.OpenAPI) || doc.Swagger == "2.0"
 	}
-
-	// Substring fallback check
-	contentStr := string(contents)
-	if strings.Contains(contentStr, `"openapi"`) || strings.Contains(contentStr, `openapi:`) ||
-		strings.Contains(contentStr, `"swagger"`) || strings.Contains(contentStr, `swagger:`) {
-		return true
-	}
-
 	return false
 }

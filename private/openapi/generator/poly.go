@@ -2,6 +2,8 @@ package generator
 
 import (
 	"math/rand"
+	"sort"
+	"strings"
 
 	"github.com/getkin/kin-openapi/openapi3"
 )
@@ -42,12 +44,22 @@ func (p *PolyResolver) ResolveOneOfOrAnyOf(walker *Walker, ctx *GenerationContex
 
 	// 1. Discriminator check
 	if discriminator != nil && discriminator.PropertyName != "" {
-		// If discriminator points to a explicit mapping or schema name
+		// If discriminator points to an explicit mapping or schema name
 		if len(discriminator.Mapping) > 0 {
-			// Find mapped schema
-			for discVal, targetRef := range discriminator.Mapping {
+			discriminatorValues := make([]string, 0, len(discriminator.Mapping))
+			for discriminatorValue := range discriminator.Mapping {
+				discriminatorValues = append(discriminatorValues, discriminatorValue)
+			}
+			sort.Strings(discriminatorValues)
+			for _, discVal := range discriminatorValues {
+				mappingRef := discriminator.Mapping[discVal]
+				encodedRef, err := mappingRef.MarshalText()
+				if err != nil {
+					continue
+				}
+				targetRef := string(encodedRef)
 				for _, ref := range list {
-					if ref.Ref == targetRef.Ref || ref.Ref == "#/components/schemas/"+targetRef.Ref {
+					if discriminatorRefsMatch(ref.Ref, targetRef) {
 						selectedRef := ref
 						res, err := p.evalBranch(walker, ctx, selectedRef)
 						if err != nil {
@@ -70,6 +82,16 @@ func (p *PolyResolver) ResolveOneOfOrAnyOf(walker *Walker, ctx *GenerationContex
 	selectedRef := list[idx]
 
 	return p.evalBranch(walker, ctx, selectedRef)
+}
+
+func discriminatorRefsMatch(branchRef, targetRef string) bool {
+	if branchRef == targetRef {
+		return true
+	}
+	if strings.Contains(targetRef, "/") {
+		return false
+	}
+	return strings.TrimPrefix(branchRef, "#/components/schemas/") == targetRef
 }
 
 func (p *PolyResolver) evalBranch(walker *Walker, ctx *GenerationContext, ref *openapi3.SchemaRef) (any, error) {

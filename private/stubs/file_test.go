@@ -32,6 +32,55 @@ func TestLoadStubsFromFileRejectsUnknownUnifiedJSONFields(t *testing.T) {
 	assert.Zero(t, unifiedRegistry.NumStubs())
 }
 
+func TestLoadStubsFromFileDetectsUnifiedTargetsBeyondFirstEntry(t *testing.T) {
+	tests := []struct {
+		name     string
+		ext      string
+		contents string
+	}{
+		{
+			name: "JSON",
+			ext:  ".json",
+			contents: `{"stubs":[
+  {"name":"gRPC first","target":{"service":"pets.Pets","method":"GetPet"},"response":{"status":200}},
+  {"name":"OpenAPI second","target":{"operationId":"getPet"},"response":{"status":200}}
+]}`,
+		},
+		{
+			name: "YAML",
+			ext:  ".yaml",
+			contents: `stubs:
+  - name: gRPC first
+    target:
+      service: pets.Pets
+      method: GetPet
+    response:
+      status: 200
+  - name: OpenAPI second
+    target:
+      operationId: getPet
+    response:
+      status: 200
+`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "stubs"+test.ext)
+			require.NoError(t, os.WriteFile(path, []byte(test.contents), 0o600))
+			unifiedRegistry := pkgstub.NewRegistry()
+			database := &unifiedStubDatabase{
+				StubDatabase:    NewStubDatabase(),
+				unifiedRegistry: unifiedRegistry,
+			}
+
+			require.NoError(t, LoadStubsFromFile(nil, database, path))
+			assert.Equal(t, 2, unifiedRegistry.NumStubs())
+		})
+	}
+}
+
 type unifiedStubDatabase struct {
 	StubDatabase
 	unifiedRegistry pkgstub.Registry

@@ -3,7 +3,6 @@ package generator
 import (
 	"fmt"
 	"math/rand"
-	"net/mail"
 	"regexp"
 	"strings"
 	"time"
@@ -180,6 +179,3 @@ func (s *ScalarSynthesizer) synthesizePattern(pattern string) string {
 	}
 	return "pattern_val"
 }
-
-// Suppress unused import warning for mail if any
-var _ = mail.ParseAddress
