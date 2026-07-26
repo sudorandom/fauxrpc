@@ -250,7 +250,8 @@ func LoadStubsFromFile(registry registry.ServiceRegistry, stubdb StubDatabase, s
 func hasUnifiedTarget(stubs []pkgstub.StubRule) bool {
 	for _, rule := range stubs {
 		target := rule.Target
-		if target.Service != "" || target.Method != "" || target.OperationID != "" || target.Path != "" {
+		// Only treat the file as “unified” when it contains OpenAPI-style targets.
+		if target.OperationID != "" || target.Path != "" {
 			return true
 		}
 	}
