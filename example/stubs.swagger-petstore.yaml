@@ -1,0 +1,131 @@
+stubs:
+  - name: The answer to pets, life, and everything
+    target:
+      operationId: getPetById
+    match:
+      pathParams:
+        petId: "42"
+    response:
+      status: 200
+      headers:
+        X-Pet-Mood: existential
+      body:
+        id: 42
+        name: Deep Thought
+        category:
+          id: 7
+          name: Philosophical Mice
+        photoUrls:
+          - https://fauxrpc.local/pets/deep-thought.jpg
+        tags:
+          - id: 1
+            name: mostly-harmless
+        status: available
+
+  - name: This pet is suspiciously absent
+    target:
+      operationId: getPetById
+    match:
+      pathParams:
+        petId: "404"
+    response:
+      status: 404
+      headers:
+        X-Pet-Whereabouts: unknown
+      body:
+        code: 404
+        type: pet_not_found
+        message: This pet has achieved invisibility and cannot be located.
+
+  - name: Available pets with unusual job titles
+    target:
+      operationId: findPetsByStatus
+    match:
+      queryParams:
+        status: available
+    response:
+      status: 200
+      body:
+        - id: 1001
+          name: Byte
+          category:
+            id: 10
+            name: Office Dogs
+          photoUrls:
+            - https://fauxrpc.local/pets/byte.jpg
+          tags:
+            - id: 11
+              name: senior-barkend-engineer
+          status: available
+        - id: 1002
+          name: Null Pointer
+          category:
+            id: 20
+            name: Debugging Cats
+          photoUrls:
+            - https://fauxrpc.local/pets/null-pointer.jpg
+          tags:
+            - id: 21
+              name: chief-box-inspector
+          status: available
+        - id: 1003
+          name: Rubber Duck
+          category:
+            id: 30
+            name: Pair Programmers
+          photoUrls:
+            - https://fauxrpc.local/pets/rubber-duck.jpg
+          tags:
+            - id: 31
+              name: principal-debugger
+          status: available
+
+  - name: Inventory after somebody left the gate open
+    target:
+      operationId: getInventory
+    response:
+      status: 200
+      headers:
+        X-Inventory-Confidence: optimistic
+      body:
+        available: 9001
+        pending: 42
+        sold: 0
+        escaped: 3
+
+  - name: Expedite completed orders
+    target:
+      operationId: placeOrder
+    match:
+      bodyExpression: complete
+    response:
+      status: 200
+      headers:
+        X-Shipping-Method: orbital-catapult
+      body:
+        id: 8675309
+        petId: 42
+        quantity: 1
+        shipDate: "2026-07-26T12:00:00Z"
+        status: approved
+        complete: true
+
+  - name: Captain Whiskers has a user account
+    target:
+      operationId: getUserByName
+    match:
+      pathParams:
+        username: captain-whiskers
+    response:
+      status: 200
+      headers:
+        X-Account-Species: cat
+      body:
+        id: 9
+        username: captain-whiskers
+        firstName: Captain
+        lastName: Whiskers
+        email: captain.whiskers@fauxrpc.local
+        password: definitely-not-the-treat-cabinet-code
+        phone: 1-800-MEOW-NOW
+        userStatus: 1

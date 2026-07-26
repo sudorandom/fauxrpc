@@ -1,0 +1,155 @@
+openapi: 3.0.3
+info:
+  title: Petstore & E-Commerce API (Advanced Demo)
+  description: Complex OpenAPI specification featuring allOf, oneOf, anyOf polymorphism, discriminators, circular references, and array constraints.
+  version: 2.0.0
+paths:
+  /v2/pets:
+    get:
+      summary: List pets with status filter
+      operationId: listPets
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [available, pending, adopted]
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+      responses:
+        '200':
+          description: List of polymorphic pets
+          content:
+            application/json:
+              schema:
+                type: array
+                minItems: 2
+                maxItems: 5
+                items:
+                  $ref: '#/components/schemas/Pet'
+    post:
+      summary: Add new pet
+      operationId: addPet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Pet'
+      responses:
+        '201':
+          description: Pet created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+
+  /v2/orgs/{id}/tree:
+    get:
+      summary: Get organization hierarchy (Circular Reference Example)
+      operationId: getOrgTree
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Recursive organization tree node
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrgNode'
+
+components:
+  schemas:
+    Pet:
+      type: object
+      discriminator:
+        propertyName: petType
+        mapping:
+          dog: '#/components/schemas/Dog'
+          cat: '#/components/schemas/Cat'
+      oneOf:
+        - $ref: '#/components/schemas/Dog'
+        - $ref: '#/components/schemas/Cat'
+
+    BasePet:
+      type: object
+      required:
+        - id
+        - name
+        - petType
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "d197f8c2-3e21-4f11-8e9a-7c9118e9a101"
+        name:
+          type: string
+          example: "Buddy"
+        petType:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+    Dog:
+      allOf:
+        - $ref: '#/components/schemas/BasePet'
+        - type: object
+          properties:
+            barkVolume:
+              type: integer
+              minimum: 1
+              maximum: 10
+              example: 8
+            breed:
+              type: string
+              example: "Golden Retriever"
+
+    Cat:
+      allOf:
+        - $ref: '#/components/schemas/BasePet'
+        - type: object
+          properties:
+            huntingAbility:
+              type: string
+              enum: [clumsy, skilled, apex_predator]
+              example: "skilled"
+            livesRemaining:
+              type: integer
+              minimum: 1
+              maximum: 9
+              example: 9
+
+    OrgNode:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "Engineering Division"
+        manager_email:
+          type: string
+          format: email
+        parent:
+          $ref: '#/components/schemas/OrgNode'
+        sub_departments:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrgNode'

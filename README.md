@@ -33,7 +33,7 @@ Binaries are built for several platforms for each release. See the latest ones o
 
 ### Running the Server
 
-The core command is `fauxrpc run`, which starts the server based on your Protobuf schema. You can combine flags to configure the server on startup.
+The core command is `fauxrpc run`, which starts the server based on your Protobuf or OpenAPI schema. You can combine flags to configure the server on startup.
 
 For example, this command starts the server with a specific schema, loads a stub for a method, and enables the dashboard:
 
@@ -43,7 +43,7 @@ fauxrpc run --schema=buf.build/connectrpc/eliza --stubs=example/stubs.eliza --da
 
 ### Loading Schemas
 
-You must provide Protobuf descriptors so FauxRPC knows which services to fake. Schemas can be loaded from multiple sources, and you can mix and match them.
+You must provide schemas so FauxRPC knows which services to fake. Protobuf descriptors and OpenAPI specifications use the same `--schema` option, and you can mix and match sources.
 
 #### From a local file:
 
@@ -55,6 +55,23 @@ fauxrpc run --schema=service.binpb
 
 ```shell
 fauxrpc run --schema=buf.build/bufbuild/eliza
+```
+
+#### From an OpenAPI specification
+
+The repository includes the canonical [Swagger Petstore OpenAPI 3.0 specification](https://github.com/swagger-api/swagger-petstore/blob/master/src/main/resources/openapi.yaml):
+
+```shell
+fauxrpc run \
+  --schema=example/swagger-petstore-openapi.yaml \
+  --stubs=example/stubs.swagger-petstore.yaml
+```
+
+Try one of the conditional Petstore stubs:
+
+```shell
+curl http://127.0.0.1:6660/api/v3/pet/42
+curl "http://127.0.0.1:6660/api/v3/pet/findByStatus?status=available"
 ```
 
 #### From multiple sources at once

@@ -17,6 +17,7 @@ import (
 	"github.com/google/uuid"
 	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
 	"github.com/sudorandom/fauxrpc/private/registry"
+	pkgstub "github.com/sudorandom/fauxrpc/private/stub"
 	"github.com/tailscale/hujson"
 	"go.yaml.in/yaml/v3"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -163,16 +164,52 @@ func LoadStubsFromFile(registry registry.ServiceRegistry, stubdb StubDatabase, s
 				}
 				contents = standardContents
 			}
+			// Try unmarshaling as Unified OpenApi / REST Stub file first if present
+			var unifiedFile struct {
+				Stubs []pkgstub.StubRule `json:"stubs" yaml:"stubs"`
+			}
+			jsonDecoder := json.NewDecoder(bytes.NewReader(contents))
+			if err := jsonDecoder.Decode(&unifiedFile); err == nil && len(unifiedFile.Stubs) > 0 && (unifiedFile.Stubs[0].Target.OperationID != "" || unifiedFile.Stubs[0].Target.Path != "") {
+				if srv, ok := stubdb.(interface{ GetUnifiedRegistry() pkgstub.Registry }); ok {
+					reg := srv.GetUnifiedRegistry()
+					if reg != nil {
+						for _, rule := range unifiedFile.Stubs {
+							reg.AddStub(rule)
+						}
+						return nil
+					}
+				}
+			}
+
 			decoder := json.NewDecoder(bytes.NewReader(contents))
 			decoder.DisallowUnknownFields()
 			if err := decoder.Decode(&stubFile); err != nil {
 				return fmt.Errorf("json.Unmarshal: %s: %w", path, err)
 			}
-		case ".yaml":
+		case ".yaml", ".yml":
 			contents, err := os.ReadFile(path)
 			if err != nil {
 				return fmt.Errorf("%s: %w", path, err)
 			}
+
+			// Try unmarshaling as Unified OpenApi / REST Stub file first if present
+			var unifiedFile struct {
+				Stubs []pkgstub.StubRule `json:"stubs" yaml:"stubs"`
+			}
+			yamlDecoder := yaml.NewDecoder(bytes.NewReader(contents))
+			yamlDecoder.KnownFields(true)
+			if err := yamlDecoder.Decode(&unifiedFile); err == nil && len(unifiedFile.Stubs) > 0 && (unifiedFile.Stubs[0].Target.OperationID != "" || unifiedFile.Stubs[0].Target.Path != "") {
+				if srv, ok := stubdb.(interface{ GetUnifiedRegistry() pkgstub.Registry }); ok {
+					reg := srv.GetUnifiedRegistry()
+					if reg != nil {
+						for _, rule := range unifiedFile.Stubs {
+							reg.AddStub(rule)
+						}
+						return nil
+					}
+				}
+			}
+
 			decoder := yaml.NewDecoder(bytes.NewReader(contents))
 			decoder.KnownFields(true)
 			if err := decoder.Decode(&stubFile); err != nil {

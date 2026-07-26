@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"encoding/binary"
 	"encoding/json"
 	"io"
@@ -14,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/sudorandom/fauxrpc"
+	"github.com/sudorandom/fauxrpc/private/stub"
 	fauxlog "github.com/sudorandom/fauxrpc/private/log"
 	"github.com/sudorandom/fauxrpc/private/metrics"
 	"github.com/sudorandom/fauxrpc/private/registry"
@@ -35,6 +37,9 @@ func (m *mockServer) GetMaxDepth() int             { return 20 }
 func (m *mockServer) GetProxyTo() string           { return "" }
 func (m *mockServer) GetRecordDir() string         { return "" }
 func (m *mockServer) GetProxyClient() *http.Client { return nil }
+func (m *mockServer) OpenAPIRouterCount() int      { return 0 }
+func (m *mockServer) AddOpenAPISchema(ctx context.Context, pathOrURL string) error { return nil }
+func (m *mockServer) GetUnifiedRegistry() stub.Registry                              { return nil }
 
 func TestHandler_Logging_Streaming(t *testing.T) {
 	// Setup
