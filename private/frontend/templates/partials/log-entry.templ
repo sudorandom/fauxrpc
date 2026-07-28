@@ -4,6 +4,7 @@ import (
     "bytes"
     "encoding/json"
     "fmt"
+    "net/http"
     "sort"
     "strings"
     "time"
@@ -33,14 +34,38 @@ var grpcStatusNames = map[int]string{
     16: "Unauthenticated",
 }
 
-func getStatusName(status int) string {
+func getStatusName(status int, protocol string) string {
+    if protocol == "HTTP" || status >= 100 {
+        return fmt.Sprintf("%d %s", status, http.StatusText(status))
+    }
     if name, ok := grpcStatusNames[status]; ok {
         return name
     }
     return fmt.Sprintf("UNKNOWN[%d]", status)
 }
 
-func getStatusColor(status int) string {
+func isErrorStatus(status int, protocol string) bool {
+    if protocol == "HTTP" || status >= 100 {
+        return status >= 400
+    }
+    return status != 0
+}
+
+func getStatusColor(status int, protocol string) string {
+    if protocol == "HTTP" || status >= 100 {
+        switch {
+        case status >= 200 && status < 300:
+            return "bg-green-500 text-green-100"
+        case status >= 300 && status < 400:
+            return "bg-blue-500 text-blue-100"
+        case status >= 400 && status < 500:
+            return "bg-yellow-500 text-yellow-100"
+        case status >= 500:
+            return "bg-red-500 text-red-100"
+        default:
+            return "bg-gray-500 text-gray-100"
+        }
+    }
     switch status {
     case 0: // OK
         return "bg-green-500 text-green-100"
@@ -138,7 +163,7 @@ templ LogEntry(entry *log.LogEntry, reg registry.ServiceRegistry) {
     <details class="bg-gray-800/60 border border-gray-700 rounded-lg mb-3 overflow-hidden">
         <summary class="w-full p-4 text-left flex items-center justify-between hover:bg-gray-700/50 transition-colors duration-200 cursor-pointer">
             <div class="flex items-center space-x-4 flex-wrap">
-                <span class={ "px-2 py-1 text-xs font-bold rounded-md", getStatusColor(entry.Status) }>{ getStatusName(entry.Status) }</span>
+                <span class={ "px-2 py-1 text-xs font-bold rounded-md", getStatusColor(entry.Status, entry.ClientProtocol) }>{ getStatusName(entry.Status, entry.ClientProtocol) }</span>
                 <span class="text-gray-400 font-mono text-sm">{ entry.Timestamp.Format(time.TimeOnly) }</span>
                 <span class="text-white font-medium">{ entry.Service }</span>
                 <span class="text-gray-400">{ entry.Method }</span>
@@ -151,12 +176,20 @@ templ LogEntry(entry *log.LogEntry, reg registry.ServiceRegistry) {
         </summary>
         <div class="p-6 border-t border-gray-700 bg-gray-900/50">
             <div class="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2 text-sm mb-8">
-                <div class="font-semibold text-gray-400 text-right">gRPC Status</div>
+                if entry.ClientProtocol == "HTTP" || entry.Status >= 100 {
+                    <div class="font-semibold text-gray-400 text-right">HTTP Status</div>
+                } else {
+                    <div class="font-semibold text-gray-400 text-right">gRPC Status</div>
+                }
                 <div class="font-mono">
-                    <span class={ "px-2 py-1 text-xs font-bold rounded-md", getStatusColor(entry.Status) }>{ getStatusName(entry.Status) } [{ entry.Status }]</span>
+                    <span class={ "px-2 py-1 text-xs font-bold rounded-md", getStatusColor(entry.Status, entry.ClientProtocol) }>{ getStatusName(entry.Status, entry.ClientProtocol) } [{ fmt.Sprintf("%d", entry.Status) }]</span>
                 </div>
                 <div class="font-semibold text-gray-400 text-right">Path</div>
-                <div class="font-mono text-gray-200">{ fmt.Sprintf("%s/%s", entry.Service, entry.Method) }</div>
+                if entry.ClientProtocol == "HTTP" {
+                    <div class="font-mono text-gray-200">{ entry.Method }</div>
+                } else {
+                    <div class="font-mono text-gray-200">{ fmt.Sprintf("%s/%s", entry.Service, entry.Method) }</div>
+                }
                 <div class="font-semibold text-gray-400 text-right">Time</div>
                 <div class="font-mono text-gray-200">{ entry.Timestamp.Format("2006-01-02 15:04:05.999 Z07:00") }</div>
                 <div class="font-semibold text-gray-400 text-right">Latency</div>
@@ -271,7 +304,7 @@ templ LogEntry(entry *log.LogEntry, reg registry.ServiceRegistry) {
                             </div>
                         } else {
                             <div>
-                                if entry.Status != 0 {
+                                if isErrorStatus(entry.Status, entry.ClientProtocol) {
                                     <h5 class="text-md font-medium text-red-400 mb-2">Error</h5>
                                 } else {
                                     <div class="flex items-center justify-between mb-2">

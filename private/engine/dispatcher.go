@@ -6,7 +6,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
+	"github.com/google/uuid"
+	fauxlog "github.com/sudorandom/fauxrpc/private/log"
 	"github.com/sudorandom/fauxrpc/private/openapi"
 	"github.com/sudorandom/fauxrpc/private/openapi/generator"
 )
@@ -27,9 +30,10 @@ type Dispatcher struct {
 	walker       *generator.Walker
 	maxDepth     int
 	onlyStubs    bool
+	logger       *fauxlog.Logger
 }
 
-func NewDispatcher(stubReg StubRegistry, router *openapi.Router, maxDepth int, staticSeed, onlyStubs bool) *Dispatcher {
+func NewDispatcher(stubReg StubRegistry, router *openapi.Router, maxDepth int, staticSeed, onlyStubs bool, logger *fauxlog.Logger) *Dispatcher {
 	if maxDepth <= 0 {
 		maxDepth = 5
 	}
@@ -40,6 +44,7 @@ func NewDispatcher(stubReg StubRegistry, router *openapi.Router, maxDepth int, s
 		walker:       generator.NewWalker(staticSeed),
 		maxDepth:     maxDepth,
 		onlyStubs:    onlyStubs,
+		logger:       logger,
 	}
 }
 
@@ -89,20 +94,48 @@ func (d *Dispatcher) ServeHTTP(w http.ResponseWriter, req *http.Request) bool {
 		Body:        bodyBytes,
 	}
 
+	startTime := time.Now()
+
+	logRequest := func(status int, resHeaders map[string]string, resBody []byte) {
+		if d.logger == nil {
+			return
+		}
+		reqHeadersJSON, _ := json.Marshal(req.Header)
+		resHeadersJSON, _ := json.Marshal(resHeaders)
+		d.logger.Log(&fauxlog.LogEntry{
+			ID:              uuid.New().String(),
+			Timestamp:       startTime,
+			Service:         "OpenAPI",
+			Method:          fmt.Sprintf("%s %s", req.Method, req.URL.Path),
+			ClientProtocol:  "HTTP",
+			Status:          status,
+			Duration:        time.Since(startTime),
+			RequestHeaders:  reqHeadersJSON,
+			ResponseHeaders: resHeadersJSON,
+			RequestBody:     bodyBytes,
+			ResponseBody:    resBody,
+		})
+	}
+
 	// 3. Pre-flight Validation
 	if err := d.validator.ValidateRequest(req, routeMatch); err != nil {
-		http.Error(w, fmt.Sprintf("400 Bad Request: %v", err), http.StatusBadRequest)
+		errMsg := fmt.Sprintf("400 Bad Request: %v", err)
+		http.Error(w, errMsg, http.StatusBadRequest)
+		logRequest(http.StatusBadRequest, map[string]string{"Content-Type": "text/plain; charset=utf-8"}, []byte(errMsg))
 		return true
 	}
 
 	// 4. Unified Stub matching
 	matchedStub, found := d.stubRegistry.FindMatch(normReq)
 	if found {
-		d.writeResponse(w, matchedStub.Response.Status, matchedStub.Response.Headers, matchedStub.Response.Body)
+		resBody := d.writeResponse(w, matchedStub.Response.Status, matchedStub.Response.Headers, matchedStub.Response.Body)
+		logRequest(matchedStub.Response.Status, matchedStub.Response.Headers, resBody)
 		return true
 	}
 	if d.onlyStubs {
-		http.Error(w, "501 Not Implemented: no matching stub", http.StatusNotImplemented)
+		errMsg := "501 Not Implemented: no matching stub"
+		http.Error(w, errMsg, http.StatusNotImplemented)
+		logRequest(http.StatusNotImplemented, map[string]string{"Content-Type": "text/plain; charset=utf-8"}, []byte(errMsg))
 		return true
 	}
 
@@ -116,17 +149,20 @@ func (d *Dispatcher) ServeHTTP(w http.ResponseWriter, req *http.Request) bool {
 			d.maxDepth,
 		)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("500 Internal Server Error: %v", err), http.StatusInternalServerError)
+			errMsg := fmt.Sprintf("500 Internal Server Error: %v", err)
+			http.Error(w, errMsg, http.StatusInternalServerError)
+			logRequest(http.StatusInternalServerError, map[string]string{"Content-Type": "text/plain; charset=utf-8"}, []byte(errMsg))
 			return true
 		}
-		d.writeResponse(w, status, headers, payload)
+		resBody := d.writeResponse(w, status, headers, payload)
+		logRequest(status, headers, resBody)
 		return true
 	}
 
 	return false
 }
 
-func (d *Dispatcher) writeResponse(w http.ResponseWriter, status int, headers map[string]string, body any) {
+func (d *Dispatcher) writeResponse(w http.ResponseWriter, status int, headers map[string]string, body any) []byte {
 	if status == 0 {
 		status = http.StatusOK
 	}
@@ -143,7 +179,7 @@ func (d *Dispatcher) writeResponse(w http.ResponseWriter, status int, headers ma
 			encodedBody, err = json.Marshal(value)
 			if err != nil {
 				http.Error(w, fmt.Sprintf("500 Internal Server Error: failed to encode response: %v", err), http.StatusInternalServerError)
-				return
+				return nil
 			}
 		}
 	}
@@ -159,4 +195,5 @@ func (d *Dispatcher) writeResponse(w http.ResponseWriter, status int, headers ma
 	if len(encodedBody) > 0 {
 		_, _ = w.Write(encodedBody)
 	}
+	return encodedBody
 }

@@ -113,6 +113,19 @@ func (s *server) GetUnifiedRegistry() stub.Registry {
 	return s.unifiedStubReg
 }
 
+func (s *server) HasProtobufServices() bool {
+	count := 0
+	s.ForEachService(func(sd protoreflect.ServiceDescriptor) bool {
+		count++
+		return false
+	})
+	return count > 0
+}
+
+func (s *server) HasOpenAPIRoutes() bool {
+	return s.OpenAPIRouterCount() > 0
+}
+
 func NewServer(opts ServerOpts) (*server, error) {
 	serviceRegistry, err := registry.NewServiceRegistry()
 	if err != nil {
@@ -196,7 +209,7 @@ func (s *server) AddOpenAPISchema(ctx context.Context, pathOrURL string) error {
 	if err != nil {
 		return fmt.Errorf("failed to create router for openapi schema %s: %w", pathOrURL, err)
 	}
-	dispatcher := engine.NewDispatcher(s.unifiedStubReg, router, s.opts.MaxDepth, s.opts.StaticSeed, s.opts.OnlyStubs)
+	dispatcher := engine.NewDispatcher(s.unifiedStubReg, router, s.opts.MaxDepth, s.opts.StaticSeed, s.opts.OnlyStubs, s.logger)
 
 	addr := s.opts.Addr
 	if addr == "" {

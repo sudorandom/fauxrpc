@@ -43,6 +43,8 @@ func (m *mockServer) GetProxyClient() *http.Client                              
 func (m *mockServer) OpenAPIRouterCount() int                                      { return 0 }
 func (m *mockServer) AddOpenAPISchema(ctx context.Context, pathOrURL string) error { return nil }
 func (m *mockServer) GetUnifiedRegistry() stub.Registry                            { return nil }
+func (m *mockServer) HasProtobufServices() bool                                    { return true }
+func (m *mockServer) HasOpenAPIRoutes() bool                                       { return true }
 
 func TestHandler_Logging_Streaming(t *testing.T) {
 	// Setup

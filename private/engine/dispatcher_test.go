@@ -78,7 +78,7 @@ paths:
 		},
 	})
 
-	dispatcher := NewDispatcher(registry, router, 5, false, false)
+	dispatcher := NewDispatcher(registry, router, 5, false, false, nil)
 
 	// 1. Test stub match
 	rec1 := httptest.NewRecorder()
@@ -139,7 +139,7 @@ paths:
 			Body:   map[string]any{"id": "stubbed"},
 		},
 	})
-	dispatcher := NewDispatcher(registry, router, 5, false, true)
+	dispatcher := NewDispatcher(registry, router, 5, false, true, nil)
 
 	stubbed := httptest.NewRecorder()
 	assert.True(t, dispatcher.ServeHTTP(stubbed, httptest.NewRequest(http.MethodGet, "/v1/users/stubbed", nil)))
@@ -166,7 +166,7 @@ paths:
 	require.NoError(t, err)
 	router, err := openapi.NewRouter(doc)
 	require.NoError(t, err)
-	dispatcher := NewDispatcher(newMockStubRegistry(), router, 5, false, false)
+	dispatcher := NewDispatcher(newMockStubRegistry(), router, 5, false, false, nil)
 
 	bodyErr := errors.New("request body read failed")
 	body := &failingReadCloser{contents: []byte("partial"), err: bodyErr}
@@ -185,7 +185,7 @@ paths:
 
 func TestDispatcherWriteResponseReturnsErrorBeforeCommittingStatus(t *testing.T) {
 	recorder := httptest.NewRecorder()
-	NewDispatcher(nil, nil, 5, false, false).writeResponse(
+	NewDispatcher(nil, nil, 5, false, false, nil).writeResponse(
 		recorder,
 		http.StatusCreated,
 		map[string]string{"X-Stub-Header": "should-not-be-written"},
@@ -212,7 +212,7 @@ paths:
 	require.NoError(t, err)
 	router, err := openapi.NewRouter(doc)
 	require.NoError(t, err)
-	dispatcher := NewDispatcher(newMockStubRegistry(), router, 5, false, false)
+	dispatcher := NewDispatcher(newMockStubRegistry(), router, 5, false, false, nil)
 	request := httptest.NewRequest(
 		http.MethodPost,
 		"/items",
@@ -250,7 +250,7 @@ func TestDispatcherWriteResponsePreservesContentType(t *testing.T) {
 			if test.preset != "" {
 				recorder.Header().Set("Content-Type", test.preset)
 			}
-			NewDispatcher(nil, nil, 5, false, false).writeResponse(
+			NewDispatcher(nil, nil, 5, false, false, nil).writeResponse(
 				recorder,
 				http.StatusOK,
 				test.headers,

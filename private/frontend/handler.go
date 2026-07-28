@@ -39,6 +39,8 @@ type Provider interface {
 	GetLogger() *log.Logger
 	registry.ServiceRegistry
 	GetStubDB() stubs.StubDatabase
+	HasProtobufServices() bool
+	HasOpenAPIRoutes() bool
 }
 
 func DashboardHandler(p Provider) http.Handler {
@@ -197,7 +199,7 @@ func DashboardHandler(p Provider) http.Handler {
 			templ.Handler(partials.RequestLog(nil, p)).ServeHTTP(w, r)
 		} else {
 			// Direct navigation, return full page with partial embedded
-			templ.Handler(templates.Index(partials.RequestLog(nil, p))).ServeHTTP(w, r)
+			templ.Handler(templates.Index(partials.RequestLog(nil, p), p)).ServeHTTP(w, r)
 		}
 	}))
 
@@ -243,7 +245,7 @@ func DashboardHandler(p Provider) http.Handler {
 			if r.Header.Get("HX-Request") == "true" {
 				templ.Handler(browser.FileContent(pkgName, fileName, content)).ServeHTTP(w, r)
 			} else {
-				templ.Handler(templates.Index(browser.FileContent(pkgName, fileName, content))).ServeHTTP(w, r)
+				templ.Handler(templates.Index(browser.FileContent(pkgName, fileName, content), p)).ServeHTTP(w, r)
 			}
 			return
 		}
@@ -266,7 +268,7 @@ func DashboardHandler(p Provider) http.Handler {
 			if r.Header.Get("HX-Request") == "true" {
 				templ.Handler(browser.Browser(path, entries)).ServeHTTP(w, r)
 			} else {
-				templ.Handler(templates.Index(browser.Browser(path, entries))).ServeHTTP(w, r)
+				templ.Handler(templates.Index(browser.Browser(path, entries), p)).ServeHTTP(w, r)
 			}
 			return
 		}
@@ -290,7 +292,7 @@ func DashboardHandler(p Provider) http.Handler {
 		if r.Header.Get("HX-Request") == "true" {
 			templ.Handler(browser.Browser("", entries)).ServeHTTP(w, r)
 		} else {
-			templ.Handler(templates.Index(browser.Browser("", entries))).ServeHTTP(w, r)
+			templ.Handler(templates.Index(browser.Browser("", entries), p)).ServeHTTP(w, r)
 		}
 	}))
 
@@ -326,7 +328,7 @@ func DashboardHandler(p Provider) http.Handler {
 				if r.Header.Get("HX-Request") == "true" {
 					templ.Handler(templates_stubs.Single(pbStubs[0])).ServeHTTP(w, r)
 				} else {
-					templ.Handler(templates.Index(templates_stubs.Single(pbStubs[0]))).ServeHTTP(w, r)
+					templ.Handler(templates.Index(templates_stubs.Single(pbStubs[0]), p)).ServeHTTP(w, r)
 				}
 				return
 			}
@@ -365,7 +367,7 @@ func DashboardHandler(p Provider) http.Handler {
 		if r.Header.Get("HX-Request") == "true" {
 			templ.Handler(templates_stubs.List(orderedGroupedStubs)).ServeHTTP(w, r)
 		} else {
-			templ.Handler(templates.Index(templates_stubs.List(orderedGroupedStubs))).ServeHTTP(w, r)
+			templ.Handler(templates.Index(templates_stubs.List(orderedGroupedStubs), p)).ServeHTTP(w, r)
 		}
 	}))
 
@@ -375,7 +377,7 @@ func DashboardHandler(p Provider) http.Handler {
 			templ.Handler(partials.SummaryPage(p.GetStats())).ServeHTTP(w, r)
 		} else {
 			// Direct navigation, return full page with partial embedded
-			templ.Handler(templates.Index(partials.SummaryPage(p.GetStats()))).ServeHTTP(w, r)
+			templ.Handler(templates.Index(partials.SummaryPage(p.GetStats()), p)).ServeHTTP(w, r)
 		}
 	}))
 
@@ -383,12 +385,12 @@ func DashboardHandler(p Provider) http.Handler {
 		if r.Header.Get("HX-Request") == "true" {
 			templ.Handler(templates.About()).ServeHTTP(w, r)
 		} else {
-			templ.Handler(templates.Index(templates.About())).ServeHTTP(w, r)
+			templ.Handler(templates.Index(templates.About(), p)).ServeHTTP(w, r)
 		}
 	}))
 
 	mux.Handle("/fauxrpc/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		templ.Handler(templates.Index(partials.SummaryPage(p.GetStats()))).ServeHTTP(w, r)
+		templ.Handler(templates.Index(partials.SummaryPage(p.GetStats()), p)).ServeHTTP(w, r)
 	}))
 
 	// Serve static assets from the embedded file system
