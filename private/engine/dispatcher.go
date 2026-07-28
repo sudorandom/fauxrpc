@@ -48,7 +48,13 @@ func (d *Dispatcher) ServeHTTP(w http.ResponseWriter, req *http.Request) bool {
 		return false
 	}
 
-	// 1. Read request body bytes if present
+	// 1. Route matching (do not read request body before route match)
+	routeMatch, err := d.router.Match(req)
+	if err != nil {
+		return false
+	}
+
+	// 2. Read request body bytes if present
 	var bodyBytes []byte
 	if req.Body != nil {
 		originalBody := req.Body
@@ -64,12 +70,6 @@ func (d *Dispatcher) ServeHTTP(w http.ResponseWriter, req *http.Request) bool {
 			http.Error(w, fmt.Sprintf("413 Request Entity Too Large: request body exceeds %d bytes", maxRequestBodySize), http.StatusRequestEntityTooLarge)
 			return true
 		}
-	}
-
-	// 2. Radix Route matching
-	routeMatch, err := d.router.Match(req)
-	if err != nil {
-		return false
 	}
 
 	queryParams := make(map[string]string)

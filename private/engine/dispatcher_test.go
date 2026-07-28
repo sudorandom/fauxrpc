@@ -157,7 +157,11 @@ func TestEngineDispatcherRejectsUnreadableRequestBody(t *testing.T) {
 	doc, err := loader.LoadFromData([]byte(`
 openapi: 3.0.0
 info: {title: Test API, version: 1.0.0}
-paths: {}
+paths:
+  /items:
+    post:
+      responses:
+        '200': {description: OK}
 `))
 	require.NoError(t, err)
 	router, err := openapi.NewRouter(doc)
@@ -199,7 +203,11 @@ func TestEngineDispatcherRejectsOversizedRequestBody(t *testing.T) {
 	doc, err := loader.LoadFromData([]byte(`
 openapi: 3.0.0
 info: {title: Test API, version: 1.0.0}
-paths: {}
+paths:
+  /items:
+    post:
+      responses:
+        '200': {description: OK}
 `))
 	require.NoError(t, err)
 	router, err := openapi.NewRouter(doc)
