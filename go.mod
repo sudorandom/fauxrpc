@@ -25,6 +25,7 @@ require (
 	github.com/alecthomas/kong v1.12.1
 	github.com/brianvoe/gofakeit/v7 v7.15.0
 	github.com/bufbuild/protocompile v0.14.1
+	github.com/getkin/kin-openapi v0.143.0
 	github.com/go-chi/chi/v5 v5.3.0
 	github.com/google/cel-go v0.29.2
 	github.com/google/uuid v1.6.0
@@ -34,6 +35,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/sudorandom/protodocs v0.1.2
 	github.com/tailscale/hujson v0.0.0-20250226034555-ec1d1c113d33
+	github.com/tidwall/gjson v1.19.0
 	go.yaml.in/yaml/v3 v3.0.4
 	golang.org/x/net v0.57.0
 	golang.org/x/sync v0.22.0
@@ -53,13 +55,21 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
+	github.com/go-openapi/jsonpointer v0.22.5 // indirect
+	github.com/go-openapi/swag/jsonname v0.25.5 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
+	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/natefinch/atomic v1.0.1 // indirect
+	github.com/oasdiff/yaml v0.1.1 // indirect
+	github.com/oasdiff/yaml3 v0.0.14 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
+	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/timandy/routine v1.1.6 // indirect
 	golang.org/x/crypto v0.54.0 // indirect
 	golang.org/x/exp v0.0.0-20260709172345-9ea1abe57597 // indirect

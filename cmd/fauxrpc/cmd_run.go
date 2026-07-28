@@ -19,7 +19,7 @@ import (
 )
 
 type RunCmd struct {
-	Schema        []string `help:"The modules to use for the RPC schema. It can be protobuf descriptors (binpb, json, yaml), a URL for reflection or a directory of descriptors."`
+	Schema        []string `help:"The schemas to serve. It can be protobuf descriptors (binpb, json, yaml), an OpenAPI specification, a URL, or a directory of schemas."`
 	Addr          string   `short:"a" help:"Address to bind to." default:"127.0.0.1:6660"`
 	NoReflection  bool     `help:"Disables the server reflection service."`
 	NoHTTPLog     bool     `help:"Disables the HTTP log."`
@@ -35,6 +35,7 @@ type RunCmd struct {
 	Stubs         []string `help:"Directories or file paths for JSON files."`
 	Dashboard     bool     `help:"Enable the admin dashboard."`
 	Depth         int      `help:"Max depth for generated messages." default:"5"`
+	StaticSeed    bool     `help:"Use deterministic generated values for unstubbed OpenAPI and Protobuf requests."`
 	ProxyTo       string   `help:"Address of the upstream gRPC/Connect server to proxy requests to."`
 	RecordDir     string   `help:"Directory path to write/append the recorded stubs structured by service/method (e.g. stubs/)."`
 	SslKeylogFile string   `help:"Path to file for logging tls secrets, requires HTTPS or HTTP3."`
@@ -52,6 +53,7 @@ func (c *RunCmd) Run(globals *Globals) error {
 		HTTPS:         c.HTTPS || c.HTTP3,
 		WithDashboard: c.Dashboard,
 		MaxDepth:      c.Depth,
+		StaticSeed:    c.StaticSeed,
 		ProxyTo:       c.ProxyTo,
 		RecordDir:     c.RecordDir,
 	})
@@ -75,8 +77,8 @@ func (c *RunCmd) Run(globals *Globals) error {
 		}
 	}
 
-	if srv.ServiceCount() == 0 && !c.Empty {
-		return errors.New("no services found in the given schemas")
+	if srv.ServiceCount() == 0 && srv.OpenAPIRouterCount() == 0 && !c.Empty {
+		return errors.New("no services or OpenAPI schemas found in the given parameters")
 	}
 
 	for _, path := range c.Stubs {
@@ -124,23 +126,50 @@ func (c *RunCmd) Run(globals *Globals) error {
 		scheme = "https"
 	}
 
-	fmt.Printf("FauxRPC (%s) - %d services loaded, %d stubs loaded\n", fullVersion(), srv.ServiceCount(), srv.NumStubs())
+	hasProto := srv.ServiceCount() > 0
+	hasOpenAPI := srv.OpenAPIRouterCount() > 0
+
+	fmt.Printf("FauxRPC (%s) - %d gRPC services loaded, %d OpenAPI routers loaded, %d stubs loaded\n", fullVersion(), srv.ServiceCount(), srv.OpenAPIRouterCount(), srv.NumStubs())
 	fmt.Printf("Listening on %s://%s\n", scheme, c.Addr)
 	if c.Dashboard {
 		fmt.Printf("Dashboard: %s://%s/fauxrpc\n", scheme, c.Addr)
 	}
 	if !c.NoDocPage {
-		fmt.Printf("Documentation: %s://%s/fauxrpc/docs/\n", scheme, c.Addr)
+		if hasProto {
+			fmt.Printf("gRPC Documentation: %s://%s/fauxrpc/docs/\n", scheme, c.Addr)
+		}
+		if hasOpenAPI {
+			fmt.Printf("OpenAPI Documentation: %s://%s/fauxrpc/openapi-docs/\n", scheme, c.Addr)
+		}
 	}
 	fmt.Println()
 	fmt.Println("Example Commands:")
 
+	if hasProto {
+		if c.HTTP3 {
+			if !c.NoReflection {
+				fmt.Printf("$ buf curl --http3 https://%s --list-methods\n", c.Addr)
+			}
+			fmt.Printf("$ buf curl --http3 https://%s/[METHOD_NAME]\n", c.Addr)
+		} else if c.HTTPS {
+			if !c.NoReflection {
+				fmt.Printf("$ buf curl https://%s --list-methods\n", c.Addr)
+			}
+			fmt.Printf("$ buf curl https://%s/[METHOD_NAME]\n", c.Addr)
+		} else {
+			if !c.NoReflection {
+				fmt.Printf("$ buf curl --http2-prior-knowledge http://%s --list-methods\n", c.Addr)
+			}
+			fmt.Printf("$ buf curl --http2-prior-knowledge http://%s/[METHOD_NAME]\n", c.Addr)
+		}
+	}
+
+	if hasOpenAPI {
+		fmt.Printf("$ curl %s://%s/[PATH]\n", scheme, c.Addr)
+	}
+
 	eg, _ := errgroup.WithContext(context.Background())
 	if c.HTTP3 {
-		if !c.NoReflection {
-			fmt.Printf("$ buf curl --http3 https://%s --list-methods\n", c.Addr)
-		}
-		fmt.Printf("$ buf curl --http3 https://%s/[METHOD_NAME]\n", c.Addr)
 		if c.Cert == "" || c.CertKey == "" {
 			return errors.New("--cert and --cert-key are required if --http3 is set")
 		}
@@ -153,10 +182,6 @@ func (c *RunCmd) Run(globals *Globals) error {
 		})
 	}
 	if c.HTTPS {
-		if !c.NoReflection {
-			fmt.Printf("$ buf curl https://%s --list-methods\n", c.Addr)
-		}
-		fmt.Printf("$ buf curl https://%s/[METHOD_NAME]\n", c.Addr)
 		if c.Cert == "" || c.CertKey == "" {
 			return errors.New("--cert and --cert-key are required if --https is set")
 		}
@@ -164,10 +189,6 @@ func (c *RunCmd) Run(globals *Globals) error {
 			return server.ListenAndServeTLS(c.Cert, c.CertKey)
 		})
 	} else {
-		if !c.NoReflection {
-			fmt.Printf("$ buf curl --http2-prior-knowledge http://%s --list-methods\n", c.Addr)
-		}
-		fmt.Printf("$ buf curl --http2-prior-knowledge http://%s/[METHOD_NAME]\n", c.Addr)
 		server.Protocols.SetUnencryptedHTTP2(true)
 		eg.Go(server.ListenAndServe)
 	}

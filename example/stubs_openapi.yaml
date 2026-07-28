@@ -1,0 +1,19 @@
+stubs:
+  - name: "Mock Get User Admin Stub"
+    target:
+      operationId: "getUserById"
+    match:
+      pathParams:
+        id: "usr_admin_123"
+      headers:
+        X-Test-Env: "staging"
+    response:
+      status: 200
+      headers:
+        Content-Type: "application/json"
+      body:
+        id: "usr_admin_123"
+        name: "Staging Admin User"
+        email: "admin@staging.fauxrpc.local"
+        role: "admin"
+        created_at: "2026-01-01T00:00:00Z"

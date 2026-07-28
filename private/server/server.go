@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"log"
 	"log/slog"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -21,16 +23,20 @@ import (
 	"connectrpc.com/validate"
 	"connectrpc.com/vanguard"
 	"github.com/MadAppGang/httplog"
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/cors"
 	"github.com/sudorandom/fauxrpc"
+	"github.com/sudorandom/fauxrpc/private/engine"
 	"github.com/sudorandom/fauxrpc/private/frontend"
 	"github.com/sudorandom/fauxrpc/private/gen/registry/v1/registryv1connect"
 	"github.com/sudorandom/fauxrpc/private/gen/stubs/v1/stubsv1connect"
 	fauxlog "github.com/sudorandom/fauxrpc/private/log"
 	"github.com/sudorandom/fauxrpc/private/metrics"
+	"github.com/sudorandom/fauxrpc/private/openapi"
 	"github.com/sudorandom/fauxrpc/private/registry"
+	"github.com/sudorandom/fauxrpc/private/stub"
 	"github.com/sudorandom/fauxrpc/private/stubs"
 	"github.com/sudorandom/protodocs"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -53,7 +59,11 @@ type Server interface {
 	GetMaxDepth() int
 	GetProxyTo() string
 	GetRecordDir() string
+	GetStaticSeed() bool
 	GetProxyClient() *http.Client
+	OpenAPIRouterCount() int
+	AddOpenAPISchema(ctx context.Context, pathOrURL string) error
+	GetUnifiedRegistry() stub.Registry
 }
 
 type ServerOpts struct {
@@ -68,6 +78,7 @@ type ServerOpts struct {
 	HTTPS         bool
 	WithDashboard bool
 	MaxDepth      int
+	StaticSeed    bool
 	ProxyTo       string
 	RecordDir     string
 }
@@ -78,14 +89,28 @@ type server struct {
 	lock *sync.Mutex
 
 	handlerDocs             *wrappedHandler
+	handlerOpenAPIDocs      *wrappedHandler
 	handlerReflectorV1      *wrappedHandler
 	handlerReflectorV1Alpha *wrappedHandler
 	handlerTranscoder       *wrappedHandler
 
-	opts        ServerOpts
-	stats       *metrics.Stats
-	logger      *fauxlog.Logger
-	proxyClient *http.Client
+	opts               ServerOpts
+	stats              *metrics.Stats
+	logger             *fauxlog.Logger
+	proxyClient        *http.Client
+	openapiDispatchers []*engine.Dispatcher
+	openapiDocs        []*openapi3.T
+	unifiedStubReg     stub.Registry
+}
+
+func (s *server) OpenAPIRouterCount() int {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+	return len(s.openapiDispatchers)
+}
+
+func (s *server) GetUnifiedRegistry() stub.Registry {
+	return s.unifiedStubReg
 }
 
 func NewServer(opts ServerOpts) (*server, error) {
@@ -98,6 +123,7 @@ func NewServer(opts ServerOpts) (*server, error) {
 		ServiceRegistry:         serviceRegistry,
 		StubDatabase:            stubs.NewStubDatabase(),
 		handlerDocs:             NewWrappedHandler(),
+		handlerOpenAPIDocs:      NewWrappedHandler(),
 		handlerReflectorV1:      NewWrappedHandler(),
 		handlerReflectorV1Alpha: NewWrappedHandler(),
 		handlerTranscoder:       NewWrappedHandler(),
@@ -110,9 +136,11 @@ func NewServer(opts ServerOpts) (*server, error) {
 			FauxRpcVersion: opts.Version,
 			RequestCounts:  make(map[time.Time]int64),
 		},
-		logger:      fauxlog.NewLogger(),
-		proxyClient: newProxyClient(),
+		logger:         fauxlog.NewLogger(),
+		proxyClient:    newProxyClient(),
+		unifiedStubReg: stub.NewRegistry(),
 	}
+
 	if opts.RecordDir != "" {
 		go s.startRecordDirWorker()
 	}
@@ -142,7 +170,78 @@ func (s *server) RegisterFile(fd protoreflect.FileDescriptor) error {
 	return nil
 }
 
+func (s *server) AddOpenAPISchema(ctx context.Context, pathOrURL string) error {
+	stat, err := os.Stat(pathOrURL)
+	if err == nil && stat.IsDir() {
+		return fs.WalkDir(os.DirFS(pathOrURL), ".", func(childpath string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if d.IsDir() {
+				return nil
+			}
+			fullPath := filepath.Join(pathOrURL, childpath)
+			if openapi.IsOpenAPISpec(fullPath) {
+				return s.AddOpenAPISchema(ctx, fullPath)
+			}
+			return nil
+		})
+	}
+
+	doc, err := openapi.LoadSchema(ctx, pathOrURL)
+	if err != nil {
+		return fmt.Errorf("failed to load openapi schema %s: %w", pathOrURL, err)
+	}
+	router, err := openapi.NewRouter(doc.Doc)
+	if err != nil {
+		return fmt.Errorf("failed to create router for openapi schema %s: %w", pathOrURL, err)
+	}
+	dispatcher := engine.NewDispatcher(s.unifiedStubReg, router, s.opts.MaxDepth, s.opts.StaticSeed, s.opts.OnlyStubs)
+
+	addr := s.opts.Addr
+	if addr == "" {
+		addr = "localhost:6660"
+	}
+	scheme := "http"
+	if s.opts.HTTPS {
+		scheme = "https"
+	}
+	if strings.HasPrefix(addr, ":") {
+		addr = "localhost" + addr
+	}
+	serverURL := fmt.Sprintf("%s://%s", scheme, addr)
+
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	s.openapiDispatchers = append(s.openapiDispatchers, dispatcher)
+	s.openapiDocs = append(s.openapiDocs, doc.Doc)
+	s.handlerOpenAPIDocs.SetHandler(openapi.ScalarHandler(s.openapiDocs, "/fauxrpc/openapi-docs/", serverURL))
+	return nil
+}
+
 func (s *server) AddFileFromPath(ctx context.Context, path string) error {
+	if openapi.IsOpenAPISpec(path) {
+		slog.Info("Detected OpenAPI specification", "path", path)
+		return s.AddOpenAPISchema(ctx, path)
+	}
+	stat, err := os.Stat(path)
+	if err == nil && stat.IsDir() {
+		// Check if directory contains any openapi specs
+		containsOpenAPI := false
+		_ = fs.WalkDir(os.DirFS(path), ".", func(childpath string, d fs.DirEntry, err error) error {
+			if err == nil && !d.IsDir() {
+				if openapi.IsOpenAPISpec(filepath.Join(path, childpath)) {
+					containsOpenAPI = true
+				}
+			}
+			return nil
+		})
+		if containsOpenAPI {
+			slog.Info("Detected OpenAPI specification directory", "path", path)
+			return s.AddOpenAPISchema(ctx, path)
+		}
+	}
 	return registry.AddServicesFromPath(ctx, s.ServiceRegistry, path)
 }
 
@@ -209,6 +308,10 @@ func (s *server) GetProxyTo() string {
 
 func (s *server) GetRecordDir() string {
 	return s.opts.RecordDir
+}
+
+func (s *server) GetStaticSeed() bool {
+	return s.opts.StaticSeed
 }
 
 func (s *server) GetProxyClient() *http.Client {
@@ -353,6 +456,19 @@ func (s *server) Handler() (http.Handler, error) {
 		}).Handler)
 	}
 
+	if len(s.openapiDispatchers) > 0 {
+		mux.Use(func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				for _, dispatcher := range s.openapiDispatchers {
+					if dispatcher.ServeHTTP(w, r) {
+						return
+					}
+				}
+				next.ServeHTTP(w, r)
+			})
+		})
+	}
+
 	mux.Mount("/", protocolMiddleware(s.handlerTranscoder))
 	if s.opts.WithDashboard {
 		mux.Handle("/", http.RedirectHandler("/fauxrpc", http.StatusFound))
@@ -369,6 +485,9 @@ func (s *server) Handler() (http.Handler, error) {
 	if s.opts.RenderDocPage {
 		mux.Get("/fauxrpc/docs", http.RedirectHandler("/fauxrpc/docs/", http.StatusMovedPermanently).ServeHTTP)
 		mux.Handle("/fauxrpc/docs/*", s.handlerDocs)
+
+		mux.Get("/fauxrpc/openapi-docs", http.RedirectHandler("/fauxrpc/openapi-docs/", http.StatusMovedPermanently).ServeHTTP)
+		mux.Handle("/fauxrpc/openapi-docs/*", s.handlerOpenAPIDocs)
 	}
 
 	validateInterceptor := validate.NewInterceptor()
