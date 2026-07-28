@@ -1,7 +1,6 @@
 package generator
 
 import (
-	"fmt"
 	"math/rand"
 	"regexp"
 	"strings"
@@ -36,11 +35,6 @@ func (s *ScalarSynthesizer) Synthesize(schema *openapi3.Schema, r *rand.Rand) an
 		return schema.Examples[0]
 	}
 
-	// 2. Default Value
-	if schema.Default != nil {
-		return schema.Default
-	}
-
 	// Determine type
 	types := schema.Type.Slice()
 	primaryType := ""
@@ -49,6 +43,7 @@ func (s *ScalarSynthesizer) Synthesize(schema *openapi3.Schema, r *rand.Rand) an
 	}
 
 	// 3. Format-driven synthesis
+	faker := gofakeit.New(uint64(r.Int63()) + 1)
 	switch strings.ToLower(schema.Format) {
 	case "uuid":
 		return syntheticUUID(r)
@@ -57,15 +52,15 @@ func (s *ScalarSynthesizer) Synthesize(schema *openapi3.Schema, r *rand.Rand) an
 	case "date":
 		return syntheticTime(r).Format("2006-01-02")
 	case "email":
-		return fmt.Sprintf("user-%d@fauxrpc.local", r.Intn(10000))
+		return strings.ToLower(faker.Email())
 	case "hostname":
-		return fmt.Sprintf("host-%d.fauxrpc.local", r.Intn(1000))
+		return strings.ToLower(faker.DomainName())
 	case "ipv4":
-		return fmt.Sprintf("192.168.%d.%d", r.Intn(255)+1, r.Intn(254)+1)
+		return faker.IPv4Address()
 	case "ipv6":
-		return "2001:db8::1"
+		return faker.IPv6Address()
 	case "uri", "url":
-		return fmt.Sprintf("https://fauxrpc.local/resource/%d", r.Intn(1000))
+		return faker.URL()
 	case "byte":
 		return "Z3JQQyBhdXRvLWdlbmVyYXRlZCBieXRlcw=="
 	case "int32", "int64":

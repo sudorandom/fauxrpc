@@ -217,3 +217,27 @@ func TestWalkerGeneratesResponseHeaders(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, stableHeaders["X-Expires-After"], nextStableHeaders["X-Expires-After"])
 }
+
+func TestWalkerSuccessiveGenerationsVary(t *testing.T) {
+	strSchema := openapi3.NewStringSchema()
+	op := &openapi3.Operation{
+		Responses: openapi3.NewResponses(
+			openapi3.WithStatus(200, &openapi3.ResponseRef{
+				Value: &openapi3.Response{
+					Content: openapi3.NewContentWithJSONSchema(strSchema),
+				},
+			}),
+		),
+	}
+
+	walker := NewWalker(false)
+	_, _, payload1, err := walker.GenerateFromOperation("GET", "/test", "getTest", op, 5)
+	require.NoError(t, err)
+
+	_, _, payload2, err := walker.GenerateFromOperation("GET", "/test", "getTest", op, 5)
+	require.NoError(t, err)
+
+	assert.NotEmpty(t, payload1)
+	assert.NotEmpty(t, payload2)
+	assert.NotEqual(t, payload1, payload2, "Successive GenerateFromOperation calls in non-static-seed mode should vary")
+}

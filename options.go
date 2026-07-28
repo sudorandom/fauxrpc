@@ -2,6 +2,7 @@ package fauxrpc
 
 import (
 	"context"
+	"time"
 
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	"github.com/brianvoe/gofakeit/v7"
@@ -40,7 +41,7 @@ func (st GenOptions) GetContext() context.Context {
 
 func (st GenOptions) fake() *gofakeit.Faker {
 	if st.Faker == nil {
-		return gofakeit.GlobalFaker
+		return gofakeit.New(uint64(time.Now().UnixNano()))
 	}
 	return st.Faker
 }

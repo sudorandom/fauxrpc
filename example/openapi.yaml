@@ -74,18 +74,14 @@ components:
         id:
           type: string
           format: uuid
-          example: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"
         name:
           type: string
-          example: "Alice Johnson"
         email:
           type: string
           format: email
-          example: "alice@example.com"
         role:
           type: string
           enum: [admin, member, guest]
-          default: "member"
         created_at:
           type: string
           format: date-time

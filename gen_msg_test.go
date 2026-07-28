@@ -229,3 +229,28 @@ func TestRecursionLimit(t *testing.T) {
 		assert.False(t, recursive.Has(recursiveField), "nested recursive field should not be set at MaxDepth 2")
 	})
 }
+
+func TestRepeatedGenerationsVary(t *testing.T) {
+	md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
+	require.NotNil(t, md)
+
+	// Generate two messages back-to-back with default GenOptions{}
+	msg1, err := fauxrpc.NewMessage(md, fauxrpc.GenOptions{})
+	require.NoError(t, err)
+
+	msg2, err := fauxrpc.NewMessage(md, fauxrpc.GenOptions{})
+	require.NoError(t, err)
+
+	pmsg1 := msg1.ProtoReflect()
+	pmsg2 := msg2.ProtoReflect()
+
+	strFd := md.Fields().ByName("string_value")
+	require.NotNil(t, strFd)
+
+	str1 := pmsg1.Get(strFd).String()
+	str2 := pmsg2.Get(strFd).String()
+
+	assert.NotEmpty(t, str1)
+	assert.NotEmpty(t, str2)
+	assert.NotEqual(t, str1, str2, "Successive NewMessage calls should generate distinct random values")
+}
