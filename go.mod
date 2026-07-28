@@ -6,9 +6,9 @@ retract v0.15.25
 
 require (
 	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260709200747-435963d16310.1
-	buf.build/gen/go/bufbuild/registry/connectrpc/go v1.20.0-20260629211719-be09125d9193.1
-	buf.build/gen/go/bufbuild/registry/protocolbuffers/go v1.36.11-20260629211719-be09125d9193.1
-	buf.build/gen/go/connectrpc/eliza/connectrpc/go v1.19.1-20230913231627-233fca715f49.2
+	buf.build/gen/go/bufbuild/registry/connectrpc/go v1.20.0-20260713175918-10d915f5b43b.1
+	buf.build/gen/go/bufbuild/registry/protocolbuffers/go v1.36.11-20260713175918-10d915f5b43b.1
+	buf.build/gen/go/connectrpc/eliza/connectrpc/go v1.20.0-20230913231627-233fca715f49.1
 	buf.build/gen/go/connectrpc/eliza/protocolbuffers/go v1.36.11-20230913231627-233fca715f49.1
 	buf.build/gen/go/grpc/grpc/connectrpc/go v1.20.0-20260331211127-1730f7242d0f.1
 	buf.build/gen/go/grpc/grpc/protocolbuffers/go v1.36.11-20260331211127-1730f7242d0f.1
@@ -21,7 +21,7 @@ require (
 	connectrpc.com/validate v0.6.0
 	connectrpc.com/vanguard v0.3.0
 	github.com/MadAppGang/httplog v1.3.0
-	github.com/a-h/templ v0.3.960
+	github.com/a-h/templ v0.3.1020
 	github.com/alecthomas/kong v1.12.1
 	github.com/brianvoe/gofakeit/v7 v7.15.0
 	github.com/bufbuild/protocompile v0.14.1
@@ -39,8 +39,8 @@ require (
 	go.yaml.in/yaml/v3 v3.0.4
 	golang.org/x/net v0.57.0
 	golang.org/x/sync v0.22.0
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260706201446-f0a921348800
-	google.golang.org/grpc v1.79.3
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260727163830-6c54dddc4772
+	google.golang.org/grpc v1.82.1
 	google.golang.org/protobuf v1.36.11
 )
 
