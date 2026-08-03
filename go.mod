@@ -22,7 +22,7 @@ require (
 	connectrpc.com/vanguard v0.3.0
 	github.com/MadAppGang/httplog v1.3.0
 	github.com/a-h/templ v0.3.1020
-	github.com/alecthomas/kong v1.12.1
+	github.com/alecthomas/kong v1.16.0
 	github.com/brianvoe/gofakeit/v7 v7.15.0
 	github.com/bufbuild/protocompile v0.14.1
 	github.com/getkin/kin-openapi v0.143.0
