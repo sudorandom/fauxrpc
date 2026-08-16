@@ -19,12 +19,13 @@ import (
 )
 
 type GenerateCmd struct {
-	Schema []string `required:"" help:"The modules to use for the RPC schema. It can be protobuf descriptors (binpb, json, yaml), a URL for reflection or a directory of descriptors."`
-	Target string   `required:"" help:"Protobuf type" example:"'connectrpc.eliza.v1.IntroduceResponse'"`
-	Format string   `default:"json" enum:"json,proto,grpc" help:"Format to output"`
-	Seed   *uint64  `help:"Seed for random number generator"`
-	Stubs  []string `help:"Directories or file paths for JSON files."`
-	Depth  int      `help:"Max depth for generated messages." default:"5"`
+	Schema       []string `required:"" help:"The modules to use for the RPC schema. It can be protobuf descriptors (binpb, json, yaml), a URL for reflection or a directory of descriptors."`
+	Target       string   `required:"" help:"Protobuf type" example:"'connectrpc.eliza.v1.IntroduceResponse'"`
+	Format       string   `default:"json" enum:"json,proto,grpc" help:"Format to output"`
+	Seed         *uint64  `help:"Seed for random number generator"`
+	Stubs        []string `help:"Directories or file paths for JSON files."`
+	Depth        int      `help:"Max depth for generated messages." default:"5"`
+	ViolateRules float64  `help:"Probability (0.0-1.0) that a field is generated to break its protovalidate rules instead of satisfying them." default:"0"`
 }
 
 func (c *GenerateCmd) Run(globals *Globals) error {
@@ -65,9 +66,10 @@ func (c *GenerateCmd) Run(globals *Globals) error {
 	}
 	fakeSrc := source.NewJSF(seed)
 	msg, err := fauxrpc.NewMessage(md, fauxrpc.GenOptions{
-		MaxDepth:   c.Depth,
-		Faker:      gofakeit.NewFaker(fakeSrc, true),
-		StubFinder: stubs.NewStubFinder(stubDB),
+		MaxDepth:     c.Depth,
+		Faker:        gofakeit.NewFaker(fakeSrc, true),
+		StubFinder:   stubs.NewStubFinder(stubDB),
+		ViolateRules: c.ViolateRules,
 	})
 	if err != nil {
 		return err

@@ -57,6 +57,7 @@ type Server interface {
 	IncrementErrors()
 	GetLogger() *fauxlog.Logger
 	GetMaxDepth() int
+	GetViolateRules() float64
 	GetProxyTo() string
 	GetRecordDir() string
 	GetStaticSeed() bool
@@ -78,6 +79,7 @@ type ServerOpts struct {
 	HTTPS         bool
 	WithDashboard bool
 	MaxDepth      int
+	ViolateRules  float64
 	StaticSeed    bool
 	ProxyTo       string
 	RecordDir     string
@@ -313,6 +315,10 @@ func (s *server) IncrementErrors() {
 
 func (s *server) GetMaxDepth() int {
 	return s.opts.MaxDepth
+}
+
+func (s *server) GetViolateRules() float64 {
+	return s.opts.ViolateRules
 }
 
 func (s *server) GetProxyTo() string {

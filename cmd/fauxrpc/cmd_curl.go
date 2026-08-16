@@ -35,6 +35,7 @@ type CurlCmd struct {
 	Stubs               []string `help:"Directories or file paths for JSON files."`
 	Method              string   `arg:"" help:"Service or method name." optional:""`
 	Depth               int      `help:"Max depth for generated messages." default:"5"`
+	ViolateRules        float64  `help:"Probability (0.0-1.0) that a field is generated to break its protovalidate rules instead of satisfying them." default:"0"`
 }
 
 func (c *CurlCmd) Run(globals *Globals) error {
@@ -200,9 +201,10 @@ func (c *CurlCmd) callRPC(
 		Req:              reqMsg,
 	}
 	genOpts := fauxrpc.GenOptions{
-		MaxDepth: c.Depth,
-		Faker:    gofakeit.New(0),
-		Context:  protocel.WithCELContext(ctx, celCtx),
+		MaxDepth:     c.Depth,
+		Faker:        gofakeit.New(0),
+		Context:      protocel.WithCELContext(ctx, celCtx),
+		ViolateRules: c.ViolateRules,
 	}
 
 	// Helper to print request

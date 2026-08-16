@@ -29,6 +29,11 @@ func Map(msg protoreflect.Message, fd protoreflect.FieldDescriptor, opts GenOpti
 	if constraints == nil {
 		return mapSimple(msg, fd, opts)
 	}
+	if opts.shouldViolate() {
+		if val, ok := violateMap(msg, fd, constraints, opts); ok {
+			return val
+		}
+	}
 	rules := constraints.GetMap()
 	if rules == nil {
 		return mapSimple(msg, fd, opts)

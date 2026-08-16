@@ -180,6 +180,28 @@ fauxrpc run --proxy-to=127.0.0.1:8080 --record-dir=stubs/
 
 If the upstream server returns an `UNIMPLEMENTED` status code (indicating that the endpoint is not yet implemented), FauxRPC will automatically catch the error and fall back to serving a mock response (from stubs or random fake generation). This allows frontend and backend teams to co-develop APIs incrementally.
 
+## Generating Invalid Data
+
+By default FauxRPC honors the [protovalidate](https://buf.build/docs/protovalidate/) rules on a schema, so generated data passes validation. `--violate-rules` inverts that for testing how clients handle bad data: it takes a probability from `0.0` to `1.0` that any single field is generated to *break* its rules instead of satisfying them.
+
+```shell
+# every field that has a violable rule gets a bad value
+fauxrpc run --schema=service.binpb --violate-rules=1.0
+
+# roughly one field in five is bad
+fauxrpc generate --schema=service.binpb --target=pkg.v1.Response --violate-rules=0.2
+```
+
+The same option is available on `fauxrpc run`, `fauxrpc generate`, and `fauxrpc curl`.
+
+Which rule gets broken is picked at random from every rule on the field that a value can break, so repeated runs exercise different failure modes: a `string` with both `min_len` and `pattern` is sometimes too short and sometimes malformed. `required` fields are either left unset or given a bad value.
+
+A few things are never violated, so a message is not guaranteed to fail validation even at `1.0`:
+
+* Fields with no rules, or with `ignore: IGNORE_ALWAYS`.
+* Message-level rules and CEL expressions (`cel`, `cel_expression`), which no single field value can be reasoned about generically.
+* Rules where no counterexample exists, such as an `int32` bounded by `gte` at the type's minimum.
+
 ## Making Requests with `fauxrpc curl`
 
 FauxRPC includes a handy built-in client, `fauxrpc curl`, for making requests to your services without needing external tools. It automatically sources the schema to provide a seamless testing experience.

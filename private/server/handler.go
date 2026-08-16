@@ -284,7 +284,8 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 
 			out := registry.NewMessage(method.Output()).Interface()
 			genOpts := fauxrpc.GenOptions{
-				MaxDepth: maxDepth,
+				MaxDepth:     maxDepth,
+				ViolateRules: s.GetViolateRules(),
 				Context: protocel.WithCELContext(ctx, &protocel.CELContext{
 					MethodDescriptor: method,
 					Req:              input,

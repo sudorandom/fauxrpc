@@ -172,7 +172,12 @@ message AllTypes {
     ENUM_TWO = 2;
   }
   AllTypes msg_value = 73;
-  Enum enum_value = 74 [(buf.validate.field).enum = { not_in: [1, 2] }];
+  Enum enum_value = 74 [(buf.validate.field).enum = {
+    not_in: [
+      1,
+      2
+    ]
+  }];
   AllTypes opt_msg_value = 75 [features.field_presence = EXPLICIT];
   Enum opt_enum_value = 76 [features.field_presence = EXPLICIT];
   repeated AllTypes msg_list = 77;
@@ -226,10 +231,26 @@ message EnumTest {
     TEST_ENUM_TWO = 2;
     TEST_ENUM_THREE = 3;
   }
-  TestEnum enum_in = 1 [(buf.validate.field).enum = { in: [2, 3] }];
-  TestEnum enum_not_in = 2 [(buf.validate.field).enum = { not_in: [0, 1] }];
-  TestEnum enum_in_and_not_in = 3 [(buf.validate.field).enum = { in: [1, 2], not_in: [2] }];
-  TestEnum enum_const = 4 [(buf.validate.field).enum = { const: 3 }];
+  TestEnum enum_in = 1 [(buf.validate.field).enum = {
+    in: [
+      2,
+      3
+    ]
+  }];
+  TestEnum enum_not_in = 2 [(buf.validate.field).enum = {
+    not_in: [
+      0,
+      1
+    ]
+  }];
+  TestEnum enum_in_and_not_in = 3 [(buf.validate.field).enum = {
+    in: [
+      1,
+      2
+    ]
+    not_in: [2]
+  }];
+  TestEnum enum_const = 4 [(buf.validate.field).enum = {const: 3}];
   TestEnum enum_required = 5 [(buf.validate.field).required = true];
 }
 
@@ -240,5 +261,78 @@ message RepeatedEnumTest {
     TEST_ENUM_TWO = 2;
     TEST_ENUM_THREE = 3;
   }
-  repeated TestEnum repeated_enum_in = 1 [(buf.validate.field).repeated.items.enum = { in: [2, 3] }];
+  repeated TestEnum repeated_enum_in = 1 [(buf.validate.field).repeated.items.enum = {
+    in: [
+      2,
+      3
+    ]
+  }];
+}
+
+// ValidateRulesTest covers the protovalidate rules that the generator knows how
+// to violate when GenOptions.ViolateRules is set.
+message ValidateRulesTest {
+  enum TestEnum {
+    TEST_ENUM_UNSPECIFIED = 0;
+    TEST_ENUM_ONE = 1;
+    TEST_ENUM_TWO = 2;
+  }
+
+  message Nested {
+    string name = 1 [(buf.validate.field).string.min_len = 5];
+  }
+
+  int32 int32_gt = 1 [(buf.validate.field).int32.gt = 10];
+  int64 int64_lte = 2 [(buf.validate.field).int64.lte = 100];
+  uint32 uint32_in = 3 [(buf.validate.field).uint32 = {
+    in: [
+      1,
+      2,
+      3
+    ]
+  }];
+  uint64 uint64_const = 4 [(buf.validate.field).uint64.const = 42];
+  sint32 sint32_gte = 5 [(buf.validate.field).sint32.gte = 5];
+  sfixed64 sfixed64_lt = 6 [(buf.validate.field).sfixed64.lt = -3];
+  fixed32 fixed32_not_in = 7 [(buf.validate.field).fixed32 = {
+    not_in: [
+      7,
+      8
+    ]
+  }];
+  float float_finite = 8 [(buf.validate.field).float.finite = true];
+  double double_gte = 9 [(buf.validate.field).double.gte = 1.5];
+  bool bool_const = 10 [(buf.validate.field).bool.const = true];
+  string string_email = 11 [(buf.validate.field).string.email = true];
+  string string_uuid = 12 [(buf.validate.field).string.uuid = true];
+  string string_pattern = 13 [(buf.validate.field).string.pattern = "^[a-z]{3,8}$"];
+  string string_min_len = 14 [(buf.validate.field).string.min_len = 5];
+  string string_max_len = 15 [(buf.validate.field).string.max_len = 4];
+  string string_prefix = 16 [(buf.validate.field).string.prefix = "abc"];
+  string string_in = 17 [(buf.validate.field).string = {
+    in: [
+      "a",
+      "b"
+    ]
+  }];
+  bytes bytes_min_len = 18 [(buf.validate.field).bytes.min_len = 4];
+  bytes bytes_const = 19 [(buf.validate.field).bytes.const = "\x01\x02"];
+  TestEnum enum_defined_only = 20 [(buf.validate.field).enum.defined_only = true];
+  TestEnum enum_const = 21 [(buf.validate.field).enum.const = 2];
+  repeated string repeated_min_items = 22 [(buf.validate.field).repeated.min_items = 2];
+  repeated string repeated_max_items = 23 [(buf.validate.field).repeated.max_items = 2];
+  repeated string repeated_unique = 24 [(buf.validate.field).repeated.unique = true];
+  map<string, string> map_min_pairs = 25 [(buf.validate.field).map.min_pairs = 2];
+  map<string, string> map_max_pairs = 26 [(buf.validate.field).map.max_pairs = 2];
+  google.protobuf.Duration duration_gt = 27 [(buf.validate.field).duration.gt = {seconds: 60}];
+  google.protobuf.Timestamp timestamp_lt = 28 [(buf.validate.field).timestamp.lt = {seconds: 1000000}];
+  string string_required = 29 [(buf.validate.field).required = true];
+  Nested nested_required = 30 [(buf.validate.field).required = true];
+}
+
+// UnvalidatedTest has no protovalidate rules at all.
+message UnvalidatedTest {
+  string name = 1;
+  int32 count = 2;
+  repeated string tags = 3;
 }

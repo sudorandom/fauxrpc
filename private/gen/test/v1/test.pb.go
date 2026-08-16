@@ -249,6 +249,50 @@ func (x RepeatedEnumTest_TestEnum) Number() protoreflect.EnumNumber {
 	return protoreflect.EnumNumber(x)
 }
 
+type ValidateRulesTest_TestEnum int32
+
+const (
+	ValidateRulesTest_TEST_ENUM_UNSPECIFIED ValidateRulesTest_TestEnum = 0
+	ValidateRulesTest_TEST_ENUM_ONE         ValidateRulesTest_TestEnum = 1
+	ValidateRulesTest_TEST_ENUM_TWO         ValidateRulesTest_TestEnum = 2
+)
+
+// Enum value maps for ValidateRulesTest_TestEnum.
+var (
+	ValidateRulesTest_TestEnum_name = map[int32]string{
+		0: "TEST_ENUM_UNSPECIFIED",
+		1: "TEST_ENUM_ONE",
+		2: "TEST_ENUM_TWO",
+	}
+	ValidateRulesTest_TestEnum_value = map[string]int32{
+		"TEST_ENUM_UNSPECIFIED": 0,
+		"TEST_ENUM_ONE":         1,
+		"TEST_ENUM_TWO":         2,
+	}
+)
+
+func (x ValidateRulesTest_TestEnum) Enum() *ValidateRulesTest_TestEnum {
+	p := new(ValidateRulesTest_TestEnum)
+	*p = x
+	return p
+}
+
+func (x ValidateRulesTest_TestEnum) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ValidateRulesTest_TestEnum) Descriptor() protoreflect.EnumDescriptor {
+	return file_test_v1_test_proto_enumTypes[5].Descriptor()
+}
+
+func (ValidateRulesTest_TestEnum) Type() protoreflect.EnumType {
+	return &file_test_v1_test_proto_enumTypes[5]
+}
+
+func (x ValidateRulesTest_TestEnum) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
 type ParameterValues struct {
 	state                         protoimpl.MessageState             `protogen:"opaque.v1"`
 	xxx_hidden_DoubleValue        float64                            `protobuf:"fixed64,1,opt,name=double_value,json=doubleValue"`
@@ -4664,6 +4708,1015 @@ func (b0 RepeatedEnumTest_builder) Build() *RepeatedEnumTest {
 	return m0
 }
 
+// ValidateRulesTest covers the protovalidate rules that the generator knows how
+// to violate when GenOptions.ViolateRules is set.
+type ValidateRulesTest struct {
+	state                       protoimpl.MessageState     `protogen:"opaque.v1"`
+	xxx_hidden_Int32Gt          int32                      `protobuf:"varint,1,opt,name=int32_gt,json=int32Gt"`
+	xxx_hidden_Int64Lte         int64                      `protobuf:"varint,2,opt,name=int64_lte,json=int64Lte"`
+	xxx_hidden_Uint32In         uint32                     `protobuf:"varint,3,opt,name=uint32_in,json=uint32In"`
+	xxx_hidden_Uint64Const      uint64                     `protobuf:"varint,4,opt,name=uint64_const,json=uint64Const"`
+	xxx_hidden_Sint32Gte        int32                      `protobuf:"zigzag32,5,opt,name=sint32_gte,json=sint32Gte"`
+	xxx_hidden_Sfixed64Lt       int64                      `protobuf:"fixed64,6,opt,name=sfixed64_lt,json=sfixed64Lt"`
+	xxx_hidden_Fixed32NotIn     uint32                     `protobuf:"fixed32,7,opt,name=fixed32_not_in,json=fixed32NotIn"`
+	xxx_hidden_FloatFinite      float32                    `protobuf:"fixed32,8,opt,name=float_finite,json=floatFinite"`
+	xxx_hidden_DoubleGte        float64                    `protobuf:"fixed64,9,opt,name=double_gte,json=doubleGte"`
+	xxx_hidden_BoolConst        bool                       `protobuf:"varint,10,opt,name=bool_const,json=boolConst"`
+	xxx_hidden_StringEmail      *string                    `protobuf:"bytes,11,opt,name=string_email,json=stringEmail"`
+	xxx_hidden_StringUuid       *string                    `protobuf:"bytes,12,opt,name=string_uuid,json=stringUuid"`
+	xxx_hidden_StringPattern    *string                    `protobuf:"bytes,13,opt,name=string_pattern,json=stringPattern"`
+	xxx_hidden_StringMinLen     *string                    `protobuf:"bytes,14,opt,name=string_min_len,json=stringMinLen"`
+	xxx_hidden_StringMaxLen     *string                    `protobuf:"bytes,15,opt,name=string_max_len,json=stringMaxLen"`
+	xxx_hidden_StringPrefix     *string                    `protobuf:"bytes,16,opt,name=string_prefix,json=stringPrefix"`
+	xxx_hidden_StringIn         *string                    `protobuf:"bytes,17,opt,name=string_in,json=stringIn"`
+	xxx_hidden_BytesMinLen      []byte                     `protobuf:"bytes,18,opt,name=bytes_min_len,json=bytesMinLen"`
+	xxx_hidden_BytesConst       []byte                     `protobuf:"bytes,19,opt,name=bytes_const,json=bytesConst"`
+	xxx_hidden_EnumDefinedOnly  ValidateRulesTest_TestEnum `protobuf:"varint,20,opt,name=enum_defined_only,json=enumDefinedOnly,enum=test.v1.ValidateRulesTest_TestEnum"`
+	xxx_hidden_EnumConst        ValidateRulesTest_TestEnum `protobuf:"varint,21,opt,name=enum_const,json=enumConst,enum=test.v1.ValidateRulesTest_TestEnum"`
+	xxx_hidden_RepeatedMinItems []string                   `protobuf:"bytes,22,rep,name=repeated_min_items,json=repeatedMinItems"`
+	xxx_hidden_RepeatedMaxItems []string                   `protobuf:"bytes,23,rep,name=repeated_max_items,json=repeatedMaxItems"`
+	xxx_hidden_RepeatedUnique   []string                   `protobuf:"bytes,24,rep,name=repeated_unique,json=repeatedUnique"`
+	xxx_hidden_MapMinPairs      map[string]string          `protobuf:"bytes,25,rep,name=map_min_pairs,json=mapMinPairs" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	xxx_hidden_MapMaxPairs      map[string]string          `protobuf:"bytes,26,rep,name=map_max_pairs,json=mapMaxPairs" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	xxx_hidden_DurationGt       *durationpb.Duration       `protobuf:"bytes,27,opt,name=duration_gt,json=durationGt"`
+	xxx_hidden_TimestampLt      *timestamppb.Timestamp     `protobuf:"bytes,28,opt,name=timestamp_lt,json=timestampLt"`
+	xxx_hidden_StringRequired   *string                    `protobuf:"bytes,29,opt,name=string_required,json=stringRequired"`
+	xxx_hidden_NestedRequired   *ValidateRulesTest_Nested  `protobuf:"bytes,30,opt,name=nested_required,json=nestedRequired"`
+	XXX_raceDetectHookData      protoimpl.RaceDetectHookData
+	XXX_presence                [1]uint32
+	unknownFields               protoimpl.UnknownFields
+	sizeCache                   protoimpl.SizeCache
+}
+
+func (x *ValidateRulesTest) Reset() {
+	*x = ValidateRulesTest{}
+	mi := &file_test_v1_test_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidateRulesTest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidateRulesTest) ProtoMessage() {}
+
+func (x *ValidateRulesTest) ProtoReflect() protoreflect.Message {
+	mi := &file_test_v1_test_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *ValidateRulesTest) GetInt32Gt() int32 {
+	if x != nil {
+		return x.xxx_hidden_Int32Gt
+	}
+	return 0
+}
+
+func (x *ValidateRulesTest) GetInt64Lte() int64 {
+	if x != nil {
+		return x.xxx_hidden_Int64Lte
+	}
+	return 0
+}
+
+func (x *ValidateRulesTest) GetUint32In() uint32 {
+	if x != nil {
+		return x.xxx_hidden_Uint32In
+	}
+	return 0
+}
+
+func (x *ValidateRulesTest) GetUint64Const() uint64 {
+	if x != nil {
+		return x.xxx_hidden_Uint64Const
+	}
+	return 0
+}
+
+func (x *ValidateRulesTest) GetSint32Gte() int32 {
+	if x != nil {
+		return x.xxx_hidden_Sint32Gte
+	}
+	return 0
+}
+
+func (x *ValidateRulesTest) GetSfixed64Lt() int64 {
+	if x != nil {
+		return x.xxx_hidden_Sfixed64Lt
+	}
+	return 0
+}
+
+func (x *ValidateRulesTest) GetFixed32NotIn() uint32 {
+	if x != nil {
+		return x.xxx_hidden_Fixed32NotIn
+	}
+	return 0
+}
+
+func (x *ValidateRulesTest) GetFloatFinite() float32 {
+	if x != nil {
+		return x.xxx_hidden_FloatFinite
+	}
+	return 0
+}
+
+func (x *ValidateRulesTest) GetDoubleGte() float64 {
+	if x != nil {
+		return x.xxx_hidden_DoubleGte
+	}
+	return 0
+}
+
+func (x *ValidateRulesTest) GetBoolConst() bool {
+	if x != nil {
+		return x.xxx_hidden_BoolConst
+	}
+	return false
+}
+
+func (x *ValidateRulesTest) GetStringEmail() string {
+	if x != nil {
+		if x.xxx_hidden_StringEmail != nil {
+			return *x.xxx_hidden_StringEmail
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *ValidateRulesTest) GetStringUuid() string {
+	if x != nil {
+		if x.xxx_hidden_StringUuid != nil {
+			return *x.xxx_hidden_StringUuid
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *ValidateRulesTest) GetStringPattern() string {
+	if x != nil {
+		if x.xxx_hidden_StringPattern != nil {
+			return *x.xxx_hidden_StringPattern
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *ValidateRulesTest) GetStringMinLen() string {
+	if x != nil {
+		if x.xxx_hidden_StringMinLen != nil {
+			return *x.xxx_hidden_StringMinLen
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *ValidateRulesTest) GetStringMaxLen() string {
+	if x != nil {
+		if x.xxx_hidden_StringMaxLen != nil {
+			return *x.xxx_hidden_StringMaxLen
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *ValidateRulesTest) GetStringPrefix() string {
+	if x != nil {
+		if x.xxx_hidden_StringPrefix != nil {
+			return *x.xxx_hidden_StringPrefix
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *ValidateRulesTest) GetStringIn() string {
+	if x != nil {
+		if x.xxx_hidden_StringIn != nil {
+			return *x.xxx_hidden_StringIn
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *ValidateRulesTest) GetBytesMinLen() []byte {
+	if x != nil {
+		return x.xxx_hidden_BytesMinLen
+	}
+	return nil
+}
+
+func (x *ValidateRulesTest) GetBytesConst() []byte {
+	if x != nil {
+		return x.xxx_hidden_BytesConst
+	}
+	return nil
+}
+
+func (x *ValidateRulesTest) GetEnumDefinedOnly() ValidateRulesTest_TestEnum {
+	if x != nil {
+		if protoimpl.X.Present(&(x.XXX_presence[0]), 19) {
+			return x.xxx_hidden_EnumDefinedOnly
+		}
+	}
+	return ValidateRulesTest_TEST_ENUM_UNSPECIFIED
+}
+
+func (x *ValidateRulesTest) GetEnumConst() ValidateRulesTest_TestEnum {
+	if x != nil {
+		if protoimpl.X.Present(&(x.XXX_presence[0]), 20) {
+			return x.xxx_hidden_EnumConst
+		}
+	}
+	return ValidateRulesTest_TEST_ENUM_UNSPECIFIED
+}
+
+func (x *ValidateRulesTest) GetRepeatedMinItems() []string {
+	if x != nil {
+		return x.xxx_hidden_RepeatedMinItems
+	}
+	return nil
+}
+
+func (x *ValidateRulesTest) GetRepeatedMaxItems() []string {
+	if x != nil {
+		return x.xxx_hidden_RepeatedMaxItems
+	}
+	return nil
+}
+
+func (x *ValidateRulesTest) GetRepeatedUnique() []string {
+	if x != nil {
+		return x.xxx_hidden_RepeatedUnique
+	}
+	return nil
+}
+
+func (x *ValidateRulesTest) GetMapMinPairs() map[string]string {
+	if x != nil {
+		return x.xxx_hidden_MapMinPairs
+	}
+	return nil
+}
+
+func (x *ValidateRulesTest) GetMapMaxPairs() map[string]string {
+	if x != nil {
+		return x.xxx_hidden_MapMaxPairs
+	}
+	return nil
+}
+
+func (x *ValidateRulesTest) GetDurationGt() *durationpb.Duration {
+	if x != nil {
+		return x.xxx_hidden_DurationGt
+	}
+	return nil
+}
+
+func (x *ValidateRulesTest) GetTimestampLt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_TimestampLt
+	}
+	return nil
+}
+
+func (x *ValidateRulesTest) GetStringRequired() string {
+	if x != nil {
+		if x.xxx_hidden_StringRequired != nil {
+			return *x.xxx_hidden_StringRequired
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *ValidateRulesTest) GetNestedRequired() *ValidateRulesTest_Nested {
+	if x != nil {
+		return x.xxx_hidden_NestedRequired
+	}
+	return nil
+}
+
+func (x *ValidateRulesTest) SetInt32Gt(v int32) {
+	x.xxx_hidden_Int32Gt = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 30)
+}
+
+func (x *ValidateRulesTest) SetInt64Lte(v int64) {
+	x.xxx_hidden_Int64Lte = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 30)
+}
+
+func (x *ValidateRulesTest) SetUint32In(v uint32) {
+	x.xxx_hidden_Uint32In = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 30)
+}
+
+func (x *ValidateRulesTest) SetUint64Const(v uint64) {
+	x.xxx_hidden_Uint64Const = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 30)
+}
+
+func (x *ValidateRulesTest) SetSint32Gte(v int32) {
+	x.xxx_hidden_Sint32Gte = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 30)
+}
+
+func (x *ValidateRulesTest) SetSfixed64Lt(v int64) {
+	x.xxx_hidden_Sfixed64Lt = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 5, 30)
+}
+
+func (x *ValidateRulesTest) SetFixed32NotIn(v uint32) {
+	x.xxx_hidden_Fixed32NotIn = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 6, 30)
+}
+
+func (x *ValidateRulesTest) SetFloatFinite(v float32) {
+	x.xxx_hidden_FloatFinite = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 7, 30)
+}
+
+func (x *ValidateRulesTest) SetDoubleGte(v float64) {
+	x.xxx_hidden_DoubleGte = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 8, 30)
+}
+
+func (x *ValidateRulesTest) SetBoolConst(v bool) {
+	x.xxx_hidden_BoolConst = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 9, 30)
+}
+
+func (x *ValidateRulesTest) SetStringEmail(v string) {
+	x.xxx_hidden_StringEmail = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 10, 30)
+}
+
+func (x *ValidateRulesTest) SetStringUuid(v string) {
+	x.xxx_hidden_StringUuid = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 11, 30)
+}
+
+func (x *ValidateRulesTest) SetStringPattern(v string) {
+	x.xxx_hidden_StringPattern = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 12, 30)
+}
+
+func (x *ValidateRulesTest) SetStringMinLen(v string) {
+	x.xxx_hidden_StringMinLen = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 13, 30)
+}
+
+func (x *ValidateRulesTest) SetStringMaxLen(v string) {
+	x.xxx_hidden_StringMaxLen = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 14, 30)
+}
+
+func (x *ValidateRulesTest) SetStringPrefix(v string) {
+	x.xxx_hidden_StringPrefix = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 15, 30)
+}
+
+func (x *ValidateRulesTest) SetStringIn(v string) {
+	x.xxx_hidden_StringIn = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 16, 30)
+}
+
+func (x *ValidateRulesTest) SetBytesMinLen(v []byte) {
+	if v == nil {
+		v = []byte{}
+	}
+	x.xxx_hidden_BytesMinLen = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 17, 30)
+}
+
+func (x *ValidateRulesTest) SetBytesConst(v []byte) {
+	if v == nil {
+		v = []byte{}
+	}
+	x.xxx_hidden_BytesConst = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 18, 30)
+}
+
+func (x *ValidateRulesTest) SetEnumDefinedOnly(v ValidateRulesTest_TestEnum) {
+	x.xxx_hidden_EnumDefinedOnly = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 19, 30)
+}
+
+func (x *ValidateRulesTest) SetEnumConst(v ValidateRulesTest_TestEnum) {
+	x.xxx_hidden_EnumConst = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 20, 30)
+}
+
+func (x *ValidateRulesTest) SetRepeatedMinItems(v []string) {
+	x.xxx_hidden_RepeatedMinItems = v
+}
+
+func (x *ValidateRulesTest) SetRepeatedMaxItems(v []string) {
+	x.xxx_hidden_RepeatedMaxItems = v
+}
+
+func (x *ValidateRulesTest) SetRepeatedUnique(v []string) {
+	x.xxx_hidden_RepeatedUnique = v
+}
+
+func (x *ValidateRulesTest) SetMapMinPairs(v map[string]string) {
+	x.xxx_hidden_MapMinPairs = v
+}
+
+func (x *ValidateRulesTest) SetMapMaxPairs(v map[string]string) {
+	x.xxx_hidden_MapMaxPairs = v
+}
+
+func (x *ValidateRulesTest) SetDurationGt(v *durationpb.Duration) {
+	x.xxx_hidden_DurationGt = v
+}
+
+func (x *ValidateRulesTest) SetTimestampLt(v *timestamppb.Timestamp) {
+	x.xxx_hidden_TimestampLt = v
+}
+
+func (x *ValidateRulesTest) SetStringRequired(v string) {
+	x.xxx_hidden_StringRequired = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 28, 30)
+}
+
+func (x *ValidateRulesTest) SetNestedRequired(v *ValidateRulesTest_Nested) {
+	x.xxx_hidden_NestedRequired = v
+}
+
+func (x *ValidateRulesTest) HasInt32Gt() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
+}
+
+func (x *ValidateRulesTest) HasInt64Lte() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
+}
+
+func (x *ValidateRulesTest) HasUint32In() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 2)
+}
+
+func (x *ValidateRulesTest) HasUint64Const() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 3)
+}
+
+func (x *ValidateRulesTest) HasSint32Gte() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 4)
+}
+
+func (x *ValidateRulesTest) HasSfixed64Lt() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 5)
+}
+
+func (x *ValidateRulesTest) HasFixed32NotIn() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 6)
+}
+
+func (x *ValidateRulesTest) HasFloatFinite() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 7)
+}
+
+func (x *ValidateRulesTest) HasDoubleGte() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 8)
+}
+
+func (x *ValidateRulesTest) HasBoolConst() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 9)
+}
+
+func (x *ValidateRulesTest) HasStringEmail() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 10)
+}
+
+func (x *ValidateRulesTest) HasStringUuid() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 11)
+}
+
+func (x *ValidateRulesTest) HasStringPattern() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 12)
+}
+
+func (x *ValidateRulesTest) HasStringMinLen() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 13)
+}
+
+func (x *ValidateRulesTest) HasStringMaxLen() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 14)
+}
+
+func (x *ValidateRulesTest) HasStringPrefix() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 15)
+}
+
+func (x *ValidateRulesTest) HasStringIn() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 16)
+}
+
+func (x *ValidateRulesTest) HasBytesMinLen() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 17)
+}
+
+func (x *ValidateRulesTest) HasBytesConst() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 18)
+}
+
+func (x *ValidateRulesTest) HasEnumDefinedOnly() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 19)
+}
+
+func (x *ValidateRulesTest) HasEnumConst() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 20)
+}
+
+func (x *ValidateRulesTest) HasDurationGt() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_DurationGt != nil
+}
+
+func (x *ValidateRulesTest) HasTimestampLt() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_TimestampLt != nil
+}
+
+func (x *ValidateRulesTest) HasStringRequired() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 28)
+}
+
+func (x *ValidateRulesTest) HasNestedRequired() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_NestedRequired != nil
+}
+
+func (x *ValidateRulesTest) ClearInt32Gt() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
+	x.xxx_hidden_Int32Gt = 0
+}
+
+func (x *ValidateRulesTest) ClearInt64Lte() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
+	x.xxx_hidden_Int64Lte = 0
+}
+
+func (x *ValidateRulesTest) ClearUint32In() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 2)
+	x.xxx_hidden_Uint32In = 0
+}
+
+func (x *ValidateRulesTest) ClearUint64Const() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 3)
+	x.xxx_hidden_Uint64Const = 0
+}
+
+func (x *ValidateRulesTest) ClearSint32Gte() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 4)
+	x.xxx_hidden_Sint32Gte = 0
+}
+
+func (x *ValidateRulesTest) ClearSfixed64Lt() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 5)
+	x.xxx_hidden_Sfixed64Lt = 0
+}
+
+func (x *ValidateRulesTest) ClearFixed32NotIn() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 6)
+	x.xxx_hidden_Fixed32NotIn = 0
+}
+
+func (x *ValidateRulesTest) ClearFloatFinite() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 7)
+	x.xxx_hidden_FloatFinite = 0
+}
+
+func (x *ValidateRulesTest) ClearDoubleGte() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 8)
+	x.xxx_hidden_DoubleGte = 0
+}
+
+func (x *ValidateRulesTest) ClearBoolConst() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 9)
+	x.xxx_hidden_BoolConst = false
+}
+
+func (x *ValidateRulesTest) ClearStringEmail() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 10)
+	x.xxx_hidden_StringEmail = nil
+}
+
+func (x *ValidateRulesTest) ClearStringUuid() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 11)
+	x.xxx_hidden_StringUuid = nil
+}
+
+func (x *ValidateRulesTest) ClearStringPattern() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 12)
+	x.xxx_hidden_StringPattern = nil
+}
+
+func (x *ValidateRulesTest) ClearStringMinLen() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 13)
+	x.xxx_hidden_StringMinLen = nil
+}
+
+func (x *ValidateRulesTest) ClearStringMaxLen() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 14)
+	x.xxx_hidden_StringMaxLen = nil
+}
+
+func (x *ValidateRulesTest) ClearStringPrefix() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 15)
+	x.xxx_hidden_StringPrefix = nil
+}
+
+func (x *ValidateRulesTest) ClearStringIn() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 16)
+	x.xxx_hidden_StringIn = nil
+}
+
+func (x *ValidateRulesTest) ClearBytesMinLen() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 17)
+	x.xxx_hidden_BytesMinLen = nil
+}
+
+func (x *ValidateRulesTest) ClearBytesConst() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 18)
+	x.xxx_hidden_BytesConst = nil
+}
+
+func (x *ValidateRulesTest) ClearEnumDefinedOnly() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 19)
+	x.xxx_hidden_EnumDefinedOnly = ValidateRulesTest_TEST_ENUM_UNSPECIFIED
+}
+
+func (x *ValidateRulesTest) ClearEnumConst() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 20)
+	x.xxx_hidden_EnumConst = ValidateRulesTest_TEST_ENUM_UNSPECIFIED
+}
+
+func (x *ValidateRulesTest) ClearDurationGt() {
+	x.xxx_hidden_DurationGt = nil
+}
+
+func (x *ValidateRulesTest) ClearTimestampLt() {
+	x.xxx_hidden_TimestampLt = nil
+}
+
+func (x *ValidateRulesTest) ClearStringRequired() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 28)
+	x.xxx_hidden_StringRequired = nil
+}
+
+func (x *ValidateRulesTest) ClearNestedRequired() {
+	x.xxx_hidden_NestedRequired = nil
+}
+
+type ValidateRulesTest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Int32Gt          *int32
+	Int64Lte         *int64
+	Uint32In         *uint32
+	Uint64Const      *uint64
+	Sint32Gte        *int32
+	Sfixed64Lt       *int64
+	Fixed32NotIn     *uint32
+	FloatFinite      *float32
+	DoubleGte        *float64
+	BoolConst        *bool
+	StringEmail      *string
+	StringUuid       *string
+	StringPattern    *string
+	StringMinLen     *string
+	StringMaxLen     *string
+	StringPrefix     *string
+	StringIn         *string
+	BytesMinLen      []byte
+	BytesConst       []byte
+	EnumDefinedOnly  *ValidateRulesTest_TestEnum
+	EnumConst        *ValidateRulesTest_TestEnum
+	RepeatedMinItems []string
+	RepeatedMaxItems []string
+	RepeatedUnique   []string
+	MapMinPairs      map[string]string
+	MapMaxPairs      map[string]string
+	DurationGt       *durationpb.Duration
+	TimestampLt      *timestamppb.Timestamp
+	StringRequired   *string
+	NestedRequired   *ValidateRulesTest_Nested
+}
+
+func (b0 ValidateRulesTest_builder) Build() *ValidateRulesTest {
+	m0 := &ValidateRulesTest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	if b.Int32Gt != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 30)
+		x.xxx_hidden_Int32Gt = *b.Int32Gt
+	}
+	if b.Int64Lte != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 30)
+		x.xxx_hidden_Int64Lte = *b.Int64Lte
+	}
+	if b.Uint32In != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 30)
+		x.xxx_hidden_Uint32In = *b.Uint32In
+	}
+	if b.Uint64Const != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 30)
+		x.xxx_hidden_Uint64Const = *b.Uint64Const
+	}
+	if b.Sint32Gte != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 30)
+		x.xxx_hidden_Sint32Gte = *b.Sint32Gte
+	}
+	if b.Sfixed64Lt != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 5, 30)
+		x.xxx_hidden_Sfixed64Lt = *b.Sfixed64Lt
+	}
+	if b.Fixed32NotIn != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 6, 30)
+		x.xxx_hidden_Fixed32NotIn = *b.Fixed32NotIn
+	}
+	if b.FloatFinite != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 7, 30)
+		x.xxx_hidden_FloatFinite = *b.FloatFinite
+	}
+	if b.DoubleGte != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 8, 30)
+		x.xxx_hidden_DoubleGte = *b.DoubleGte
+	}
+	if b.BoolConst != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 9, 30)
+		x.xxx_hidden_BoolConst = *b.BoolConst
+	}
+	if b.StringEmail != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 10, 30)
+		x.xxx_hidden_StringEmail = b.StringEmail
+	}
+	if b.StringUuid != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 11, 30)
+		x.xxx_hidden_StringUuid = b.StringUuid
+	}
+	if b.StringPattern != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 12, 30)
+		x.xxx_hidden_StringPattern = b.StringPattern
+	}
+	if b.StringMinLen != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 13, 30)
+		x.xxx_hidden_StringMinLen = b.StringMinLen
+	}
+	if b.StringMaxLen != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 14, 30)
+		x.xxx_hidden_StringMaxLen = b.StringMaxLen
+	}
+	if b.StringPrefix != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 15, 30)
+		x.xxx_hidden_StringPrefix = b.StringPrefix
+	}
+	if b.StringIn != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 16, 30)
+		x.xxx_hidden_StringIn = b.StringIn
+	}
+	if b.BytesMinLen != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 17, 30)
+		x.xxx_hidden_BytesMinLen = b.BytesMinLen
+	}
+	if b.BytesConst != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 18, 30)
+		x.xxx_hidden_BytesConst = b.BytesConst
+	}
+	if b.EnumDefinedOnly != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 19, 30)
+		x.xxx_hidden_EnumDefinedOnly = *b.EnumDefinedOnly
+	}
+	if b.EnumConst != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 20, 30)
+		x.xxx_hidden_EnumConst = *b.EnumConst
+	}
+	x.xxx_hidden_RepeatedMinItems = b.RepeatedMinItems
+	x.xxx_hidden_RepeatedMaxItems = b.RepeatedMaxItems
+	x.xxx_hidden_RepeatedUnique = b.RepeatedUnique
+	x.xxx_hidden_MapMinPairs = b.MapMinPairs
+	x.xxx_hidden_MapMaxPairs = b.MapMaxPairs
+	x.xxx_hidden_DurationGt = b.DurationGt
+	x.xxx_hidden_TimestampLt = b.TimestampLt
+	if b.StringRequired != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 28, 30)
+		x.xxx_hidden_StringRequired = b.StringRequired
+	}
+	x.xxx_hidden_NestedRequired = b.NestedRequired
+	return m0
+}
+
+// UnvalidatedTest has no protovalidate rules at all.
+type UnvalidatedTest struct {
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Name        *string                `protobuf:"bytes,1,opt,name=name"`
+	xxx_hidden_Count       int32                  `protobuf:"varint,2,opt,name=count"`
+	xxx_hidden_Tags        []string               `protobuf:"bytes,3,rep,name=tags"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *UnvalidatedTest) Reset() {
+	*x = UnvalidatedTest{}
+	mi := &file_test_v1_test_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UnvalidatedTest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UnvalidatedTest) ProtoMessage() {}
+
+func (x *UnvalidatedTest) ProtoReflect() protoreflect.Message {
+	mi := &file_test_v1_test_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *UnvalidatedTest) GetName() string {
+	if x != nil {
+		if x.xxx_hidden_Name != nil {
+			return *x.xxx_hidden_Name
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *UnvalidatedTest) GetCount() int32 {
+	if x != nil {
+		return x.xxx_hidden_Count
+	}
+	return 0
+}
+
+func (x *UnvalidatedTest) GetTags() []string {
+	if x != nil {
+		return x.xxx_hidden_Tags
+	}
+	return nil
+}
+
+func (x *UnvalidatedTest) SetName(v string) {
+	x.xxx_hidden_Name = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 3)
+}
+
+func (x *UnvalidatedTest) SetCount(v int32) {
+	x.xxx_hidden_Count = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 3)
+}
+
+func (x *UnvalidatedTest) SetTags(v []string) {
+	x.xxx_hidden_Tags = v
+}
+
+func (x *UnvalidatedTest) HasName() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
+}
+
+func (x *UnvalidatedTest) HasCount() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
+}
+
+func (x *UnvalidatedTest) ClearName() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
+	x.xxx_hidden_Name = nil
+}
+
+func (x *UnvalidatedTest) ClearCount() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
+	x.xxx_hidden_Count = 0
+}
+
+type UnvalidatedTest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Name  *string
+	Count *int32
+	Tags  []string
+}
+
+func (b0 UnvalidatedTest_builder) Build() *UnvalidatedTest {
+	m0 := &UnvalidatedTest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	if b.Name != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 3)
+		x.xxx_hidden_Name = b.Name
+	}
+	if b.Count != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 3)
+		x.xxx_hidden_Count = *b.Count
+	}
+	x.xxx_hidden_Tags = b.Tags
+	return m0
+}
+
 type ParameterValues_Nested struct {
 	state                         protoimpl.MessageState      `protogen:"opaque.v1"`
 	xxx_hidden_DoubleValue        float64                     `protobuf:"fixed64,1,opt,name=double_value,json=doubleValue"`
@@ -4677,7 +5730,7 @@ type ParameterValues_Nested struct {
 
 func (x *ParameterValues_Nested) Reset() {
 	*x = ParameterValues_Nested{}
-	mi := &file_test_v1_test_proto_msgTypes[4]
+	mi := &file_test_v1_test_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4689,7 +5742,7 @@ func (x *ParameterValues_Nested) String() string {
 func (*ParameterValues_Nested) ProtoMessage() {}
 
 func (x *ParameterValues_Nested) ProtoReflect() protoreflect.Message {
-	mi := &file_test_v1_test_proto_msgTypes[4]
+	mi := &file_test_v1_test_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4792,6 +5845,84 @@ func (b0 ParameterValues_Nested_builder) Build() *ParameterValues_Nested {
 	if b.EnumValue != nil {
 		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 3)
 		x.xxx_hidden_EnumValue = *b.EnumValue
+	}
+	return m0
+}
+
+type ValidateRulesTest_Nested struct {
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Name        *string                `protobuf:"bytes,1,opt,name=name"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *ValidateRulesTest_Nested) Reset() {
+	*x = ValidateRulesTest_Nested{}
+	mi := &file_test_v1_test_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ValidateRulesTest_Nested) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ValidateRulesTest_Nested) ProtoMessage() {}
+
+func (x *ValidateRulesTest_Nested) ProtoReflect() protoreflect.Message {
+	mi := &file_test_v1_test_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *ValidateRulesTest_Nested) GetName() string {
+	if x != nil {
+		if x.xxx_hidden_Name != nil {
+			return *x.xxx_hidden_Name
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *ValidateRulesTest_Nested) SetName(v string) {
+	x.xxx_hidden_Name = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 1)
+}
+
+func (x *ValidateRulesTest_Nested) HasName() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
+}
+
+func (x *ValidateRulesTest_Nested) ClearName() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
+	x.xxx_hidden_Name = nil
+}
+
+type ValidateRulesTest_Nested_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Name *string
+}
+
+func (b0 ValidateRulesTest_Nested_builder) Build() *ValidateRulesTest_Nested {
+	m0 := &ValidateRulesTest_Nested{}
+	b, x := &b0, m0
+	_, _ = b, x
+	if b.Name != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 1)
+		x.xxx_hidden_Name = b.Name
 	}
 	return m0
 }
@@ -5156,158 +6287,234 @@ const file_test_v1_test_proto_rawDesc = "" +
 	"\x15TEST_ENUM_UNSPECIFIED\x10\x00\x12\x11\n" +
 	"\rTEST_ENUM_ONE\x10\x01\x12\x11\n" +
 	"\rTEST_ENUM_TWO\x10\x02\x12\x13\n" +
-	"\x0fTEST_ENUM_THREE\x10\x03B\x97\x01\n" +
+	"\x0fTEST_ENUM_THREE\x10\x03\"\xfb\x0e\n" +
+	"\x11ValidateRulesTest\x12\"\n" +
+	"\bint32_gt\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02 \n" +
+	"R\aint32Gt\x12$\n" +
+	"\tint64_lte\x18\x02 \x01(\x03B\a\xbaH\x04\"\x02\x18dR\bint64Lte\x12(\n" +
+	"\tuint32_in\x18\x03 \x01(\rB\v\xbaH\b*\x060\x010\x020\x03R\buint32In\x12*\n" +
+	"\fuint64_const\x18\x04 \x01(\x04B\a\xbaH\x042\x02\b*R\vuint64Const\x12&\n" +
+	"\n" +
+	"sint32_gte\x18\x05 \x01(\x11B\a\xbaH\x04:\x02(\n" +
+	"R\tsint32Gte\x12/\n" +
+	"\vsfixed64_lt\x18\x06 \x01(\x10B\x0e\xbaH\vb\t\x11\xfd\xff\xff\xff\xff\xff\xff\xffR\n" +
+	"sfixed64Lt\x125\n" +
+	"\x0efixed32_not_in\x18\a \x01(\aB\x0f\xbaH\fJ\n" +
+	"=\a\x00\x00\x00=\b\x00\x00\x00R\ffixed32NotIn\x12*\n" +
+	"\ffloat_finite\x18\b \x01(\x02B\a\xbaH\x04\n" +
+	"\x02@\x01R\vfloatFinite\x12-\n" +
+	"\n" +
+	"double_gte\x18\t \x01(\x01B\x0e\xbaH\v\x12\t)\x00\x00\x00\x00\x00\x00\xf8?R\tdoubleGte\x12&\n" +
+	"\n" +
+	"bool_const\x18\n" +
+	" \x01(\bB\a\xbaH\x04j\x02\b\x01R\tboolConst\x12*\n" +
+	"\fstring_email\x18\v \x01(\tB\a\xbaH\x04r\x02`\x01R\vstringEmail\x12)\n" +
+	"\vstring_uuid\x18\f \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\n" +
+	"stringUuid\x12:\n" +
+	"\x0estring_pattern\x18\r \x01(\tB\x13\xbaH\x10r\x0e2\f^[a-z]{3,8}$R\rstringPattern\x12-\n" +
+	"\x0estring_min_len\x18\x0e \x01(\tB\a\xbaH\x04r\x02\x10\x05R\fstringMinLen\x12-\n" +
+	"\x0estring_max_len\x18\x0f \x01(\tB\a\xbaH\x04r\x02\x18\x04R\fstringMaxLen\x12/\n" +
+	"\rstring_prefix\x18\x10 \x01(\tB\n" +
+	"\xbaH\ar\x05:\x03abcR\fstringPrefix\x12(\n" +
+	"\tstring_in\x18\x11 \x01(\tB\v\xbaH\br\x06R\x01aR\x01bR\bstringIn\x12+\n" +
+	"\rbytes_min_len\x18\x12 \x01(\fB\a\xbaH\x04z\x02\x10\x04R\vbytesMinLen\x12*\n" +
+	"\vbytes_const\x18\x13 \x01(\fB\t\xbaH\x06z\x04\n" +
+	"\x02\x01\x02R\n" +
+	"bytesConst\x12Y\n" +
+	"\x11enum_defined_only\x18\x14 \x01(\x0e2#.test.v1.ValidateRulesTest.TestEnumB\b\xbaH\x05\x82\x01\x02\x10\x01R\x0fenumDefinedOnly\x12L\n" +
+	"\n" +
+	"enum_const\x18\x15 \x01(\x0e2#.test.v1.ValidateRulesTest.TestEnumB\b\xbaH\x05\x82\x01\x02\b\x02R\tenumConst\x126\n" +
+	"\x12repeated_min_items\x18\x16 \x03(\tB\b\xbaH\x05\x92\x01\x02\b\x02R\x10repeatedMinItems\x126\n" +
+	"\x12repeated_max_items\x18\x17 \x03(\tB\b\xbaH\x05\x92\x01\x02\x10\x02R\x10repeatedMaxItems\x121\n" +
+	"\x0frepeated_unique\x18\x18 \x03(\tB\b\xbaH\x05\x92\x01\x02\x18\x01R\x0erepeatedUnique\x12Y\n" +
+	"\rmap_min_pairs\x18\x19 \x03(\v2+.test.v1.ValidateRulesTest.MapMinPairsEntryB\b\xbaH\x05\x9a\x01\x02\b\x02R\vmapMinPairs\x12Y\n" +
+	"\rmap_max_pairs\x18\x1a \x03(\v2+.test.v1.ValidateRulesTest.MapMaxPairsEntryB\b\xbaH\x05\x9a\x01\x02\x10\x02R\vmapMaxPairs\x12F\n" +
+	"\vduration_gt\x18\x1b \x01(\v2\x19.google.protobuf.DurationB\n" +
+	"\xbaH\a\xaa\x01\x04*\x02\b<R\n" +
+	"durationGt\x12K\n" +
+	"\ftimestamp_lt\x18\x1c \x01(\v2\x1a.google.protobuf.TimestampB\f\xbaH\t\xb2\x01\x06\x1a\x04\b\xc0\x84=R\vtimestampLt\x12/\n" +
+	"\x0fstring_required\x18\x1d \x01(\tB\x06\xbaH\x03\xc8\x01\x01R\x0estringRequired\x12R\n" +
+	"\x0fnested_required\x18\x1e \x01(\v2!.test.v1.ValidateRulesTest.NestedB\x06\xbaH\x03\xc8\x01\x01R\x0enestedRequired\x1a%\n" +
+	"\x06Nested\x12\x1b\n" +
+	"\x04name\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x05R\x04name\x1a>\n" +
+	"\x10MapMinPairsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\x1a>\n" +
+	"\x10MapMaxPairsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"K\n" +
+	"\bTestEnum\x12\x19\n" +
+	"\x15TEST_ENUM_UNSPECIFIED\x10\x00\x12\x11\n" +
+	"\rTEST_ENUM_ONE\x10\x01\x12\x11\n" +
+	"\rTEST_ENUM_TWO\x10\x02\"O\n" +
+	"\x0fUnvalidatedTest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
+	"\x05count\x18\x02 \x01(\x05R\x05count\x12\x12\n" +
+	"\x04tags\x18\x03 \x03(\tR\x04tagsB\x97\x01\n" +
 	"\vcom.test.v1B\tTestProtoP\x01Z8github.com/sudorandom/fauxrpc/private/gen/test/v1;testv1\xa2\x02\x03TXX\xaa\x02\aTest.V1\xca\x02\aTest\\V1\xe2\x02\x13Test\\V1\\GPBMetadata\xea\x02\bTest::V1\x92\x03\x05\xd2>\x02\x10\x03b\beditionsp\xe8\a"
 
-var file_test_v1_test_proto_enumTypes = make([]protoimpl.EnumInfo, 5)
-var file_test_v1_test_proto_msgTypes = make([]protoimpl.MessageInfo, 41)
+var file_test_v1_test_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
+var file_test_v1_test_proto_msgTypes = make([]protoimpl.MessageInfo, 46)
 var file_test_v1_test_proto_goTypes = []any{
 	(ParameterValues_Enum)(0),        // 0: test.v1.ParameterValues.Enum
 	(ParameterValues_Nested_Enum)(0), // 1: test.v1.ParameterValues.Nested.Enum
 	(AllTypes_Enum)(0),               // 2: test.v1.AllTypes.Enum
 	(EnumTest_TestEnum)(0),           // 3: test.v1.EnumTest.TestEnum
 	(RepeatedEnumTest_TestEnum)(0),   // 4: test.v1.RepeatedEnumTest.TestEnum
-	(*ParameterValues)(nil),          // 5: test.v1.ParameterValues
-	(*AllTypes)(nil),                 // 6: test.v1.AllTypes
-	(*EnumTest)(nil),                 // 7: test.v1.EnumTest
-	(*RepeatedEnumTest)(nil),         // 8: test.v1.RepeatedEnumTest
-	(*ParameterValues_Nested)(nil),   // 9: test.v1.ParameterValues.Nested
-	nil,                              // 10: test.v1.ParameterValues.StringMapEntry
-	nil,                              // 11: test.v1.ParameterValues.StringValueMapEntry
-	nil,                              // 12: test.v1.ParameterValues.EnumMapEntry
-	nil,                              // 13: test.v1.ParameterValues.NestedMapEntry
-	nil,                              // 14: test.v1.AllTypes.Int32ToStringMapEntry
-	nil,                              // 15: test.v1.AllTypes.Int64ToStringMapEntry
-	nil,                              // 16: test.v1.AllTypes.Uint32ToStringMapEntry
-	nil,                              // 17: test.v1.AllTypes.Uint64ToStringMapEntry
-	nil,                              // 18: test.v1.AllTypes.Sint32ToStringMapEntry
-	nil,                              // 19: test.v1.AllTypes.Sint64ToStringMapEntry
-	nil,                              // 20: test.v1.AllTypes.Fixed32ToStringMapEntry
-	nil,                              // 21: test.v1.AllTypes.Fixed64ToStringMapEntry
-	nil,                              // 22: test.v1.AllTypes.Sfixed32ToStringMapEntry
-	nil,                              // 23: test.v1.AllTypes.Sfixed64ToStringMapEntry
-	nil,                              // 24: test.v1.AllTypes.BoolToStringMapEntry
-	nil,                              // 25: test.v1.AllTypes.StringToStringMapEntry
-	nil,                              // 26: test.v1.AllTypes.DoubleMapEntry
-	nil,                              // 27: test.v1.AllTypes.FloatMapEntry
-	nil,                              // 28: test.v1.AllTypes.Int32MapEntry
-	nil,                              // 29: test.v1.AllTypes.Int64MapEntry
-	nil,                              // 30: test.v1.AllTypes.Uint32MapEntry
-	nil,                              // 31: test.v1.AllTypes.Uint64MapEntry
-	nil,                              // 32: test.v1.AllTypes.Sint32MapEntry
-	nil,                              // 33: test.v1.AllTypes.Sint64MapEntry
-	nil,                              // 34: test.v1.AllTypes.Fixed32MapEntry
-	nil,                              // 35: test.v1.AllTypes.Fixed64MapEntry
-	nil,                              // 36: test.v1.AllTypes.Sfixed32MapEntry
-	nil,                              // 37: test.v1.AllTypes.Sfixed64MapEntry
-	nil,                              // 38: test.v1.AllTypes.BoolMapEntry
-	nil,                              // 39: test.v1.AllTypes.StringMapEntry
-	nil,                              // 40: test.v1.AllTypes.BytesMapEntry
-	nil,                              // 41: test.v1.AllTypes.MsgMapEntry
-	nil,                              // 42: test.v1.AllTypes.EnumMapEntry
-	nil,                              // 43: test.v1.AllTypes.AttributesEntry
-	nil,                              // 44: test.v1.AllTypes.AttrsEntry
-	nil,                              // 45: test.v1.AllTypes.CustomAttrEntry
-	(*timestamppb.Timestamp)(nil),    // 46: google.protobuf.Timestamp
-	(*durationpb.Duration)(nil),      // 47: google.protobuf.Duration
-	(*wrapperspb.BoolValue)(nil),     // 48: google.protobuf.BoolValue
-	(*wrapperspb.Int32Value)(nil),    // 49: google.protobuf.Int32Value
-	(*wrapperspb.Int64Value)(nil),    // 50: google.protobuf.Int64Value
-	(*wrapperspb.UInt32Value)(nil),   // 51: google.protobuf.UInt32Value
-	(*wrapperspb.UInt64Value)(nil),   // 52: google.protobuf.UInt64Value
-	(*wrapperspb.FloatValue)(nil),    // 53: google.protobuf.FloatValue
-	(*wrapperspb.DoubleValue)(nil),   // 54: google.protobuf.DoubleValue
-	(*wrapperspb.BytesValue)(nil),    // 55: google.protobuf.BytesValue
-	(*wrapperspb.StringValue)(nil),   // 56: google.protobuf.StringValue
-	(*fieldmaskpb.FieldMask)(nil),    // 57: google.protobuf.FieldMask
-	(*structpb.Struct)(nil),          // 58: google.protobuf.Struct
-	(*structpb.Value)(nil),           // 59: google.protobuf.Value
+	(ValidateRulesTest_TestEnum)(0),  // 5: test.v1.ValidateRulesTest.TestEnum
+	(*ParameterValues)(nil),          // 6: test.v1.ParameterValues
+	(*AllTypes)(nil),                 // 7: test.v1.AllTypes
+	(*EnumTest)(nil),                 // 8: test.v1.EnumTest
+	(*RepeatedEnumTest)(nil),         // 9: test.v1.RepeatedEnumTest
+	(*ValidateRulesTest)(nil),        // 10: test.v1.ValidateRulesTest
+	(*UnvalidatedTest)(nil),          // 11: test.v1.UnvalidatedTest
+	(*ParameterValues_Nested)(nil),   // 12: test.v1.ParameterValues.Nested
+	nil,                              // 13: test.v1.ParameterValues.StringMapEntry
+	nil,                              // 14: test.v1.ParameterValues.StringValueMapEntry
+	nil,                              // 15: test.v1.ParameterValues.EnumMapEntry
+	nil,                              // 16: test.v1.ParameterValues.NestedMapEntry
+	nil,                              // 17: test.v1.AllTypes.Int32ToStringMapEntry
+	nil,                              // 18: test.v1.AllTypes.Int64ToStringMapEntry
+	nil,                              // 19: test.v1.AllTypes.Uint32ToStringMapEntry
+	nil,                              // 20: test.v1.AllTypes.Uint64ToStringMapEntry
+	nil,                              // 21: test.v1.AllTypes.Sint32ToStringMapEntry
+	nil,                              // 22: test.v1.AllTypes.Sint64ToStringMapEntry
+	nil,                              // 23: test.v1.AllTypes.Fixed32ToStringMapEntry
+	nil,                              // 24: test.v1.AllTypes.Fixed64ToStringMapEntry
+	nil,                              // 25: test.v1.AllTypes.Sfixed32ToStringMapEntry
+	nil,                              // 26: test.v1.AllTypes.Sfixed64ToStringMapEntry
+	nil,                              // 27: test.v1.AllTypes.BoolToStringMapEntry
+	nil,                              // 28: test.v1.AllTypes.StringToStringMapEntry
+	nil,                              // 29: test.v1.AllTypes.DoubleMapEntry
+	nil,                              // 30: test.v1.AllTypes.FloatMapEntry
+	nil,                              // 31: test.v1.AllTypes.Int32MapEntry
+	nil,                              // 32: test.v1.AllTypes.Int64MapEntry
+	nil,                              // 33: test.v1.AllTypes.Uint32MapEntry
+	nil,                              // 34: test.v1.AllTypes.Uint64MapEntry
+	nil,                              // 35: test.v1.AllTypes.Sint32MapEntry
+	nil,                              // 36: test.v1.AllTypes.Sint64MapEntry
+	nil,                              // 37: test.v1.AllTypes.Fixed32MapEntry
+	nil,                              // 38: test.v1.AllTypes.Fixed64MapEntry
+	nil,                              // 39: test.v1.AllTypes.Sfixed32MapEntry
+	nil,                              // 40: test.v1.AllTypes.Sfixed64MapEntry
+	nil,                              // 41: test.v1.AllTypes.BoolMapEntry
+	nil,                              // 42: test.v1.AllTypes.StringMapEntry
+	nil,                              // 43: test.v1.AllTypes.BytesMapEntry
+	nil,                              // 44: test.v1.AllTypes.MsgMapEntry
+	nil,                              // 45: test.v1.AllTypes.EnumMapEntry
+	nil,                              // 46: test.v1.AllTypes.AttributesEntry
+	nil,                              // 47: test.v1.AllTypes.AttrsEntry
+	nil,                              // 48: test.v1.AllTypes.CustomAttrEntry
+	(*ValidateRulesTest_Nested)(nil), // 49: test.v1.ValidateRulesTest.Nested
+	nil,                              // 50: test.v1.ValidateRulesTest.MapMinPairsEntry
+	nil,                              // 51: test.v1.ValidateRulesTest.MapMaxPairsEntry
+	(*timestamppb.Timestamp)(nil),    // 52: google.protobuf.Timestamp
+	(*durationpb.Duration)(nil),      // 53: google.protobuf.Duration
+	(*wrapperspb.BoolValue)(nil),     // 54: google.protobuf.BoolValue
+	(*wrapperspb.Int32Value)(nil),    // 55: google.protobuf.Int32Value
+	(*wrapperspb.Int64Value)(nil),    // 56: google.protobuf.Int64Value
+	(*wrapperspb.UInt32Value)(nil),   // 57: google.protobuf.UInt32Value
+	(*wrapperspb.UInt64Value)(nil),   // 58: google.protobuf.UInt64Value
+	(*wrapperspb.FloatValue)(nil),    // 59: google.protobuf.FloatValue
+	(*wrapperspb.DoubleValue)(nil),   // 60: google.protobuf.DoubleValue
+	(*wrapperspb.BytesValue)(nil),    // 61: google.protobuf.BytesValue
+	(*wrapperspb.StringValue)(nil),   // 62: google.protobuf.StringValue
+	(*fieldmaskpb.FieldMask)(nil),    // 63: google.protobuf.FieldMask
+	(*structpb.Struct)(nil),          // 64: google.protobuf.Struct
+	(*structpb.Value)(nil),           // 65: google.protobuf.Value
 }
 var file_test_v1_test_proto_depIdxs = []int32{
-	46, // 0: test.v1.ParameterValues.timestamp:type_name -> google.protobuf.Timestamp
-	47, // 1: test.v1.ParameterValues.duration:type_name -> google.protobuf.Duration
-	48, // 2: test.v1.ParameterValues.bool_value_wrapper:type_name -> google.protobuf.BoolValue
-	49, // 3: test.v1.ParameterValues.int32_value_wrapper:type_name -> google.protobuf.Int32Value
-	50, // 4: test.v1.ParameterValues.int64_value_wrapper:type_name -> google.protobuf.Int64Value
-	51, // 5: test.v1.ParameterValues.uint32_value_wrapper:type_name -> google.protobuf.UInt32Value
-	52, // 6: test.v1.ParameterValues.uint64_value_wrapper:type_name -> google.protobuf.UInt64Value
-	53, // 7: test.v1.ParameterValues.float_value_wrapper:type_name -> google.protobuf.FloatValue
-	54, // 8: test.v1.ParameterValues.double_value_wrapper:type_name -> google.protobuf.DoubleValue
-	55, // 9: test.v1.ParameterValues.bytes_value_wrapper:type_name -> google.protobuf.BytesValue
-	56, // 10: test.v1.ParameterValues.string_value_wrapper:type_name -> google.protobuf.StringValue
-	57, // 11: test.v1.ParameterValues.field_mask:type_name -> google.protobuf.FieldMask
+	52, // 0: test.v1.ParameterValues.timestamp:type_name -> google.protobuf.Timestamp
+	53, // 1: test.v1.ParameterValues.duration:type_name -> google.protobuf.Duration
+	54, // 2: test.v1.ParameterValues.bool_value_wrapper:type_name -> google.protobuf.BoolValue
+	55, // 3: test.v1.ParameterValues.int32_value_wrapper:type_name -> google.protobuf.Int32Value
+	56, // 4: test.v1.ParameterValues.int64_value_wrapper:type_name -> google.protobuf.Int64Value
+	57, // 5: test.v1.ParameterValues.uint32_value_wrapper:type_name -> google.protobuf.UInt32Value
+	58, // 6: test.v1.ParameterValues.uint64_value_wrapper:type_name -> google.protobuf.UInt64Value
+	59, // 7: test.v1.ParameterValues.float_value_wrapper:type_name -> google.protobuf.FloatValue
+	60, // 8: test.v1.ParameterValues.double_value_wrapper:type_name -> google.protobuf.DoubleValue
+	61, // 9: test.v1.ParameterValues.bytes_value_wrapper:type_name -> google.protobuf.BytesValue
+	62, // 10: test.v1.ParameterValues.string_value_wrapper:type_name -> google.protobuf.StringValue
+	63, // 11: test.v1.ParameterValues.field_mask:type_name -> google.protobuf.FieldMask
 	0,  // 12: test.v1.ParameterValues.enum_value:type_name -> test.v1.ParameterValues.Enum
 	0,  // 13: test.v1.ParameterValues.enum_list:type_name -> test.v1.ParameterValues.Enum
-	54, // 14: test.v1.ParameterValues.double_value_list:type_name -> google.protobuf.DoubleValue
-	54, // 15: test.v1.ParameterValues.oneof_double_value_wrapper:type_name -> google.protobuf.DoubleValue
+	60, // 14: test.v1.ParameterValues.double_value_list:type_name -> google.protobuf.DoubleValue
+	60, // 15: test.v1.ParameterValues.oneof_double_value_wrapper:type_name -> google.protobuf.DoubleValue
 	0,  // 16: test.v1.ParameterValues.oneof_enum_value:type_name -> test.v1.ParameterValues.Enum
-	9,  // 17: test.v1.ParameterValues.nested:type_name -> test.v1.ParameterValues.Nested
-	5,  // 18: test.v1.ParameterValues.recursive:type_name -> test.v1.ParameterValues
-	10, // 19: test.v1.ParameterValues.string_map:type_name -> test.v1.ParameterValues.StringMapEntry
-	11, // 20: test.v1.ParameterValues.string_value_map:type_name -> test.v1.ParameterValues.StringValueMapEntry
-	12, // 21: test.v1.ParameterValues.enum_map:type_name -> test.v1.ParameterValues.EnumMapEntry
-	13, // 22: test.v1.ParameterValues.nested_map:type_name -> test.v1.ParameterValues.NestedMapEntry
-	58, // 23: test.v1.ParameterValues.struct_value:type_name -> google.protobuf.Struct
-	59, // 24: test.v1.ParameterValues.value:type_name -> google.protobuf.Value
-	5,  // 25: test.v1.ParameterValues.recursive_list:type_name -> test.v1.ParameterValues
-	14, // 26: test.v1.AllTypes.int32_to_string_map:type_name -> test.v1.AllTypes.Int32ToStringMapEntry
-	15, // 27: test.v1.AllTypes.int64_to_string_map:type_name -> test.v1.AllTypes.Int64ToStringMapEntry
-	16, // 28: test.v1.AllTypes.uint32_to_string_map:type_name -> test.v1.AllTypes.Uint32ToStringMapEntry
-	17, // 29: test.v1.AllTypes.uint64_to_string_map:type_name -> test.v1.AllTypes.Uint64ToStringMapEntry
-	18, // 30: test.v1.AllTypes.sint32_to_string_map:type_name -> test.v1.AllTypes.Sint32ToStringMapEntry
-	19, // 31: test.v1.AllTypes.sint64_to_string_map:type_name -> test.v1.AllTypes.Sint64ToStringMapEntry
-	20, // 32: test.v1.AllTypes.fixed32_to_string_map:type_name -> test.v1.AllTypes.Fixed32ToStringMapEntry
-	21, // 33: test.v1.AllTypes.fixed64_to_string_map:type_name -> test.v1.AllTypes.Fixed64ToStringMapEntry
-	22, // 34: test.v1.AllTypes.sfixed32_to_string_map:type_name -> test.v1.AllTypes.Sfixed32ToStringMapEntry
-	23, // 35: test.v1.AllTypes.sfixed64_to_string_map:type_name -> test.v1.AllTypes.Sfixed64ToStringMapEntry
-	24, // 36: test.v1.AllTypes.bool_to_string_map:type_name -> test.v1.AllTypes.BoolToStringMapEntry
-	25, // 37: test.v1.AllTypes.string_to_string_map:type_name -> test.v1.AllTypes.StringToStringMapEntry
-	26, // 38: test.v1.AllTypes.double_map:type_name -> test.v1.AllTypes.DoubleMapEntry
-	27, // 39: test.v1.AllTypes.float_map:type_name -> test.v1.AllTypes.FloatMapEntry
-	28, // 40: test.v1.AllTypes.int32_map:type_name -> test.v1.AllTypes.Int32MapEntry
-	29, // 41: test.v1.AllTypes.int64_map:type_name -> test.v1.AllTypes.Int64MapEntry
-	30, // 42: test.v1.AllTypes.uint32_map:type_name -> test.v1.AllTypes.Uint32MapEntry
-	31, // 43: test.v1.AllTypes.uint64_map:type_name -> test.v1.AllTypes.Uint64MapEntry
-	32, // 44: test.v1.AllTypes.sint32_map:type_name -> test.v1.AllTypes.Sint32MapEntry
-	33, // 45: test.v1.AllTypes.sint64_map:type_name -> test.v1.AllTypes.Sint64MapEntry
-	34, // 46: test.v1.AllTypes.fixed32_map:type_name -> test.v1.AllTypes.Fixed32MapEntry
-	35, // 47: test.v1.AllTypes.fixed64_map:type_name -> test.v1.AllTypes.Fixed64MapEntry
-	36, // 48: test.v1.AllTypes.sfixed32_map:type_name -> test.v1.AllTypes.Sfixed32MapEntry
-	37, // 49: test.v1.AllTypes.sfixed64_map:type_name -> test.v1.AllTypes.Sfixed64MapEntry
-	38, // 50: test.v1.AllTypes.bool_map:type_name -> test.v1.AllTypes.BoolMapEntry
-	39, // 51: test.v1.AllTypes.string_map:type_name -> test.v1.AllTypes.StringMapEntry
-	40, // 52: test.v1.AllTypes.bytes_map:type_name -> test.v1.AllTypes.BytesMapEntry
-	6,  // 53: test.v1.AllTypes.msg_value:type_name -> test.v1.AllTypes
+	12, // 17: test.v1.ParameterValues.nested:type_name -> test.v1.ParameterValues.Nested
+	6,  // 18: test.v1.ParameterValues.recursive:type_name -> test.v1.ParameterValues
+	13, // 19: test.v1.ParameterValues.string_map:type_name -> test.v1.ParameterValues.StringMapEntry
+	14, // 20: test.v1.ParameterValues.string_value_map:type_name -> test.v1.ParameterValues.StringValueMapEntry
+	15, // 21: test.v1.ParameterValues.enum_map:type_name -> test.v1.ParameterValues.EnumMapEntry
+	16, // 22: test.v1.ParameterValues.nested_map:type_name -> test.v1.ParameterValues.NestedMapEntry
+	64, // 23: test.v1.ParameterValues.struct_value:type_name -> google.protobuf.Struct
+	65, // 24: test.v1.ParameterValues.value:type_name -> google.protobuf.Value
+	6,  // 25: test.v1.ParameterValues.recursive_list:type_name -> test.v1.ParameterValues
+	17, // 26: test.v1.AllTypes.int32_to_string_map:type_name -> test.v1.AllTypes.Int32ToStringMapEntry
+	18, // 27: test.v1.AllTypes.int64_to_string_map:type_name -> test.v1.AllTypes.Int64ToStringMapEntry
+	19, // 28: test.v1.AllTypes.uint32_to_string_map:type_name -> test.v1.AllTypes.Uint32ToStringMapEntry
+	20, // 29: test.v1.AllTypes.uint64_to_string_map:type_name -> test.v1.AllTypes.Uint64ToStringMapEntry
+	21, // 30: test.v1.AllTypes.sint32_to_string_map:type_name -> test.v1.AllTypes.Sint32ToStringMapEntry
+	22, // 31: test.v1.AllTypes.sint64_to_string_map:type_name -> test.v1.AllTypes.Sint64ToStringMapEntry
+	23, // 32: test.v1.AllTypes.fixed32_to_string_map:type_name -> test.v1.AllTypes.Fixed32ToStringMapEntry
+	24, // 33: test.v1.AllTypes.fixed64_to_string_map:type_name -> test.v1.AllTypes.Fixed64ToStringMapEntry
+	25, // 34: test.v1.AllTypes.sfixed32_to_string_map:type_name -> test.v1.AllTypes.Sfixed32ToStringMapEntry
+	26, // 35: test.v1.AllTypes.sfixed64_to_string_map:type_name -> test.v1.AllTypes.Sfixed64ToStringMapEntry
+	27, // 36: test.v1.AllTypes.bool_to_string_map:type_name -> test.v1.AllTypes.BoolToStringMapEntry
+	28, // 37: test.v1.AllTypes.string_to_string_map:type_name -> test.v1.AllTypes.StringToStringMapEntry
+	29, // 38: test.v1.AllTypes.double_map:type_name -> test.v1.AllTypes.DoubleMapEntry
+	30, // 39: test.v1.AllTypes.float_map:type_name -> test.v1.AllTypes.FloatMapEntry
+	31, // 40: test.v1.AllTypes.int32_map:type_name -> test.v1.AllTypes.Int32MapEntry
+	32, // 41: test.v1.AllTypes.int64_map:type_name -> test.v1.AllTypes.Int64MapEntry
+	33, // 42: test.v1.AllTypes.uint32_map:type_name -> test.v1.AllTypes.Uint32MapEntry
+	34, // 43: test.v1.AllTypes.uint64_map:type_name -> test.v1.AllTypes.Uint64MapEntry
+	35, // 44: test.v1.AllTypes.sint32_map:type_name -> test.v1.AllTypes.Sint32MapEntry
+	36, // 45: test.v1.AllTypes.sint64_map:type_name -> test.v1.AllTypes.Sint64MapEntry
+	37, // 46: test.v1.AllTypes.fixed32_map:type_name -> test.v1.AllTypes.Fixed32MapEntry
+	38, // 47: test.v1.AllTypes.fixed64_map:type_name -> test.v1.AllTypes.Fixed64MapEntry
+	39, // 48: test.v1.AllTypes.sfixed32_map:type_name -> test.v1.AllTypes.Sfixed32MapEntry
+	40, // 49: test.v1.AllTypes.sfixed64_map:type_name -> test.v1.AllTypes.Sfixed64MapEntry
+	41, // 50: test.v1.AllTypes.bool_map:type_name -> test.v1.AllTypes.BoolMapEntry
+	42, // 51: test.v1.AllTypes.string_map:type_name -> test.v1.AllTypes.StringMapEntry
+	43, // 52: test.v1.AllTypes.bytes_map:type_name -> test.v1.AllTypes.BytesMapEntry
+	7,  // 53: test.v1.AllTypes.msg_value:type_name -> test.v1.AllTypes
 	2,  // 54: test.v1.AllTypes.enum_value:type_name -> test.v1.AllTypes.Enum
-	6,  // 55: test.v1.AllTypes.opt_msg_value:type_name -> test.v1.AllTypes
+	7,  // 55: test.v1.AllTypes.opt_msg_value:type_name -> test.v1.AllTypes
 	2,  // 56: test.v1.AllTypes.opt_enum_value:type_name -> test.v1.AllTypes.Enum
-	6,  // 57: test.v1.AllTypes.msg_list:type_name -> test.v1.AllTypes
+	7,  // 57: test.v1.AllTypes.msg_list:type_name -> test.v1.AllTypes
 	2,  // 58: test.v1.AllTypes.enum_list:type_name -> test.v1.AllTypes.Enum
-	41, // 59: test.v1.AllTypes.msg_map:type_name -> test.v1.AllTypes.MsgMapEntry
-	42, // 60: test.v1.AllTypes.enum_map:type_name -> test.v1.AllTypes.EnumMapEntry
-	6,  // 61: test.v1.AllTypes.msg_option:type_name -> test.v1.AllTypes
+	44, // 59: test.v1.AllTypes.msg_map:type_name -> test.v1.AllTypes.MsgMapEntry
+	45, // 60: test.v1.AllTypes.enum_map:type_name -> test.v1.AllTypes.EnumMapEntry
+	7,  // 61: test.v1.AllTypes.msg_option:type_name -> test.v1.AllTypes
 	2,  // 62: test.v1.AllTypes.enum_option:type_name -> test.v1.AllTypes.Enum
-	43, // 63: test.v1.AllTypes.attributes:type_name -> test.v1.AllTypes.AttributesEntry
-	44, // 64: test.v1.AllTypes.attrs:type_name -> test.v1.AllTypes.AttrsEntry
-	45, // 65: test.v1.AllTypes.custom_attr:type_name -> test.v1.AllTypes.CustomAttrEntry
+	46, // 63: test.v1.AllTypes.attributes:type_name -> test.v1.AllTypes.AttributesEntry
+	47, // 64: test.v1.AllTypes.attrs:type_name -> test.v1.AllTypes.AttrsEntry
+	48, // 65: test.v1.AllTypes.custom_attr:type_name -> test.v1.AllTypes.CustomAttrEntry
 	3,  // 66: test.v1.EnumTest.enum_in:type_name -> test.v1.EnumTest.TestEnum
 	3,  // 67: test.v1.EnumTest.enum_not_in:type_name -> test.v1.EnumTest.TestEnum
 	3,  // 68: test.v1.EnumTest.enum_in_and_not_in:type_name -> test.v1.EnumTest.TestEnum
 	3,  // 69: test.v1.EnumTest.enum_const:type_name -> test.v1.EnumTest.TestEnum
 	3,  // 70: test.v1.EnumTest.enum_required:type_name -> test.v1.EnumTest.TestEnum
 	4,  // 71: test.v1.RepeatedEnumTest.repeated_enum_in:type_name -> test.v1.RepeatedEnumTest.TestEnum
-	54, // 72: test.v1.ParameterValues.Nested.double_value_wrapper:type_name -> google.protobuf.DoubleValue
-	1,  // 73: test.v1.ParameterValues.Nested.enum_value:type_name -> test.v1.ParameterValues.Nested.Enum
-	56, // 74: test.v1.ParameterValues.StringValueMapEntry.value:type_name -> google.protobuf.StringValue
-	0,  // 75: test.v1.ParameterValues.EnumMapEntry.value:type_name -> test.v1.ParameterValues.Enum
-	9,  // 76: test.v1.ParameterValues.NestedMapEntry.value:type_name -> test.v1.ParameterValues.Nested
-	6,  // 77: test.v1.AllTypes.MsgMapEntry.value:type_name -> test.v1.AllTypes
-	2,  // 78: test.v1.AllTypes.EnumMapEntry.value:type_name -> test.v1.AllTypes.Enum
-	79, // [79:79] is the sub-list for method output_type
-	79, // [79:79] is the sub-list for method input_type
-	79, // [79:79] is the sub-list for extension type_name
-	79, // [79:79] is the sub-list for extension extendee
-	0,  // [0:79] is the sub-list for field type_name
+	5,  // 72: test.v1.ValidateRulesTest.enum_defined_only:type_name -> test.v1.ValidateRulesTest.TestEnum
+	5,  // 73: test.v1.ValidateRulesTest.enum_const:type_name -> test.v1.ValidateRulesTest.TestEnum
+	50, // 74: test.v1.ValidateRulesTest.map_min_pairs:type_name -> test.v1.ValidateRulesTest.MapMinPairsEntry
+	51, // 75: test.v1.ValidateRulesTest.map_max_pairs:type_name -> test.v1.ValidateRulesTest.MapMaxPairsEntry
+	53, // 76: test.v1.ValidateRulesTest.duration_gt:type_name -> google.protobuf.Duration
+	52, // 77: test.v1.ValidateRulesTest.timestamp_lt:type_name -> google.protobuf.Timestamp
+	49, // 78: test.v1.ValidateRulesTest.nested_required:type_name -> test.v1.ValidateRulesTest.Nested
+	60, // 79: test.v1.ParameterValues.Nested.double_value_wrapper:type_name -> google.protobuf.DoubleValue
+	1,  // 80: test.v1.ParameterValues.Nested.enum_value:type_name -> test.v1.ParameterValues.Nested.Enum
+	62, // 81: test.v1.ParameterValues.StringValueMapEntry.value:type_name -> google.protobuf.StringValue
+	0,  // 82: test.v1.ParameterValues.EnumMapEntry.value:type_name -> test.v1.ParameterValues.Enum
+	12, // 83: test.v1.ParameterValues.NestedMapEntry.value:type_name -> test.v1.ParameterValues.Nested
+	7,  // 84: test.v1.AllTypes.MsgMapEntry.value:type_name -> test.v1.AllTypes
+	2,  // 85: test.v1.AllTypes.EnumMapEntry.value:type_name -> test.v1.AllTypes.Enum
+	86, // [86:86] is the sub-list for method output_type
+	86, // [86:86] is the sub-list for method input_type
+	86, // [86:86] is the sub-list for extension type_name
+	86, // [86:86] is the sub-list for extension extendee
+	0,  // [0:86] is the sub-list for field type_name
 }
 
 func init() { file_test_v1_test_proto_init() }
@@ -5344,8 +6551,8 @@ func file_test_v1_test_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_test_v1_test_proto_rawDesc), len(file_test_v1_test_proto_rawDesc)),
-			NumEnums:      5,
-			NumMessages:   41,
+			NumEnums:      6,
+			NumMessages:   46,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

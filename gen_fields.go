@@ -76,6 +76,18 @@ func FieldValue(fd protoreflect.FieldDescriptor, opts GenOptions) *protoreflect.
 	if opts.MaxDepth <= 0 {
 		return nil
 	}
+	if opts.shouldViolate() {
+		v, hasValue := violatingFieldValue(fd, opts)
+		// Leaving a required field unset breaks its rules too, so it competes
+		// with the value-based violations rather than only backstopping them.
+		canOmit := violatesByOmission(fd, opts)
+		switch {
+		case canOmit && (!hasValue || opts.fake().Bool()):
+			return nil
+		case hasValue:
+			return &v
+		}
+	}
 	switch fd.Kind() {
 	case protoreflect.MessageKind:
 		switch string(fd.Message().FullName()) {

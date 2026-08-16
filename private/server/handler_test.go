@@ -36,6 +36,7 @@ func (m *mockServer) IncrementTotalRequests()                                   
 func (m *mockServer) IncrementErrors()                                             {}
 func (m *mockServer) GetLogger() *fauxlog.Logger                                   { return m.logger }
 func (m *mockServer) GetMaxDepth() int                                             { return 20 }
+func (m *mockServer) GetViolateRules() float64                                     { return 0 }
 func (m *mockServer) GetProxyTo() string                                           { return "" }
 func (m *mockServer) GetRecordDir() string                                         { return "" }
 func (m *mockServer) GetStaticSeed() bool                                          { return m.staticSeed }
