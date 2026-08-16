@@ -44,5 +44,14 @@ func Bytes(fd protoreflect.FieldDescriptor, opts GenOptions) []byte {
 		return rules.In[opts.fake().IntRange(0, len(rules.In)-1)]
 	}
 
-	return []byte(opts.fake().Sentence(int(maxLen / uint64(4)))[minLen:maxLen])
+	// Build at least minLen bytes before trimming: a sentence of the estimated
+	// word count regularly comes up short, and slicing it would panic.
+	b := []byte(opts.fake().Sentence(int(maxLen/uint64(4)) + 1))
+	for uint64(len(b)) < minLen {
+		b = append(b, opts.fake().Sentence(1)...)
+	}
+	if uint64(len(b)) > maxLen {
+		b = b[:maxLen]
+	}
+	return b
 }

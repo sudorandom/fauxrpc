@@ -8,6 +8,7 @@ import (
 )
 
 const (
+	minInt32 = math.MinInt32
 	maxInt32 = math.MaxInt32
 	// maxViolatingLength bounds how long a generated string or byte slice may
 	// get while violating a length rule.
@@ -30,46 +31,47 @@ type numericRules[T numeric] struct {
 	lte      *T
 }
 
-// violateNumeric returns a value that fails one of the rules, picked at random
-// from every rule a value can break.
+// violateNumeric rolls each rule against ViolateRules and returns a value that
+// fails one of the rules that came up.
 func violateNumeric[T numeric](rules numericRules[T], lowest, highest T, opts GenOptions) (T, bool) {
-	return pickOne(numericViolations(rules, lowest, highest), opts)
+	return numericViolations(rules, lowest, highest).pick(opts)
 }
 
-// numericViolations returns one counterexample per rule that a value can break.
-// lowest and highest bound T so that stepping outside a range cannot wrap
-// around.
-func numericViolations[T numeric](rules numericRules[T], lowest, highest T) []T {
-	var candidates []T
+// numericViolations groups counterexamples by the rule each one breaks. lowest
+// and highest bound T so that stepping outside a range cannot wrap around.
+func numericViolations[T numeric](rules numericRules[T], lowest, highest T) ruleViolations[T] {
+	var violations ruleViolations[T]
 	if rules.constVal != nil {
+		var anythingElse []T
 		if *rules.constVal < highest {
-			candidates = append(candidates, *rules.constVal+1)
+			anythingElse = append(anythingElse, *rules.constVal+1)
 		}
 		if *rules.constVal > lowest {
-			candidates = append(candidates, *rules.constVal-1)
+			anythingElse = append(anythingElse, *rules.constVal-1)
 		}
+		violations = violations.add(anythingElse...)
 	}
-	candidates = append(candidates, rules.notIn...)
+	violations = violations.add(rules.notIn...)
 	if len(rules.in) > 0 {
 		if v, ok := valueNotIn(rules.in, lowest, highest); ok {
-			candidates = append(candidates, v)
+			violations = violations.add(v)
 		}
 	}
 	// A bound is not greater/less than itself, so it is its own counterexample
 	// for the exclusive forms.
 	if rules.gt != nil {
-		candidates = append(candidates, *rules.gt)
+		violations = violations.add(*rules.gt)
 	}
 	if rules.lt != nil {
-		candidates = append(candidates, *rules.lt)
+		violations = violations.add(*rules.lt)
 	}
 	if rules.gte != nil && *rules.gte > lowest {
-		candidates = append(candidates, *rules.gte-1)
+		violations = violations.add(*rules.gte - 1)
 	}
 	if rules.lte != nil && *rules.lte < highest {
-		candidates = append(candidates, *rules.lte+1)
+		violations = violations.add(*rules.lte + 1)
 	}
-	return candidates
+	return violations
 }
 
 // valueNotIn returns a value missing from in. Scanning len(in)+1 candidates
@@ -376,15 +378,15 @@ func violateFloatRules(rules *validate.FloatRules, opts GenOptions) (float32, bo
 	case *validate.FloatRules_Lte:
 		n.lte = &v.Lte
 	}
-	candidates := numericViolations(n, -math.MaxFloat32, math.MaxFloat32)
+	violations := numericViolations(n, -math.MaxFloat32, math.MaxFloat32)
 	if rules.GetFinite() {
-		candidates = append(candidates,
+		violations = violations.add(
 			float32(math.Inf(1)),
 			float32(math.Inf(-1)),
 			float32(math.NaN()),
 		)
 	}
-	return pickOne(candidates, opts)
+	return violations.pick(opts)
 }
 
 func violateDoubleRules(rules *validate.DoubleRules, opts GenOptions) (float64, bool) {
@@ -404,9 +406,9 @@ func violateDoubleRules(rules *validate.DoubleRules, opts GenOptions) (float64, 
 	case *validate.DoubleRules_Lte:
 		n.lte = &v.Lte
 	}
-	candidates := numericViolations(n, -math.MaxFloat64, math.MaxFloat64)
+	violations := numericViolations(n, -math.MaxFloat64, math.MaxFloat64)
 	if rules.GetFinite() {
-		candidates = append(candidates, math.Inf(1), math.Inf(-1), math.NaN())
+		violations = violations.add(math.Inf(1), math.Inf(-1), math.NaN())
 	}
-	return pickOne(candidates, opts)
+	return violations.pick(opts)
 }

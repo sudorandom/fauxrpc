@@ -76,10 +76,10 @@ func FieldValue(fd protoreflect.FieldDescriptor, opts GenOptions) *protoreflect.
 	if opts.MaxDepth <= 0 {
 		return nil
 	}
-	if opts.shouldViolate() {
+	if opts.ViolateRules > 0 {
 		v, hasValue := violatingFieldValue(fd, opts)
-		// Leaving a required field unset breaks its rules too, so it competes
-		// with the value-based violations rather than only backstopping them.
+		// `required` is a rule like any other: it gets its own roll, and
+		// leaving the field unset is the only way to break it.
 		canOmit := violatesByOmission(fd, opts)
 		switch {
 		case canOmit && (!hasValue || opts.fake().Bool()):

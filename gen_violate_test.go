@@ -99,21 +99,19 @@ func TestViolateRulesDisabled(t *testing.T) {
 	}
 }
 
-// TestViolateRulesProbability checks that the option behaves like a probability:
-// a low value violates some fields but not all of them.
-func TestViolateRulesProbability(t *testing.T) {
-	md := violateTestMessage(t)
+// violationRates generates n messages and returns how often each field ended up
+// with a reported violation.
+func violationRates(t *testing.T, md protoreflect.MessageDescriptor, probability float64, n uint64) map[string]float64 {
+	t.Helper()
 	validator, err := protovalidate.New()
 	require.NoError(t, err)
 
-	fieldCount := md.Fields().Len()
-	sawPartial := false
-	sawAny := false
-	for seed := range uint64(50) {
+	counts := map[string]int{}
+	for seed := range n {
 		msg, err := fauxrpc.NewMessage(md, fauxrpc.GenOptions{
 			MaxDepth:     5,
 			Faker:        gofakeit.New(seed + 1),
-			ViolateRules: 0.3,
+			ViolateRules: probability,
 		})
 		require.NoError(t, err)
 
@@ -121,15 +119,56 @@ func TestViolateRulesProbability(t *testing.T) {
 		if err == nil {
 			continue
 		}
-		sawAny = true
 		var violations *protovalidate.ValidationError
 		require.ErrorAs(t, err, &violations)
-		if len(violations.Violations) < fieldCount {
-			sawPartial = true
+		// One bad value can trip several rules at once, so count each field at
+		// most once per message.
+		seen := map[string]bool{}
+		for _, v := range violations.Violations {
+			elements := v.Proto.GetField().GetElements()
+			if len(elements) > 0 {
+				seen[elements[0].GetFieldName()] = true
+			}
+		}
+		for name := range seen {
+			counts[name]++
 		}
 	}
-	assert.True(t, sawAny, "no message failed validation at a 0.3 probability")
-	assert.True(t, sawPartial, "every failing message violated every field at a 0.3 probability")
+
+	rates := make(map[string]float64, len(counts))
+	for name, count := range counts {
+		rates[name] = float64(count) / float64(n)
+	}
+	return rates
+}
+
+// TestViolateRulesProbabilityPerRule checks that the option is a per-rule
+// probability: a field with one rule is violated at roughly that rate, and a
+// field with three is violated at roughly 1-(1-p)^3.
+func TestViolateRulesProbabilityPerRule(t *testing.T) {
+	md := violateTestMessage(t)
+	const probability = 0.5
+	rates := violationRates(t, md, probability, 600)
+
+	// Generous bounds: this is a sampled rate, not an exact count.
+	for _, name := range []string{"string_uuid", "int32_gt", "string_required"} {
+		assert.InDelta(t, probability, rates[name], 0.08, "%s carries one rule", name)
+	}
+
+	expectedMulti := 1 - (1-probability)*(1-probability)*(1-probability)
+	assert.InDelta(t, expectedMulti, rates["string_multi_rule"], 0.08,
+		"string_multi_rule carries three rules, so each one gets its own roll")
+}
+
+// TestViolateRulesProbabilityScales checks that the violation rate tracks the
+// option across its range rather than being all-or-nothing.
+func TestViolateRulesProbabilityScales(t *testing.T) {
+	md := violateTestMessage(t)
+	for _, probability := range []float64{0.1, 0.25, 0.5, 0.9} {
+		rates := violationRates(t, md, probability, 400)
+		assert.InDelta(t, probability, rates["string_uuid"], 0.08,
+			"single-rule field at probability %.2f", probability)
+	}
 }
 
 // TestViolateRulesUnvalidatedMessage checks that a message with no rules is

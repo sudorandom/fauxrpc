@@ -4742,6 +4742,7 @@ type ValidateRulesTest struct {
 	xxx_hidden_TimestampLt      *timestamppb.Timestamp     `protobuf:"bytes,28,opt,name=timestamp_lt,json=timestampLt"`
 	xxx_hidden_StringRequired   *string                    `protobuf:"bytes,29,opt,name=string_required,json=stringRequired"`
 	xxx_hidden_NestedRequired   *ValidateRulesTest_Nested  `protobuf:"bytes,30,opt,name=nested_required,json=nestedRequired"`
+	xxx_hidden_StringMultiRule  *string                    `protobuf:"bytes,31,opt,name=string_multi_rule,json=stringMultiRule"`
 	XXX_raceDetectHookData      protoimpl.RaceDetectHookData
 	XXX_presence                [1]uint32
 	unknownFields               protoimpl.UnknownFields
@@ -5011,89 +5012,99 @@ func (x *ValidateRulesTest) GetNestedRequired() *ValidateRulesTest_Nested {
 	return nil
 }
 
+func (x *ValidateRulesTest) GetStringMultiRule() string {
+	if x != nil {
+		if x.xxx_hidden_StringMultiRule != nil {
+			return *x.xxx_hidden_StringMultiRule
+		}
+		return ""
+	}
+	return ""
+}
+
 func (x *ValidateRulesTest) SetInt32Gt(v int32) {
 	x.xxx_hidden_Int32Gt = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 30)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 31)
 }
 
 func (x *ValidateRulesTest) SetInt64Lte(v int64) {
 	x.xxx_hidden_Int64Lte = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 30)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 31)
 }
 
 func (x *ValidateRulesTest) SetUint32In(v uint32) {
 	x.xxx_hidden_Uint32In = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 30)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 2, 31)
 }
 
 func (x *ValidateRulesTest) SetUint64Const(v uint64) {
 	x.xxx_hidden_Uint64Const = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 30)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 3, 31)
 }
 
 func (x *ValidateRulesTest) SetSint32Gte(v int32) {
 	x.xxx_hidden_Sint32Gte = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 30)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 4, 31)
 }
 
 func (x *ValidateRulesTest) SetSfixed64Lt(v int64) {
 	x.xxx_hidden_Sfixed64Lt = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 5, 30)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 5, 31)
 }
 
 func (x *ValidateRulesTest) SetFixed32NotIn(v uint32) {
 	x.xxx_hidden_Fixed32NotIn = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 6, 30)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 6, 31)
 }
 
 func (x *ValidateRulesTest) SetFloatFinite(v float32) {
 	x.xxx_hidden_FloatFinite = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 7, 30)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 7, 31)
 }
 
 func (x *ValidateRulesTest) SetDoubleGte(v float64) {
 	x.xxx_hidden_DoubleGte = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 8, 30)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 8, 31)
 }
 
 func (x *ValidateRulesTest) SetBoolConst(v bool) {
 	x.xxx_hidden_BoolConst = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 9, 30)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 9, 31)
 }
 
 func (x *ValidateRulesTest) SetStringEmail(v string) {
 	x.xxx_hidden_StringEmail = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 10, 30)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 10, 31)
 }
 
 func (x *ValidateRulesTest) SetStringUuid(v string) {
 	x.xxx_hidden_StringUuid = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 11, 30)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 11, 31)
 }
 
 func (x *ValidateRulesTest) SetStringPattern(v string) {
 	x.xxx_hidden_StringPattern = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 12, 30)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 12, 31)
 }
 
 func (x *ValidateRulesTest) SetStringMinLen(v string) {
 	x.xxx_hidden_StringMinLen = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 13, 30)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 13, 31)
 }
 
 func (x *ValidateRulesTest) SetStringMaxLen(v string) {
 	x.xxx_hidden_StringMaxLen = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 14, 30)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 14, 31)
 }
 
 func (x *ValidateRulesTest) SetStringPrefix(v string) {
 	x.xxx_hidden_StringPrefix = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 15, 30)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 15, 31)
 }
 
 func (x *ValidateRulesTest) SetStringIn(v string) {
 	x.xxx_hidden_StringIn = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 16, 30)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 16, 31)
 }
 
 func (x *ValidateRulesTest) SetBytesMinLen(v []byte) {
@@ -5101,7 +5112,7 @@ func (x *ValidateRulesTest) SetBytesMinLen(v []byte) {
 		v = []byte{}
 	}
 	x.xxx_hidden_BytesMinLen = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 17, 30)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 17, 31)
 }
 
 func (x *ValidateRulesTest) SetBytesConst(v []byte) {
@@ -5109,17 +5120,17 @@ func (x *ValidateRulesTest) SetBytesConst(v []byte) {
 		v = []byte{}
 	}
 	x.xxx_hidden_BytesConst = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 18, 30)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 18, 31)
 }
 
 func (x *ValidateRulesTest) SetEnumDefinedOnly(v ValidateRulesTest_TestEnum) {
 	x.xxx_hidden_EnumDefinedOnly = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 19, 30)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 19, 31)
 }
 
 func (x *ValidateRulesTest) SetEnumConst(v ValidateRulesTest_TestEnum) {
 	x.xxx_hidden_EnumConst = v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 20, 30)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 20, 31)
 }
 
 func (x *ValidateRulesTest) SetRepeatedMinItems(v []string) {
@@ -5152,11 +5163,16 @@ func (x *ValidateRulesTest) SetTimestampLt(v *timestamppb.Timestamp) {
 
 func (x *ValidateRulesTest) SetStringRequired(v string) {
 	x.xxx_hidden_StringRequired = &v
-	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 28, 30)
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 28, 31)
 }
 
 func (x *ValidateRulesTest) SetNestedRequired(v *ValidateRulesTest_Nested) {
 	x.xxx_hidden_NestedRequired = v
+}
+
+func (x *ValidateRulesTest) SetStringMultiRule(v string) {
+	x.xxx_hidden_StringMultiRule = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 30, 31)
 }
 
 func (x *ValidateRulesTest) HasInt32Gt() bool {
@@ -5334,6 +5350,13 @@ func (x *ValidateRulesTest) HasNestedRequired() bool {
 	return x.xxx_hidden_NestedRequired != nil
 }
 
+func (x *ValidateRulesTest) HasStringMultiRule() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 30)
+}
+
 func (x *ValidateRulesTest) ClearInt32Gt() {
 	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
 	x.xxx_hidden_Int32Gt = 0
@@ -5456,6 +5479,11 @@ func (x *ValidateRulesTest) ClearNestedRequired() {
 	x.xxx_hidden_NestedRequired = nil
 }
 
+func (x *ValidateRulesTest) ClearStringMultiRule() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 30)
+	x.xxx_hidden_StringMultiRule = nil
+}
+
 type ValidateRulesTest_builder struct {
 	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
 
@@ -5489,6 +5517,9 @@ type ValidateRulesTest_builder struct {
 	TimestampLt      *timestamppb.Timestamp
 	StringRequired   *string
 	NestedRequired   *ValidateRulesTest_Nested
+	// Three independently violable rules on one field, so its odds of ending up
+	// invalid are 1-(1-p)^3 rather than p.
+	StringMultiRule *string
 }
 
 func (b0 ValidateRulesTest_builder) Build() *ValidateRulesTest {
@@ -5496,87 +5527,87 @@ func (b0 ValidateRulesTest_builder) Build() *ValidateRulesTest {
 	b, x := &b0, m0
 	_, _ = b, x
 	if b.Int32Gt != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 30)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 31)
 		x.xxx_hidden_Int32Gt = *b.Int32Gt
 	}
 	if b.Int64Lte != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 30)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 31)
 		x.xxx_hidden_Int64Lte = *b.Int64Lte
 	}
 	if b.Uint32In != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 30)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 2, 31)
 		x.xxx_hidden_Uint32In = *b.Uint32In
 	}
 	if b.Uint64Const != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 30)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 3, 31)
 		x.xxx_hidden_Uint64Const = *b.Uint64Const
 	}
 	if b.Sint32Gte != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 30)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 4, 31)
 		x.xxx_hidden_Sint32Gte = *b.Sint32Gte
 	}
 	if b.Sfixed64Lt != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 5, 30)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 5, 31)
 		x.xxx_hidden_Sfixed64Lt = *b.Sfixed64Lt
 	}
 	if b.Fixed32NotIn != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 6, 30)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 6, 31)
 		x.xxx_hidden_Fixed32NotIn = *b.Fixed32NotIn
 	}
 	if b.FloatFinite != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 7, 30)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 7, 31)
 		x.xxx_hidden_FloatFinite = *b.FloatFinite
 	}
 	if b.DoubleGte != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 8, 30)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 8, 31)
 		x.xxx_hidden_DoubleGte = *b.DoubleGte
 	}
 	if b.BoolConst != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 9, 30)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 9, 31)
 		x.xxx_hidden_BoolConst = *b.BoolConst
 	}
 	if b.StringEmail != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 10, 30)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 10, 31)
 		x.xxx_hidden_StringEmail = b.StringEmail
 	}
 	if b.StringUuid != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 11, 30)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 11, 31)
 		x.xxx_hidden_StringUuid = b.StringUuid
 	}
 	if b.StringPattern != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 12, 30)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 12, 31)
 		x.xxx_hidden_StringPattern = b.StringPattern
 	}
 	if b.StringMinLen != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 13, 30)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 13, 31)
 		x.xxx_hidden_StringMinLen = b.StringMinLen
 	}
 	if b.StringMaxLen != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 14, 30)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 14, 31)
 		x.xxx_hidden_StringMaxLen = b.StringMaxLen
 	}
 	if b.StringPrefix != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 15, 30)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 15, 31)
 		x.xxx_hidden_StringPrefix = b.StringPrefix
 	}
 	if b.StringIn != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 16, 30)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 16, 31)
 		x.xxx_hidden_StringIn = b.StringIn
 	}
 	if b.BytesMinLen != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 17, 30)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 17, 31)
 		x.xxx_hidden_BytesMinLen = b.BytesMinLen
 	}
 	if b.BytesConst != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 18, 30)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 18, 31)
 		x.xxx_hidden_BytesConst = b.BytesConst
 	}
 	if b.EnumDefinedOnly != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 19, 30)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 19, 31)
 		x.xxx_hidden_EnumDefinedOnly = *b.EnumDefinedOnly
 	}
 	if b.EnumConst != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 20, 30)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 20, 31)
 		x.xxx_hidden_EnumConst = *b.EnumConst
 	}
 	x.xxx_hidden_RepeatedMinItems = b.RepeatedMinItems
@@ -5587,10 +5618,14 @@ func (b0 ValidateRulesTest_builder) Build() *ValidateRulesTest {
 	x.xxx_hidden_DurationGt = b.DurationGt
 	x.xxx_hidden_TimestampLt = b.TimestampLt
 	if b.StringRequired != nil {
-		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 28, 30)
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 28, 31)
 		x.xxx_hidden_StringRequired = b.StringRequired
 	}
 	x.xxx_hidden_NestedRequired = b.NestedRequired
+	if b.StringMultiRule != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 30, 31)
+		x.xxx_hidden_StringMultiRule = b.StringMultiRule
+	}
 	return m0
 }
 
@@ -6287,7 +6322,7 @@ const file_test_v1_test_proto_rawDesc = "" +
 	"\x15TEST_ENUM_UNSPECIFIED\x10\x00\x12\x11\n" +
 	"\rTEST_ENUM_ONE\x10\x01\x12\x11\n" +
 	"\rTEST_ENUM_TWO\x10\x02\x12\x13\n" +
-	"\x0fTEST_ENUM_THREE\x10\x03\"\xfb\x0e\n" +
+	"\x0fTEST_ENUM_THREE\x10\x03\"\xbc\x0f\n" +
 	"\x11ValidateRulesTest\x12\"\n" +
 	"\bint32_gt\x18\x01 \x01(\x05B\a\xbaH\x04\x1a\x02 \n" +
 	"R\aint32Gt\x12$\n" +
@@ -6334,7 +6369,9 @@ const file_test_v1_test_proto_rawDesc = "" +
 	"durationGt\x12K\n" +
 	"\ftimestamp_lt\x18\x1c \x01(\v2\x1a.google.protobuf.TimestampB\f\xbaH\t\xb2\x01\x06\x1a\x04\b\xc0\x84=R\vtimestampLt\x12/\n" +
 	"\x0fstring_required\x18\x1d \x01(\tB\x06\xbaH\x03\xc8\x01\x01R\x0estringRequired\x12R\n" +
-	"\x0fnested_required\x18\x1e \x01(\v2!.test.v1.ValidateRulesTest.NestedB\x06\xbaH\x03\xc8\x01\x01R\x0enestedRequired\x1a%\n" +
+	"\x0fnested_required\x18\x1e \x01(\v2!.test.v1.ValidateRulesTest.NestedB\x06\xbaH\x03\xc8\x01\x01R\x0enestedRequired\x12?\n" +
+	"\x11string_multi_rule\x18\x1f \x01(\tB\x13\xbaH\x10r\x0e\x10\x05\x18\n" +
+	"2\b^[a-z]+$R\x0fstringMultiRule\x1a%\n" +
 	"\x06Nested\x12\x1b\n" +
 	"\x04name\x18\x01 \x01(\tB\a\xbaH\x04r\x02\x10\x05R\x04name\x1a>\n" +
 	"\x10MapMinPairsEntry\x12\x10\n" +

@@ -328,6 +328,14 @@ message ValidateRulesTest {
   google.protobuf.Timestamp timestamp_lt = 28 [(buf.validate.field).timestamp.lt = {seconds: 1000000}];
   string string_required = 29 [(buf.validate.field).required = true];
   Nested nested_required = 30 [(buf.validate.field).required = true];
+
+  // Three independently violable rules on one field, so its odds of ending up
+  // invalid are 1-(1-p)^3 rather than p.
+  string string_multi_rule = 31 [(buf.validate.field).string = {
+    min_len: 5
+    max_len: 10
+    pattern: "^[a-z]+$"
+  }];
 }
 
 // UnvalidatedTest has no protovalidate rules at all.

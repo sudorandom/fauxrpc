@@ -29,14 +29,18 @@ type GenOptions struct {
 	StubRecorder func(StubEntry)
 	StubFinder   StubFinder
 
-	// ViolateRules is the probability, from 0.0 to 1.0, that any single field
-	// is generated to fail its protovalidate rules instead of satisfy them.
-	// 0 (the default) never violates and 1 violates every field it can. Which
-	// of the field's rules gets broken is chosen at random.
+	// ViolateRules is the probability, from 0.0 to 1.0, that any single
+	// protovalidate rule is broken rather than satisfied. Every rule on every
+	// field is rolled independently, so a field carrying five rules is far more
+	// likely to end up invalid than a field carrying one. 0 (the default) never
+	// violates and 1 breaks every rule it can.
 	//
-	// Fields without rules, and rules that no value can violate on its own
-	// (message-level rules and CEL expressions), are generated as usual, so a
-	// message is not guaranteed to fail validation at any probability.
+	// A field can only hold one value, so when several of its rules come up at
+	// once, one of them is picked at random to be the one that breaks.
+	//
+	// Rules that no value can violate on its own (message-level rules and CEL
+	// expressions) are always satisfied, so a message is not guaranteed to fail
+	// validation even at 1.0.
 	ViolateRules float64
 
 	extraFieldConstraints *validate.FieldRules
@@ -56,7 +60,7 @@ func (st GenOptions) fake() *gofakeit.Faker {
 	return st.Faker
 }
 
-// shouldViolate rolls the ViolateRules dice for a single field.
+// shouldViolate rolls the ViolateRules dice for a single rule.
 func (st GenOptions) shouldViolate() bool {
 	if st.ViolateRules <= 0 {
 		return false

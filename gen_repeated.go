@@ -22,7 +22,7 @@ func Repeated(msg protoreflect.Message, fd protoreflect.FieldDescriptor, opts Ge
 	if constraints == nil {
 		return repeatedSimple(msg, fd, opts)
 	}
-	if opts.shouldViolate() {
+	if opts.ViolateRules > 0 {
 		if val, ok := violateRepeated(msg, fd, constraints, opts); ok {
 			return val
 		}

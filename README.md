@@ -182,19 +182,19 @@ If the upstream server returns an `UNIMPLEMENTED` status code (indicating that t
 
 ## Generating Invalid Data
 
-By default FauxRPC honors the [protovalidate](https://buf.build/docs/protovalidate/) rules on a schema, so generated data passes validation. `--violate-rules` inverts that for testing how clients handle bad data: it takes a probability from `0.0` to `1.0` that any single field is generated to *break* its rules instead of satisfying them.
+By default FauxRPC honors the [protovalidate](https://buf.build/docs/protovalidate/) rules on a schema, so generated data passes validation. `--violate-rules` inverts that for testing how clients handle bad data: it takes a probability from `0.0` to `1.0` that any single **rule** is broken instead of satisfied.
 
 ```shell
-# every field that has a violable rule gets a bad value
+# break every rule that can be broken
 fauxrpc run --schema=service.binpb --violate-rules=1.0
 
-# roughly one field in five is bad
+# break roughly one rule in five
 fauxrpc generate --schema=service.binpb --target=pkg.v1.Response --violate-rules=0.2
 ```
 
 The same option is available on `fauxrpc run`, `fauxrpc generate`, and `fauxrpc curl`.
 
-Which rule gets broken is picked at random from every rule on the field that a value can break, so repeated runs exercise different failure modes: a `string` with both `min_len` and `pattern` is sometimes too short and sometimes malformed. `required` fields are either left unset or given a bad value.
+The dice are rolled **per rule**, not per field or per message. A field carrying a single rule is invalid about `p` of the time; a field carrying three independent rules is invalid about `1-(1-p)³` of the time. Because a field can only hold one value, when several of its rules come up at once one of them is picked at random to be the one that breaks — so repeated runs exercise different failure modes: a `string` with both `min_len` and `pattern` is sometimes too short and sometimes malformed. `required` counts as a rule of its own, broken by leaving the field unset.
 
 A few things are never violated, so a message is not guaranteed to fail validation even at `1.0`:
 
