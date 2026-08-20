@@ -5752,6 +5752,857 @@ func (b0 UnvalidatedTest_builder) Build() *UnvalidatedTest {
 	return m0
 }
 
+type Author struct {
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Name        *string                `protobuf:"bytes,1,opt,name=name"`
+	xxx_hidden_Address     *Address               `protobuf:"bytes,2,opt,name=address"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *Author) Reset() {
+	*x = Author{}
+	mi := &file_test_v1_test_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Author) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Author) ProtoMessage() {}
+
+func (x *Author) ProtoReflect() protoreflect.Message {
+	mi := &file_test_v1_test_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *Author) GetName() string {
+	if x != nil {
+		if x.xxx_hidden_Name != nil {
+			return *x.xxx_hidden_Name
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *Author) GetAddress() *Address {
+	if x != nil {
+		return x.xxx_hidden_Address
+	}
+	return nil
+}
+
+func (x *Author) SetName(v string) {
+	x.xxx_hidden_Name = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 2)
+}
+
+func (x *Author) SetAddress(v *Address) {
+	x.xxx_hidden_Address = v
+}
+
+func (x *Author) HasName() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
+}
+
+func (x *Author) HasAddress() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Address != nil
+}
+
+func (x *Author) ClearName() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
+	x.xxx_hidden_Name = nil
+}
+
+func (x *Author) ClearAddress() {
+	x.xxx_hidden_Address = nil
+}
+
+type Author_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Name    *string
+	Address *Address
+}
+
+func (b0 Author_builder) Build() *Author {
+	m0 := &Author{}
+	b, x := &b0, m0
+	_, _ = b, x
+	if b.Name != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 2)
+		x.xxx_hidden_Name = b.Name
+	}
+	x.xxx_hidden_Address = b.Address
+	return m0
+}
+
+type Address struct {
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Street      *string                `protobuf:"bytes,1,opt,name=street"`
+	xxx_hidden_City        *string                `protobuf:"bytes,2,opt,name=city"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *Address) Reset() {
+	*x = Address{}
+	mi := &file_test_v1_test_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Address) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Address) ProtoMessage() {}
+
+func (x *Address) ProtoReflect() protoreflect.Message {
+	mi := &file_test_v1_test_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *Address) GetStreet() string {
+	if x != nil {
+		if x.xxx_hidden_Street != nil {
+			return *x.xxx_hidden_Street
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *Address) GetCity() string {
+	if x != nil {
+		if x.xxx_hidden_City != nil {
+			return *x.xxx_hidden_City
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *Address) SetStreet(v string) {
+	x.xxx_hidden_Street = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 2)
+}
+
+func (x *Address) SetCity(v string) {
+	x.xxx_hidden_City = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 2)
+}
+
+func (x *Address) HasStreet() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
+}
+
+func (x *Address) HasCity() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
+}
+
+func (x *Address) ClearStreet() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
+	x.xxx_hidden_Street = nil
+}
+
+func (x *Address) ClearCity() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
+	x.xxx_hidden_City = nil
+}
+
+type Address_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Street *string
+	City   *string
+}
+
+func (b0 Address_builder) Build() *Address {
+	m0 := &Address{}
+	b, x := &b0, m0
+	_, _ = b, x
+	if b.Street != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 2)
+		x.xxx_hidden_Street = b.Street
+	}
+	if b.City != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 2)
+		x.xxx_hidden_City = b.City
+	}
+	return m0
+}
+
+type Book struct {
+	state                  protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Name        *string                `protobuf:"bytes,1,opt,name=name"`
+	xxx_hidden_Title       *string                `protobuf:"bytes,2,opt,name=title"`
+	xxx_hidden_Author      *Author                `protobuf:"bytes,3,opt,name=author"`
+	xxx_hidden_PublishTime *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=publish_time,json=publishTime"`
+	xxx_hidden_Tags        []string               `protobuf:"bytes,5,rep,name=tags"`
+	xxx_hidden_Labels      map[string]string      `protobuf:"bytes,6,rep,name=labels" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	XXX_raceDetectHookData protoimpl.RaceDetectHookData
+	XXX_presence           [1]uint32
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *Book) Reset() {
+	*x = Book{}
+	mi := &file_test_v1_test_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Book) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Book) ProtoMessage() {}
+
+func (x *Book) ProtoReflect() protoreflect.Message {
+	mi := &file_test_v1_test_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *Book) GetName() string {
+	if x != nil {
+		if x.xxx_hidden_Name != nil {
+			return *x.xxx_hidden_Name
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *Book) GetTitle() string {
+	if x != nil {
+		if x.xxx_hidden_Title != nil {
+			return *x.xxx_hidden_Title
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *Book) GetAuthor() *Author {
+	if x != nil {
+		return x.xxx_hidden_Author
+	}
+	return nil
+}
+
+func (x *Book) GetPublishTime() *timestamppb.Timestamp {
+	if x != nil {
+		return x.xxx_hidden_PublishTime
+	}
+	return nil
+}
+
+func (x *Book) GetTags() []string {
+	if x != nil {
+		return x.xxx_hidden_Tags
+	}
+	return nil
+}
+
+func (x *Book) GetLabels() map[string]string {
+	if x != nil {
+		return x.xxx_hidden_Labels
+	}
+	return nil
+}
+
+func (x *Book) SetName(v string) {
+	x.xxx_hidden_Name = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 6)
+}
+
+func (x *Book) SetTitle(v string) {
+	x.xxx_hidden_Title = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 6)
+}
+
+func (x *Book) SetAuthor(v *Author) {
+	x.xxx_hidden_Author = v
+}
+
+func (x *Book) SetPublishTime(v *timestamppb.Timestamp) {
+	x.xxx_hidden_PublishTime = v
+}
+
+func (x *Book) SetTags(v []string) {
+	x.xxx_hidden_Tags = v
+}
+
+func (x *Book) SetLabels(v map[string]string) {
+	x.xxx_hidden_Labels = v
+}
+
+func (x *Book) HasName() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
+}
+
+func (x *Book) HasTitle() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
+}
+
+func (x *Book) HasAuthor() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Author != nil
+}
+
+func (x *Book) HasPublishTime() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_PublishTime != nil
+}
+
+func (x *Book) ClearName() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
+	x.xxx_hidden_Name = nil
+}
+
+func (x *Book) ClearTitle() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
+	x.xxx_hidden_Title = nil
+}
+
+func (x *Book) ClearAuthor() {
+	x.xxx_hidden_Author = nil
+}
+
+func (x *Book) ClearPublishTime() {
+	x.xxx_hidden_PublishTime = nil
+}
+
+type Book_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Name        *string
+	Title       *string
+	Author      *Author
+	PublishTime *timestamppb.Timestamp
+	Tags        []string
+	Labels      map[string]string
+}
+
+func (b0 Book_builder) Build() *Book {
+	m0 := &Book{}
+	b, x := &b0, m0
+	_, _ = b, x
+	if b.Name != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 6)
+		x.xxx_hidden_Name = b.Name
+	}
+	if b.Title != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 6)
+		x.xxx_hidden_Title = b.Title
+	}
+	x.xxx_hidden_Author = b.Author
+	x.xxx_hidden_PublishTime = b.PublishTime
+	x.xxx_hidden_Tags = b.Tags
+	x.xxx_hidden_Labels = b.Labels
+	return m0
+}
+
+// UpdateBookRequest is the AIP-134 shape: the mask describes the resource named
+// by the request, not the request itself.
+type UpdateBookRequest struct {
+	state                 protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Book       *Book                  `protobuf:"bytes,1,opt,name=book"`
+	xxx_hidden_UpdateMask *fieldmaskpb.FieldMask `protobuf:"bytes,2,opt,name=update_mask,json=updateMask"`
+	unknownFields         protoimpl.UnknownFields
+	sizeCache             protoimpl.SizeCache
+}
+
+func (x *UpdateBookRequest) Reset() {
+	*x = UpdateBookRequest{}
+	mi := &file_test_v1_test_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateBookRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateBookRequest) ProtoMessage() {}
+
+func (x *UpdateBookRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_test_v1_test_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *UpdateBookRequest) GetBook() *Book {
+	if x != nil {
+		return x.xxx_hidden_Book
+	}
+	return nil
+}
+
+func (x *UpdateBookRequest) GetUpdateMask() *fieldmaskpb.FieldMask {
+	if x != nil {
+		return x.xxx_hidden_UpdateMask
+	}
+	return nil
+}
+
+func (x *UpdateBookRequest) SetBook(v *Book) {
+	x.xxx_hidden_Book = v
+}
+
+func (x *UpdateBookRequest) SetUpdateMask(v *fieldmaskpb.FieldMask) {
+	x.xxx_hidden_UpdateMask = v
+}
+
+func (x *UpdateBookRequest) HasBook() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Book != nil
+}
+
+func (x *UpdateBookRequest) HasUpdateMask() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_UpdateMask != nil
+}
+
+func (x *UpdateBookRequest) ClearBook() {
+	x.xxx_hidden_Book = nil
+}
+
+func (x *UpdateBookRequest) ClearUpdateMask() {
+	x.xxx_hidden_UpdateMask = nil
+}
+
+type UpdateBookRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Book       *Book
+	UpdateMask *fieldmaskpb.FieldMask
+}
+
+func (b0 UpdateBookRequest_builder) Build() *UpdateBookRequest {
+	m0 := &UpdateBookRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Book = b.Book
+	x.xxx_hidden_UpdateMask = b.UpdateMask
+	return m0
+}
+
+// GetBookRequest carries no resource, so the mask falls back to the request.
+type GetBookRequest struct {
+	state                   protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Name         *string                `protobuf:"bytes,1,opt,name=name"`
+	xxx_hidden_AllowMissing bool                   `protobuf:"varint,2,opt,name=allow_missing,json=allowMissing"`
+	xxx_hidden_ReadMask     *fieldmaskpb.FieldMask `protobuf:"bytes,3,opt,name=read_mask,json=readMask"`
+	XXX_raceDetectHookData  protoimpl.RaceDetectHookData
+	XXX_presence            [1]uint32
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
+}
+
+func (x *GetBookRequest) Reset() {
+	*x = GetBookRequest{}
+	mi := &file_test_v1_test_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetBookRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetBookRequest) ProtoMessage() {}
+
+func (x *GetBookRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_test_v1_test_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *GetBookRequest) GetName() string {
+	if x != nil {
+		if x.xxx_hidden_Name != nil {
+			return *x.xxx_hidden_Name
+		}
+		return ""
+	}
+	return ""
+}
+
+func (x *GetBookRequest) GetAllowMissing() bool {
+	if x != nil {
+		return x.xxx_hidden_AllowMissing
+	}
+	return false
+}
+
+func (x *GetBookRequest) GetReadMask() *fieldmaskpb.FieldMask {
+	if x != nil {
+		return x.xxx_hidden_ReadMask
+	}
+	return nil
+}
+
+func (x *GetBookRequest) SetName(v string) {
+	x.xxx_hidden_Name = &v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 0, 3)
+}
+
+func (x *GetBookRequest) SetAllowMissing(v bool) {
+	x.xxx_hidden_AllowMissing = v
+	protoimpl.X.SetPresent(&(x.XXX_presence[0]), 1, 3)
+}
+
+func (x *GetBookRequest) SetReadMask(v *fieldmaskpb.FieldMask) {
+	x.xxx_hidden_ReadMask = v
+}
+
+func (x *GetBookRequest) HasName() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 0)
+}
+
+func (x *GetBookRequest) HasAllowMissing() bool {
+	if x == nil {
+		return false
+	}
+	return protoimpl.X.Present(&(x.XXX_presence[0]), 1)
+}
+
+func (x *GetBookRequest) HasReadMask() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_ReadMask != nil
+}
+
+func (x *GetBookRequest) ClearName() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 0)
+	x.xxx_hidden_Name = nil
+}
+
+func (x *GetBookRequest) ClearAllowMissing() {
+	protoimpl.X.ClearPresent(&(x.XXX_presence[0]), 1)
+	x.xxx_hidden_AllowMissing = false
+}
+
+func (x *GetBookRequest) ClearReadMask() {
+	x.xxx_hidden_ReadMask = nil
+}
+
+type GetBookRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Name         *string
+	AllowMissing *bool
+	ReadMask     *fieldmaskpb.FieldMask
+}
+
+func (b0 GetBookRequest_builder) Build() *GetBookRequest {
+	m0 := &GetBookRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	if b.Name != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 0, 3)
+		x.xxx_hidden_Name = b.Name
+	}
+	if b.AllowMissing != nil {
+		protoimpl.X.SetPresentNonAtomic(&(x.XXX_presence[0]), 1, 3)
+		x.xxx_hidden_AllowMissing = *b.AllowMissing
+	}
+	x.xxx_hidden_ReadMask = b.ReadMask
+	return m0
+}
+
+// SuffixMaskRequest names the field it masks directly.
+type SuffixMaskRequest struct {
+	state               protoimpl.MessageState `protogen:"opaque.v1"`
+	xxx_hidden_Author   *Author                `protobuf:"bytes,1,opt,name=author"`
+	xxx_hidden_Book     *Book                  `protobuf:"bytes,2,opt,name=book"`
+	xxx_hidden_BookMask *fieldmaskpb.FieldMask `protobuf:"bytes,3,opt,name=book_mask,json=bookMask"`
+	unknownFields       protoimpl.UnknownFields
+	sizeCache           protoimpl.SizeCache
+}
+
+func (x *SuffixMaskRequest) Reset() {
+	*x = SuffixMaskRequest{}
+	mi := &file_test_v1_test_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SuffixMaskRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SuffixMaskRequest) ProtoMessage() {}
+
+func (x *SuffixMaskRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_test_v1_test_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *SuffixMaskRequest) GetAuthor() *Author {
+	if x != nil {
+		return x.xxx_hidden_Author
+	}
+	return nil
+}
+
+func (x *SuffixMaskRequest) GetBook() *Book {
+	if x != nil {
+		return x.xxx_hidden_Book
+	}
+	return nil
+}
+
+func (x *SuffixMaskRequest) GetBookMask() *fieldmaskpb.FieldMask {
+	if x != nil {
+		return x.xxx_hidden_BookMask
+	}
+	return nil
+}
+
+func (x *SuffixMaskRequest) SetAuthor(v *Author) {
+	x.xxx_hidden_Author = v
+}
+
+func (x *SuffixMaskRequest) SetBook(v *Book) {
+	x.xxx_hidden_Book = v
+}
+
+func (x *SuffixMaskRequest) SetBookMask(v *fieldmaskpb.FieldMask) {
+	x.xxx_hidden_BookMask = v
+}
+
+func (x *SuffixMaskRequest) HasAuthor() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Author != nil
+}
+
+func (x *SuffixMaskRequest) HasBook() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Book != nil
+}
+
+func (x *SuffixMaskRequest) HasBookMask() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_BookMask != nil
+}
+
+func (x *SuffixMaskRequest) ClearAuthor() {
+	x.xxx_hidden_Author = nil
+}
+
+func (x *SuffixMaskRequest) ClearBook() {
+	x.xxx_hidden_Book = nil
+}
+
+func (x *SuffixMaskRequest) ClearBookMask() {
+	x.xxx_hidden_BookMask = nil
+}
+
+type SuffixMaskRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Author   *Author
+	Book     *Book
+	BookMask *fieldmaskpb.FieldMask
+}
+
+func (b0 SuffixMaskRequest_builder) Build() *SuffixMaskRequest {
+	m0 := &SuffixMaskRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Author = b.Author
+	x.xxx_hidden_Book = b.Book
+	x.xxx_hidden_BookMask = b.BookMask
+	return m0
+}
+
+// MaskCollectionsRequest holds masks that are not fields of the request
+// themselves: a map value's parent is the synthetic map entry.
+type MaskCollectionsRequest struct {
+	state                  protoimpl.MessageState            `protogen:"opaque.v1"`
+	xxx_hidden_Book        *Book                             `protobuf:"bytes,1,opt,name=book"`
+	xxx_hidden_MasksByName map[string]*fieldmaskpb.FieldMask `protobuf:"bytes,2,rep,name=masks_by_name,json=masksByName" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	xxx_hidden_ReadMasks   *[]*fieldmaskpb.FieldMask         `protobuf:"bytes,3,rep,name=read_masks,json=readMasks"`
+	unknownFields          protoimpl.UnknownFields
+	sizeCache              protoimpl.SizeCache
+}
+
+func (x *MaskCollectionsRequest) Reset() {
+	*x = MaskCollectionsRequest{}
+	mi := &file_test_v1_test_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MaskCollectionsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MaskCollectionsRequest) ProtoMessage() {}
+
+func (x *MaskCollectionsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_test_v1_test_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+func (x *MaskCollectionsRequest) GetBook() *Book {
+	if x != nil {
+		return x.xxx_hidden_Book
+	}
+	return nil
+}
+
+func (x *MaskCollectionsRequest) GetMasksByName() map[string]*fieldmaskpb.FieldMask {
+	if x != nil {
+		return x.xxx_hidden_MasksByName
+	}
+	return nil
+}
+
+func (x *MaskCollectionsRequest) GetReadMasks() []*fieldmaskpb.FieldMask {
+	if x != nil {
+		if x.xxx_hidden_ReadMasks != nil {
+			return *x.xxx_hidden_ReadMasks
+		}
+	}
+	return nil
+}
+
+func (x *MaskCollectionsRequest) SetBook(v *Book) {
+	x.xxx_hidden_Book = v
+}
+
+func (x *MaskCollectionsRequest) SetMasksByName(v map[string]*fieldmaskpb.FieldMask) {
+	x.xxx_hidden_MasksByName = v
+}
+
+func (x *MaskCollectionsRequest) SetReadMasks(v []*fieldmaskpb.FieldMask) {
+	x.xxx_hidden_ReadMasks = &v
+}
+
+func (x *MaskCollectionsRequest) HasBook() bool {
+	if x == nil {
+		return false
+	}
+	return x.xxx_hidden_Book != nil
+}
+
+func (x *MaskCollectionsRequest) ClearBook() {
+	x.xxx_hidden_Book = nil
+}
+
+type MaskCollectionsRequest_builder struct {
+	_ [0]func() // Prevents comparability and use of unkeyed literals for the builder.
+
+	Book        *Book
+	MasksByName map[string]*fieldmaskpb.FieldMask
+	ReadMasks   []*fieldmaskpb.FieldMask
+}
+
+func (b0 MaskCollectionsRequest_builder) Build() *MaskCollectionsRequest {
+	m0 := &MaskCollectionsRequest{}
+	b, x := &b0, m0
+	_, _ = b, x
+	x.xxx_hidden_Book = b.Book
+	x.xxx_hidden_MasksByName = b.MasksByName
+	x.xxx_hidden_ReadMasks = &b.ReadMasks
+	return m0
+}
+
 type ParameterValues_Nested struct {
 	state                         protoimpl.MessageState      `protogen:"opaque.v1"`
 	xxx_hidden_DoubleValue        float64                     `protobuf:"fixed64,1,opt,name=double_value,json=doubleValue"`
@@ -5765,7 +6616,7 @@ type ParameterValues_Nested struct {
 
 func (x *ParameterValues_Nested) Reset() {
 	*x = ParameterValues_Nested{}
-	mi := &file_test_v1_test_proto_msgTypes[6]
+	mi := &file_test_v1_test_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5777,7 +6628,7 @@ func (x *ParameterValues_Nested) String() string {
 func (*ParameterValues_Nested) ProtoMessage() {}
 
 func (x *ParameterValues_Nested) ProtoReflect() protoreflect.Message {
-	mi := &file_test_v1_test_proto_msgTypes[6]
+	mi := &file_test_v1_test_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5895,7 +6746,7 @@ type ValidateRulesTest_Nested struct {
 
 func (x *ValidateRulesTest_Nested) Reset() {
 	*x = ValidateRulesTest_Nested{}
-	mi := &file_test_v1_test_proto_msgTypes[43]
+	mi := &file_test_v1_test_proto_msgTypes[50]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5907,7 +6758,7 @@ func (x *ValidateRulesTest_Nested) String() string {
 func (*ValidateRulesTest_Nested) ProtoMessage() {}
 
 func (x *ValidateRulesTest_Nested) ProtoReflect() protoreflect.Message {
-	mi := &file_test_v1_test_proto_msgTypes[43]
+	mi := &file_test_v1_test_proto_msgTypes[50]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -6387,11 +7238,47 @@ const file_test_v1_test_proto_rawDesc = "" +
 	"\x0fUnvalidatedTest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05count\x18\x02 \x01(\x05R\x05count\x12\x12\n" +
-	"\x04tags\x18\x03 \x03(\tR\x04tagsB\x97\x01\n" +
+	"\x04tags\x18\x03 \x03(\tR\x04tags\"H\n" +
+	"\x06Author\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12*\n" +
+	"\aaddress\x18\x02 \x01(\v2\x10.test.v1.AddressR\aaddress\"5\n" +
+	"\aAddress\x12\x16\n" +
+	"\x06street\x18\x01 \x01(\tR\x06street\x12\x12\n" +
+	"\x04city\x18\x02 \x01(\tR\x04city\"\x9a\x02\n" +
+	"\x04Book\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
+	"\x05title\x18\x02 \x01(\tR\x05title\x12'\n" +
+	"\x06author\x18\x03 \x01(\v2\x0f.test.v1.AuthorR\x06author\x12=\n" +
+	"\fpublish_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\vpublishTime\x12\x12\n" +
+	"\x04tags\x18\x05 \x03(\tR\x04tags\x121\n" +
+	"\x06labels\x18\x06 \x03(\v2\x19.test.v1.Book.LabelsEntryR\x06labels\x1a9\n" +
+	"\vLabelsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"s\n" +
+	"\x11UpdateBookRequest\x12!\n" +
+	"\x04book\x18\x01 \x01(\v2\r.test.v1.BookR\x04book\x12;\n" +
+	"\vupdate_mask\x18\x02 \x01(\v2\x1a.google.protobuf.FieldMaskR\n" +
+	"updateMask\"\x82\x01\n" +
+	"\x0eGetBookRequest\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12#\n" +
+	"\rallow_missing\x18\x02 \x01(\bR\fallowMissing\x127\n" +
+	"\tread_mask\x18\x03 \x01(\v2\x1a.google.protobuf.FieldMaskR\breadMask\"\x98\x01\n" +
+	"\x11SuffixMaskRequest\x12'\n" +
+	"\x06author\x18\x01 \x01(\v2\x0f.test.v1.AuthorR\x06author\x12!\n" +
+	"\x04book\x18\x02 \x01(\v2\r.test.v1.BookR\x04book\x127\n" +
+	"\tbook_mask\x18\x03 \x01(\v2\x1a.google.protobuf.FieldMaskR\bbookMask\"\xa8\x02\n" +
+	"\x16MaskCollectionsRequest\x12!\n" +
+	"\x04book\x18\x01 \x01(\v2\r.test.v1.BookR\x04book\x12T\n" +
+	"\rmasks_by_name\x18\x02 \x03(\v20.test.v1.MaskCollectionsRequest.MasksByNameEntryR\vmasksByName\x129\n" +
+	"\n" +
+	"read_masks\x18\x03 \x03(\v2\x1a.google.protobuf.FieldMaskR\treadMasks\x1aZ\n" +
+	"\x10MasksByNameEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x120\n" +
+	"\x05value\x18\x02 \x01(\v2\x1a.google.protobuf.FieldMaskR\x05value:\x028\x01B\x97\x01\n" +
 	"\vcom.test.v1B\tTestProtoP\x01Z8github.com/sudorandom/fauxrpc/private/gen/test/v1;testv1\xa2\x02\x03TXX\xaa\x02\aTest.V1\xca\x02\aTest\\V1\xe2\x02\x13Test\\V1\\GPBMetadata\xea\x02\bTest::V1\x92\x03\x05\xd2>\x02\x10\x03b\beditionsp\xe8\a"
 
 var file_test_v1_test_proto_enumTypes = make([]protoimpl.EnumInfo, 6)
-var file_test_v1_test_proto_msgTypes = make([]protoimpl.MessageInfo, 46)
+var file_test_v1_test_proto_msgTypes = make([]protoimpl.MessageInfo, 55)
 var file_test_v1_test_proto_goTypes = []any{
 	(ParameterValues_Enum)(0),        // 0: test.v1.ParameterValues.Enum
 	(ParameterValues_Nested_Enum)(0), // 1: test.v1.ParameterValues.Nested.Enum
@@ -6405,153 +7292,176 @@ var file_test_v1_test_proto_goTypes = []any{
 	(*RepeatedEnumTest)(nil),         // 9: test.v1.RepeatedEnumTest
 	(*ValidateRulesTest)(nil),        // 10: test.v1.ValidateRulesTest
 	(*UnvalidatedTest)(nil),          // 11: test.v1.UnvalidatedTest
-	(*ParameterValues_Nested)(nil),   // 12: test.v1.ParameterValues.Nested
-	nil,                              // 13: test.v1.ParameterValues.StringMapEntry
-	nil,                              // 14: test.v1.ParameterValues.StringValueMapEntry
-	nil,                              // 15: test.v1.ParameterValues.EnumMapEntry
-	nil,                              // 16: test.v1.ParameterValues.NestedMapEntry
-	nil,                              // 17: test.v1.AllTypes.Int32ToStringMapEntry
-	nil,                              // 18: test.v1.AllTypes.Int64ToStringMapEntry
-	nil,                              // 19: test.v1.AllTypes.Uint32ToStringMapEntry
-	nil,                              // 20: test.v1.AllTypes.Uint64ToStringMapEntry
-	nil,                              // 21: test.v1.AllTypes.Sint32ToStringMapEntry
-	nil,                              // 22: test.v1.AllTypes.Sint64ToStringMapEntry
-	nil,                              // 23: test.v1.AllTypes.Fixed32ToStringMapEntry
-	nil,                              // 24: test.v1.AllTypes.Fixed64ToStringMapEntry
-	nil,                              // 25: test.v1.AllTypes.Sfixed32ToStringMapEntry
-	nil,                              // 26: test.v1.AllTypes.Sfixed64ToStringMapEntry
-	nil,                              // 27: test.v1.AllTypes.BoolToStringMapEntry
-	nil,                              // 28: test.v1.AllTypes.StringToStringMapEntry
-	nil,                              // 29: test.v1.AllTypes.DoubleMapEntry
-	nil,                              // 30: test.v1.AllTypes.FloatMapEntry
-	nil,                              // 31: test.v1.AllTypes.Int32MapEntry
-	nil,                              // 32: test.v1.AllTypes.Int64MapEntry
-	nil,                              // 33: test.v1.AllTypes.Uint32MapEntry
-	nil,                              // 34: test.v1.AllTypes.Uint64MapEntry
-	nil,                              // 35: test.v1.AllTypes.Sint32MapEntry
-	nil,                              // 36: test.v1.AllTypes.Sint64MapEntry
-	nil,                              // 37: test.v1.AllTypes.Fixed32MapEntry
-	nil,                              // 38: test.v1.AllTypes.Fixed64MapEntry
-	nil,                              // 39: test.v1.AllTypes.Sfixed32MapEntry
-	nil,                              // 40: test.v1.AllTypes.Sfixed64MapEntry
-	nil,                              // 41: test.v1.AllTypes.BoolMapEntry
-	nil,                              // 42: test.v1.AllTypes.StringMapEntry
-	nil,                              // 43: test.v1.AllTypes.BytesMapEntry
-	nil,                              // 44: test.v1.AllTypes.MsgMapEntry
-	nil,                              // 45: test.v1.AllTypes.EnumMapEntry
-	nil,                              // 46: test.v1.AllTypes.AttributesEntry
-	nil,                              // 47: test.v1.AllTypes.AttrsEntry
-	nil,                              // 48: test.v1.AllTypes.CustomAttrEntry
-	(*ValidateRulesTest_Nested)(nil), // 49: test.v1.ValidateRulesTest.Nested
-	nil,                              // 50: test.v1.ValidateRulesTest.MapMinPairsEntry
-	nil,                              // 51: test.v1.ValidateRulesTest.MapMaxPairsEntry
-	(*timestamppb.Timestamp)(nil),    // 52: google.protobuf.Timestamp
-	(*durationpb.Duration)(nil),      // 53: google.protobuf.Duration
-	(*wrapperspb.BoolValue)(nil),     // 54: google.protobuf.BoolValue
-	(*wrapperspb.Int32Value)(nil),    // 55: google.protobuf.Int32Value
-	(*wrapperspb.Int64Value)(nil),    // 56: google.protobuf.Int64Value
-	(*wrapperspb.UInt32Value)(nil),   // 57: google.protobuf.UInt32Value
-	(*wrapperspb.UInt64Value)(nil),   // 58: google.protobuf.UInt64Value
-	(*wrapperspb.FloatValue)(nil),    // 59: google.protobuf.FloatValue
-	(*wrapperspb.DoubleValue)(nil),   // 60: google.protobuf.DoubleValue
-	(*wrapperspb.BytesValue)(nil),    // 61: google.protobuf.BytesValue
-	(*wrapperspb.StringValue)(nil),   // 62: google.protobuf.StringValue
-	(*fieldmaskpb.FieldMask)(nil),    // 63: google.protobuf.FieldMask
-	(*structpb.Struct)(nil),          // 64: google.protobuf.Struct
-	(*structpb.Value)(nil),           // 65: google.protobuf.Value
+	(*Author)(nil),                   // 12: test.v1.Author
+	(*Address)(nil),                  // 13: test.v1.Address
+	(*Book)(nil),                     // 14: test.v1.Book
+	(*UpdateBookRequest)(nil),        // 15: test.v1.UpdateBookRequest
+	(*GetBookRequest)(nil),           // 16: test.v1.GetBookRequest
+	(*SuffixMaskRequest)(nil),        // 17: test.v1.SuffixMaskRequest
+	(*MaskCollectionsRequest)(nil),   // 18: test.v1.MaskCollectionsRequest
+	(*ParameterValues_Nested)(nil),   // 19: test.v1.ParameterValues.Nested
+	nil,                              // 20: test.v1.ParameterValues.StringMapEntry
+	nil,                              // 21: test.v1.ParameterValues.StringValueMapEntry
+	nil,                              // 22: test.v1.ParameterValues.EnumMapEntry
+	nil,                              // 23: test.v1.ParameterValues.NestedMapEntry
+	nil,                              // 24: test.v1.AllTypes.Int32ToStringMapEntry
+	nil,                              // 25: test.v1.AllTypes.Int64ToStringMapEntry
+	nil,                              // 26: test.v1.AllTypes.Uint32ToStringMapEntry
+	nil,                              // 27: test.v1.AllTypes.Uint64ToStringMapEntry
+	nil,                              // 28: test.v1.AllTypes.Sint32ToStringMapEntry
+	nil,                              // 29: test.v1.AllTypes.Sint64ToStringMapEntry
+	nil,                              // 30: test.v1.AllTypes.Fixed32ToStringMapEntry
+	nil,                              // 31: test.v1.AllTypes.Fixed64ToStringMapEntry
+	nil,                              // 32: test.v1.AllTypes.Sfixed32ToStringMapEntry
+	nil,                              // 33: test.v1.AllTypes.Sfixed64ToStringMapEntry
+	nil,                              // 34: test.v1.AllTypes.BoolToStringMapEntry
+	nil,                              // 35: test.v1.AllTypes.StringToStringMapEntry
+	nil,                              // 36: test.v1.AllTypes.DoubleMapEntry
+	nil,                              // 37: test.v1.AllTypes.FloatMapEntry
+	nil,                              // 38: test.v1.AllTypes.Int32MapEntry
+	nil,                              // 39: test.v1.AllTypes.Int64MapEntry
+	nil,                              // 40: test.v1.AllTypes.Uint32MapEntry
+	nil,                              // 41: test.v1.AllTypes.Uint64MapEntry
+	nil,                              // 42: test.v1.AllTypes.Sint32MapEntry
+	nil,                              // 43: test.v1.AllTypes.Sint64MapEntry
+	nil,                              // 44: test.v1.AllTypes.Fixed32MapEntry
+	nil,                              // 45: test.v1.AllTypes.Fixed64MapEntry
+	nil,                              // 46: test.v1.AllTypes.Sfixed32MapEntry
+	nil,                              // 47: test.v1.AllTypes.Sfixed64MapEntry
+	nil,                              // 48: test.v1.AllTypes.BoolMapEntry
+	nil,                              // 49: test.v1.AllTypes.StringMapEntry
+	nil,                              // 50: test.v1.AllTypes.BytesMapEntry
+	nil,                              // 51: test.v1.AllTypes.MsgMapEntry
+	nil,                              // 52: test.v1.AllTypes.EnumMapEntry
+	nil,                              // 53: test.v1.AllTypes.AttributesEntry
+	nil,                              // 54: test.v1.AllTypes.AttrsEntry
+	nil,                              // 55: test.v1.AllTypes.CustomAttrEntry
+	(*ValidateRulesTest_Nested)(nil), // 56: test.v1.ValidateRulesTest.Nested
+	nil,                              // 57: test.v1.ValidateRulesTest.MapMinPairsEntry
+	nil,                              // 58: test.v1.ValidateRulesTest.MapMaxPairsEntry
+	nil,                              // 59: test.v1.Book.LabelsEntry
+	nil,                              // 60: test.v1.MaskCollectionsRequest.MasksByNameEntry
+	(*timestamppb.Timestamp)(nil),    // 61: google.protobuf.Timestamp
+	(*durationpb.Duration)(nil),      // 62: google.protobuf.Duration
+	(*wrapperspb.BoolValue)(nil),     // 63: google.protobuf.BoolValue
+	(*wrapperspb.Int32Value)(nil),    // 64: google.protobuf.Int32Value
+	(*wrapperspb.Int64Value)(nil),    // 65: google.protobuf.Int64Value
+	(*wrapperspb.UInt32Value)(nil),   // 66: google.protobuf.UInt32Value
+	(*wrapperspb.UInt64Value)(nil),   // 67: google.protobuf.UInt64Value
+	(*wrapperspb.FloatValue)(nil),    // 68: google.protobuf.FloatValue
+	(*wrapperspb.DoubleValue)(nil),   // 69: google.protobuf.DoubleValue
+	(*wrapperspb.BytesValue)(nil),    // 70: google.protobuf.BytesValue
+	(*wrapperspb.StringValue)(nil),   // 71: google.protobuf.StringValue
+	(*fieldmaskpb.FieldMask)(nil),    // 72: google.protobuf.FieldMask
+	(*structpb.Struct)(nil),          // 73: google.protobuf.Struct
+	(*structpb.Value)(nil),           // 74: google.protobuf.Value
 }
 var file_test_v1_test_proto_depIdxs = []int32{
-	52, // 0: test.v1.ParameterValues.timestamp:type_name -> google.protobuf.Timestamp
-	53, // 1: test.v1.ParameterValues.duration:type_name -> google.protobuf.Duration
-	54, // 2: test.v1.ParameterValues.bool_value_wrapper:type_name -> google.protobuf.BoolValue
-	55, // 3: test.v1.ParameterValues.int32_value_wrapper:type_name -> google.protobuf.Int32Value
-	56, // 4: test.v1.ParameterValues.int64_value_wrapper:type_name -> google.protobuf.Int64Value
-	57, // 5: test.v1.ParameterValues.uint32_value_wrapper:type_name -> google.protobuf.UInt32Value
-	58, // 6: test.v1.ParameterValues.uint64_value_wrapper:type_name -> google.protobuf.UInt64Value
-	59, // 7: test.v1.ParameterValues.float_value_wrapper:type_name -> google.protobuf.FloatValue
-	60, // 8: test.v1.ParameterValues.double_value_wrapper:type_name -> google.protobuf.DoubleValue
-	61, // 9: test.v1.ParameterValues.bytes_value_wrapper:type_name -> google.protobuf.BytesValue
-	62, // 10: test.v1.ParameterValues.string_value_wrapper:type_name -> google.protobuf.StringValue
-	63, // 11: test.v1.ParameterValues.field_mask:type_name -> google.protobuf.FieldMask
-	0,  // 12: test.v1.ParameterValues.enum_value:type_name -> test.v1.ParameterValues.Enum
-	0,  // 13: test.v1.ParameterValues.enum_list:type_name -> test.v1.ParameterValues.Enum
-	60, // 14: test.v1.ParameterValues.double_value_list:type_name -> google.protobuf.DoubleValue
-	60, // 15: test.v1.ParameterValues.oneof_double_value_wrapper:type_name -> google.protobuf.DoubleValue
-	0,  // 16: test.v1.ParameterValues.oneof_enum_value:type_name -> test.v1.ParameterValues.Enum
-	12, // 17: test.v1.ParameterValues.nested:type_name -> test.v1.ParameterValues.Nested
-	6,  // 18: test.v1.ParameterValues.recursive:type_name -> test.v1.ParameterValues
-	13, // 19: test.v1.ParameterValues.string_map:type_name -> test.v1.ParameterValues.StringMapEntry
-	14, // 20: test.v1.ParameterValues.string_value_map:type_name -> test.v1.ParameterValues.StringValueMapEntry
-	15, // 21: test.v1.ParameterValues.enum_map:type_name -> test.v1.ParameterValues.EnumMapEntry
-	16, // 22: test.v1.ParameterValues.nested_map:type_name -> test.v1.ParameterValues.NestedMapEntry
-	64, // 23: test.v1.ParameterValues.struct_value:type_name -> google.protobuf.Struct
-	65, // 24: test.v1.ParameterValues.value:type_name -> google.protobuf.Value
-	6,  // 25: test.v1.ParameterValues.recursive_list:type_name -> test.v1.ParameterValues
-	17, // 26: test.v1.AllTypes.int32_to_string_map:type_name -> test.v1.AllTypes.Int32ToStringMapEntry
-	18, // 27: test.v1.AllTypes.int64_to_string_map:type_name -> test.v1.AllTypes.Int64ToStringMapEntry
-	19, // 28: test.v1.AllTypes.uint32_to_string_map:type_name -> test.v1.AllTypes.Uint32ToStringMapEntry
-	20, // 29: test.v1.AllTypes.uint64_to_string_map:type_name -> test.v1.AllTypes.Uint64ToStringMapEntry
-	21, // 30: test.v1.AllTypes.sint32_to_string_map:type_name -> test.v1.AllTypes.Sint32ToStringMapEntry
-	22, // 31: test.v1.AllTypes.sint64_to_string_map:type_name -> test.v1.AllTypes.Sint64ToStringMapEntry
-	23, // 32: test.v1.AllTypes.fixed32_to_string_map:type_name -> test.v1.AllTypes.Fixed32ToStringMapEntry
-	24, // 33: test.v1.AllTypes.fixed64_to_string_map:type_name -> test.v1.AllTypes.Fixed64ToStringMapEntry
-	25, // 34: test.v1.AllTypes.sfixed32_to_string_map:type_name -> test.v1.AllTypes.Sfixed32ToStringMapEntry
-	26, // 35: test.v1.AllTypes.sfixed64_to_string_map:type_name -> test.v1.AllTypes.Sfixed64ToStringMapEntry
-	27, // 36: test.v1.AllTypes.bool_to_string_map:type_name -> test.v1.AllTypes.BoolToStringMapEntry
-	28, // 37: test.v1.AllTypes.string_to_string_map:type_name -> test.v1.AllTypes.StringToStringMapEntry
-	29, // 38: test.v1.AllTypes.double_map:type_name -> test.v1.AllTypes.DoubleMapEntry
-	30, // 39: test.v1.AllTypes.float_map:type_name -> test.v1.AllTypes.FloatMapEntry
-	31, // 40: test.v1.AllTypes.int32_map:type_name -> test.v1.AllTypes.Int32MapEntry
-	32, // 41: test.v1.AllTypes.int64_map:type_name -> test.v1.AllTypes.Int64MapEntry
-	33, // 42: test.v1.AllTypes.uint32_map:type_name -> test.v1.AllTypes.Uint32MapEntry
-	34, // 43: test.v1.AllTypes.uint64_map:type_name -> test.v1.AllTypes.Uint64MapEntry
-	35, // 44: test.v1.AllTypes.sint32_map:type_name -> test.v1.AllTypes.Sint32MapEntry
-	36, // 45: test.v1.AllTypes.sint64_map:type_name -> test.v1.AllTypes.Sint64MapEntry
-	37, // 46: test.v1.AllTypes.fixed32_map:type_name -> test.v1.AllTypes.Fixed32MapEntry
-	38, // 47: test.v1.AllTypes.fixed64_map:type_name -> test.v1.AllTypes.Fixed64MapEntry
-	39, // 48: test.v1.AllTypes.sfixed32_map:type_name -> test.v1.AllTypes.Sfixed32MapEntry
-	40, // 49: test.v1.AllTypes.sfixed64_map:type_name -> test.v1.AllTypes.Sfixed64MapEntry
-	41, // 50: test.v1.AllTypes.bool_map:type_name -> test.v1.AllTypes.BoolMapEntry
-	42, // 51: test.v1.AllTypes.string_map:type_name -> test.v1.AllTypes.StringMapEntry
-	43, // 52: test.v1.AllTypes.bytes_map:type_name -> test.v1.AllTypes.BytesMapEntry
-	7,  // 53: test.v1.AllTypes.msg_value:type_name -> test.v1.AllTypes
-	2,  // 54: test.v1.AllTypes.enum_value:type_name -> test.v1.AllTypes.Enum
-	7,  // 55: test.v1.AllTypes.opt_msg_value:type_name -> test.v1.AllTypes
-	2,  // 56: test.v1.AllTypes.opt_enum_value:type_name -> test.v1.AllTypes.Enum
-	7,  // 57: test.v1.AllTypes.msg_list:type_name -> test.v1.AllTypes
-	2,  // 58: test.v1.AllTypes.enum_list:type_name -> test.v1.AllTypes.Enum
-	44, // 59: test.v1.AllTypes.msg_map:type_name -> test.v1.AllTypes.MsgMapEntry
-	45, // 60: test.v1.AllTypes.enum_map:type_name -> test.v1.AllTypes.EnumMapEntry
-	7,  // 61: test.v1.AllTypes.msg_option:type_name -> test.v1.AllTypes
-	2,  // 62: test.v1.AllTypes.enum_option:type_name -> test.v1.AllTypes.Enum
-	46, // 63: test.v1.AllTypes.attributes:type_name -> test.v1.AllTypes.AttributesEntry
-	47, // 64: test.v1.AllTypes.attrs:type_name -> test.v1.AllTypes.AttrsEntry
-	48, // 65: test.v1.AllTypes.custom_attr:type_name -> test.v1.AllTypes.CustomAttrEntry
-	3,  // 66: test.v1.EnumTest.enum_in:type_name -> test.v1.EnumTest.TestEnum
-	3,  // 67: test.v1.EnumTest.enum_not_in:type_name -> test.v1.EnumTest.TestEnum
-	3,  // 68: test.v1.EnumTest.enum_in_and_not_in:type_name -> test.v1.EnumTest.TestEnum
-	3,  // 69: test.v1.EnumTest.enum_const:type_name -> test.v1.EnumTest.TestEnum
-	3,  // 70: test.v1.EnumTest.enum_required:type_name -> test.v1.EnumTest.TestEnum
-	4,  // 71: test.v1.RepeatedEnumTest.repeated_enum_in:type_name -> test.v1.RepeatedEnumTest.TestEnum
-	5,  // 72: test.v1.ValidateRulesTest.enum_defined_only:type_name -> test.v1.ValidateRulesTest.TestEnum
-	5,  // 73: test.v1.ValidateRulesTest.enum_const:type_name -> test.v1.ValidateRulesTest.TestEnum
-	50, // 74: test.v1.ValidateRulesTest.map_min_pairs:type_name -> test.v1.ValidateRulesTest.MapMinPairsEntry
-	51, // 75: test.v1.ValidateRulesTest.map_max_pairs:type_name -> test.v1.ValidateRulesTest.MapMaxPairsEntry
-	53, // 76: test.v1.ValidateRulesTest.duration_gt:type_name -> google.protobuf.Duration
-	52, // 77: test.v1.ValidateRulesTest.timestamp_lt:type_name -> google.protobuf.Timestamp
-	49, // 78: test.v1.ValidateRulesTest.nested_required:type_name -> test.v1.ValidateRulesTest.Nested
-	60, // 79: test.v1.ParameterValues.Nested.double_value_wrapper:type_name -> google.protobuf.DoubleValue
-	1,  // 80: test.v1.ParameterValues.Nested.enum_value:type_name -> test.v1.ParameterValues.Nested.Enum
-	62, // 81: test.v1.ParameterValues.StringValueMapEntry.value:type_name -> google.protobuf.StringValue
-	0,  // 82: test.v1.ParameterValues.EnumMapEntry.value:type_name -> test.v1.ParameterValues.Enum
-	12, // 83: test.v1.ParameterValues.NestedMapEntry.value:type_name -> test.v1.ParameterValues.Nested
-	7,  // 84: test.v1.AllTypes.MsgMapEntry.value:type_name -> test.v1.AllTypes
-	2,  // 85: test.v1.AllTypes.EnumMapEntry.value:type_name -> test.v1.AllTypes.Enum
-	86, // [86:86] is the sub-list for method output_type
-	86, // [86:86] is the sub-list for method input_type
-	86, // [86:86] is the sub-list for extension type_name
-	86, // [86:86] is the sub-list for extension extendee
-	0,  // [0:86] is the sub-list for field type_name
+	61,  // 0: test.v1.ParameterValues.timestamp:type_name -> google.protobuf.Timestamp
+	62,  // 1: test.v1.ParameterValues.duration:type_name -> google.protobuf.Duration
+	63,  // 2: test.v1.ParameterValues.bool_value_wrapper:type_name -> google.protobuf.BoolValue
+	64,  // 3: test.v1.ParameterValues.int32_value_wrapper:type_name -> google.protobuf.Int32Value
+	65,  // 4: test.v1.ParameterValues.int64_value_wrapper:type_name -> google.protobuf.Int64Value
+	66,  // 5: test.v1.ParameterValues.uint32_value_wrapper:type_name -> google.protobuf.UInt32Value
+	67,  // 6: test.v1.ParameterValues.uint64_value_wrapper:type_name -> google.protobuf.UInt64Value
+	68,  // 7: test.v1.ParameterValues.float_value_wrapper:type_name -> google.protobuf.FloatValue
+	69,  // 8: test.v1.ParameterValues.double_value_wrapper:type_name -> google.protobuf.DoubleValue
+	70,  // 9: test.v1.ParameterValues.bytes_value_wrapper:type_name -> google.protobuf.BytesValue
+	71,  // 10: test.v1.ParameterValues.string_value_wrapper:type_name -> google.protobuf.StringValue
+	72,  // 11: test.v1.ParameterValues.field_mask:type_name -> google.protobuf.FieldMask
+	0,   // 12: test.v1.ParameterValues.enum_value:type_name -> test.v1.ParameterValues.Enum
+	0,   // 13: test.v1.ParameterValues.enum_list:type_name -> test.v1.ParameterValues.Enum
+	69,  // 14: test.v1.ParameterValues.double_value_list:type_name -> google.protobuf.DoubleValue
+	69,  // 15: test.v1.ParameterValues.oneof_double_value_wrapper:type_name -> google.protobuf.DoubleValue
+	0,   // 16: test.v1.ParameterValues.oneof_enum_value:type_name -> test.v1.ParameterValues.Enum
+	19,  // 17: test.v1.ParameterValues.nested:type_name -> test.v1.ParameterValues.Nested
+	6,   // 18: test.v1.ParameterValues.recursive:type_name -> test.v1.ParameterValues
+	20,  // 19: test.v1.ParameterValues.string_map:type_name -> test.v1.ParameterValues.StringMapEntry
+	21,  // 20: test.v1.ParameterValues.string_value_map:type_name -> test.v1.ParameterValues.StringValueMapEntry
+	22,  // 21: test.v1.ParameterValues.enum_map:type_name -> test.v1.ParameterValues.EnumMapEntry
+	23,  // 22: test.v1.ParameterValues.nested_map:type_name -> test.v1.ParameterValues.NestedMapEntry
+	73,  // 23: test.v1.ParameterValues.struct_value:type_name -> google.protobuf.Struct
+	74,  // 24: test.v1.ParameterValues.value:type_name -> google.protobuf.Value
+	6,   // 25: test.v1.ParameterValues.recursive_list:type_name -> test.v1.ParameterValues
+	24,  // 26: test.v1.AllTypes.int32_to_string_map:type_name -> test.v1.AllTypes.Int32ToStringMapEntry
+	25,  // 27: test.v1.AllTypes.int64_to_string_map:type_name -> test.v1.AllTypes.Int64ToStringMapEntry
+	26,  // 28: test.v1.AllTypes.uint32_to_string_map:type_name -> test.v1.AllTypes.Uint32ToStringMapEntry
+	27,  // 29: test.v1.AllTypes.uint64_to_string_map:type_name -> test.v1.AllTypes.Uint64ToStringMapEntry
+	28,  // 30: test.v1.AllTypes.sint32_to_string_map:type_name -> test.v1.AllTypes.Sint32ToStringMapEntry
+	29,  // 31: test.v1.AllTypes.sint64_to_string_map:type_name -> test.v1.AllTypes.Sint64ToStringMapEntry
+	30,  // 32: test.v1.AllTypes.fixed32_to_string_map:type_name -> test.v1.AllTypes.Fixed32ToStringMapEntry
+	31,  // 33: test.v1.AllTypes.fixed64_to_string_map:type_name -> test.v1.AllTypes.Fixed64ToStringMapEntry
+	32,  // 34: test.v1.AllTypes.sfixed32_to_string_map:type_name -> test.v1.AllTypes.Sfixed32ToStringMapEntry
+	33,  // 35: test.v1.AllTypes.sfixed64_to_string_map:type_name -> test.v1.AllTypes.Sfixed64ToStringMapEntry
+	34,  // 36: test.v1.AllTypes.bool_to_string_map:type_name -> test.v1.AllTypes.BoolToStringMapEntry
+	35,  // 37: test.v1.AllTypes.string_to_string_map:type_name -> test.v1.AllTypes.StringToStringMapEntry
+	36,  // 38: test.v1.AllTypes.double_map:type_name -> test.v1.AllTypes.DoubleMapEntry
+	37,  // 39: test.v1.AllTypes.float_map:type_name -> test.v1.AllTypes.FloatMapEntry
+	38,  // 40: test.v1.AllTypes.int32_map:type_name -> test.v1.AllTypes.Int32MapEntry
+	39,  // 41: test.v1.AllTypes.int64_map:type_name -> test.v1.AllTypes.Int64MapEntry
+	40,  // 42: test.v1.AllTypes.uint32_map:type_name -> test.v1.AllTypes.Uint32MapEntry
+	41,  // 43: test.v1.AllTypes.uint64_map:type_name -> test.v1.AllTypes.Uint64MapEntry
+	42,  // 44: test.v1.AllTypes.sint32_map:type_name -> test.v1.AllTypes.Sint32MapEntry
+	43,  // 45: test.v1.AllTypes.sint64_map:type_name -> test.v1.AllTypes.Sint64MapEntry
+	44,  // 46: test.v1.AllTypes.fixed32_map:type_name -> test.v1.AllTypes.Fixed32MapEntry
+	45,  // 47: test.v1.AllTypes.fixed64_map:type_name -> test.v1.AllTypes.Fixed64MapEntry
+	46,  // 48: test.v1.AllTypes.sfixed32_map:type_name -> test.v1.AllTypes.Sfixed32MapEntry
+	47,  // 49: test.v1.AllTypes.sfixed64_map:type_name -> test.v1.AllTypes.Sfixed64MapEntry
+	48,  // 50: test.v1.AllTypes.bool_map:type_name -> test.v1.AllTypes.BoolMapEntry
+	49,  // 51: test.v1.AllTypes.string_map:type_name -> test.v1.AllTypes.StringMapEntry
+	50,  // 52: test.v1.AllTypes.bytes_map:type_name -> test.v1.AllTypes.BytesMapEntry
+	7,   // 53: test.v1.AllTypes.msg_value:type_name -> test.v1.AllTypes
+	2,   // 54: test.v1.AllTypes.enum_value:type_name -> test.v1.AllTypes.Enum
+	7,   // 55: test.v1.AllTypes.opt_msg_value:type_name -> test.v1.AllTypes
+	2,   // 56: test.v1.AllTypes.opt_enum_value:type_name -> test.v1.AllTypes.Enum
+	7,   // 57: test.v1.AllTypes.msg_list:type_name -> test.v1.AllTypes
+	2,   // 58: test.v1.AllTypes.enum_list:type_name -> test.v1.AllTypes.Enum
+	51,  // 59: test.v1.AllTypes.msg_map:type_name -> test.v1.AllTypes.MsgMapEntry
+	52,  // 60: test.v1.AllTypes.enum_map:type_name -> test.v1.AllTypes.EnumMapEntry
+	7,   // 61: test.v1.AllTypes.msg_option:type_name -> test.v1.AllTypes
+	2,   // 62: test.v1.AllTypes.enum_option:type_name -> test.v1.AllTypes.Enum
+	53,  // 63: test.v1.AllTypes.attributes:type_name -> test.v1.AllTypes.AttributesEntry
+	54,  // 64: test.v1.AllTypes.attrs:type_name -> test.v1.AllTypes.AttrsEntry
+	55,  // 65: test.v1.AllTypes.custom_attr:type_name -> test.v1.AllTypes.CustomAttrEntry
+	3,   // 66: test.v1.EnumTest.enum_in:type_name -> test.v1.EnumTest.TestEnum
+	3,   // 67: test.v1.EnumTest.enum_not_in:type_name -> test.v1.EnumTest.TestEnum
+	3,   // 68: test.v1.EnumTest.enum_in_and_not_in:type_name -> test.v1.EnumTest.TestEnum
+	3,   // 69: test.v1.EnumTest.enum_const:type_name -> test.v1.EnumTest.TestEnum
+	3,   // 70: test.v1.EnumTest.enum_required:type_name -> test.v1.EnumTest.TestEnum
+	4,   // 71: test.v1.RepeatedEnumTest.repeated_enum_in:type_name -> test.v1.RepeatedEnumTest.TestEnum
+	5,   // 72: test.v1.ValidateRulesTest.enum_defined_only:type_name -> test.v1.ValidateRulesTest.TestEnum
+	5,   // 73: test.v1.ValidateRulesTest.enum_const:type_name -> test.v1.ValidateRulesTest.TestEnum
+	57,  // 74: test.v1.ValidateRulesTest.map_min_pairs:type_name -> test.v1.ValidateRulesTest.MapMinPairsEntry
+	58,  // 75: test.v1.ValidateRulesTest.map_max_pairs:type_name -> test.v1.ValidateRulesTest.MapMaxPairsEntry
+	62,  // 76: test.v1.ValidateRulesTest.duration_gt:type_name -> google.protobuf.Duration
+	61,  // 77: test.v1.ValidateRulesTest.timestamp_lt:type_name -> google.protobuf.Timestamp
+	56,  // 78: test.v1.ValidateRulesTest.nested_required:type_name -> test.v1.ValidateRulesTest.Nested
+	13,  // 79: test.v1.Author.address:type_name -> test.v1.Address
+	12,  // 80: test.v1.Book.author:type_name -> test.v1.Author
+	61,  // 81: test.v1.Book.publish_time:type_name -> google.protobuf.Timestamp
+	59,  // 82: test.v1.Book.labels:type_name -> test.v1.Book.LabelsEntry
+	14,  // 83: test.v1.UpdateBookRequest.book:type_name -> test.v1.Book
+	72,  // 84: test.v1.UpdateBookRequest.update_mask:type_name -> google.protobuf.FieldMask
+	72,  // 85: test.v1.GetBookRequest.read_mask:type_name -> google.protobuf.FieldMask
+	12,  // 86: test.v1.SuffixMaskRequest.author:type_name -> test.v1.Author
+	14,  // 87: test.v1.SuffixMaskRequest.book:type_name -> test.v1.Book
+	72,  // 88: test.v1.SuffixMaskRequest.book_mask:type_name -> google.protobuf.FieldMask
+	14,  // 89: test.v1.MaskCollectionsRequest.book:type_name -> test.v1.Book
+	60,  // 90: test.v1.MaskCollectionsRequest.masks_by_name:type_name -> test.v1.MaskCollectionsRequest.MasksByNameEntry
+	72,  // 91: test.v1.MaskCollectionsRequest.read_masks:type_name -> google.protobuf.FieldMask
+	69,  // 92: test.v1.ParameterValues.Nested.double_value_wrapper:type_name -> google.protobuf.DoubleValue
+	1,   // 93: test.v1.ParameterValues.Nested.enum_value:type_name -> test.v1.ParameterValues.Nested.Enum
+	71,  // 94: test.v1.ParameterValues.StringValueMapEntry.value:type_name -> google.protobuf.StringValue
+	0,   // 95: test.v1.ParameterValues.EnumMapEntry.value:type_name -> test.v1.ParameterValues.Enum
+	19,  // 96: test.v1.ParameterValues.NestedMapEntry.value:type_name -> test.v1.ParameterValues.Nested
+	7,   // 97: test.v1.AllTypes.MsgMapEntry.value:type_name -> test.v1.AllTypes
+	2,   // 98: test.v1.AllTypes.EnumMapEntry.value:type_name -> test.v1.AllTypes.Enum
+	72,  // 99: test.v1.MaskCollectionsRequest.MasksByNameEntry.value:type_name -> google.protobuf.FieldMask
+	100, // [100:100] is the sub-list for method output_type
+	100, // [100:100] is the sub-list for method input_type
+	100, // [100:100] is the sub-list for extension type_name
+	100, // [100:100] is the sub-list for extension extendee
+	0,   // [0:100] is the sub-list for field type_name
 }
 
 func init() { file_test_v1_test_proto_init() }
@@ -6589,7 +7499,7 @@ func file_test_v1_test_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_test_v1_test_proto_rawDesc), len(file_test_v1_test_proto_rawDesc)),
 			NumEnums:      6,
-			NumMessages:   46,
+			NumMessages:   55,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -237,3 +237,30 @@ func TestRepeatedEnum(t *testing.T) {
 		}
 	})
 }
+
+// TestRepeatedDefaultFakerVaries is a regression test for GenOptions that
+// carry no Faker of their own. Building a wall-clock-seeded faker per call
+// gave neighbouring items the same seed, because the clock's resolution is
+// coarser than a single value generation, so list items came out in
+// duplicated runs.
+func TestRepeatedDefaultFakerVaries(t *testing.T) {
+	md := testv1.File_test_v1_test_proto.Messages().ByName("AllTypes")
+	fd := md.Fields().ByName("int32_list")
+	require.NotNil(t, fd)
+
+	items, adjacentDupes := 0, 0
+	for range 50 {
+		msg := &testv1.AllTypes{}
+		val := fauxrpc.Repeated(msg.ProtoReflect(), fd, fauxrpc.GenOptions{MaxDepth: 5})
+		require.NotNil(t, val)
+		list := val.List()
+		items += list.Len()
+		for i := 1; i < list.Len(); i++ {
+			if list.Get(i).Int() == list.Get(i-1).Int() {
+				adjacentDupes++
+			}
+		}
+	}
+	require.NotZero(t, items, "no items generated")
+	assert.Zero(t, adjacentDupes, "%d of %d items repeat the item before them", adjacentDupes, items)
+}

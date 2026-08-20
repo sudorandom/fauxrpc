@@ -344,3 +344,53 @@ message UnvalidatedTest {
   int32 count = 2;
   repeated string tags = 3;
 }
+
+// The messages below cover the conventions a field mask is resolved against.
+
+message Author {
+  string name = 1;
+  Address address = 2;
+}
+
+message Address {
+  string street = 1;
+  string city = 2;
+}
+
+message Book {
+  string name = 1;
+  string title = 2;
+  Author author = 3;
+  google.protobuf.Timestamp publish_time = 4;
+  repeated string tags = 5;
+  map<string, string> labels = 6;
+}
+
+// UpdateBookRequest is the AIP-134 shape: the mask describes the resource named
+// by the request, not the request itself.
+message UpdateBookRequest {
+  Book book = 1;
+  google.protobuf.FieldMask update_mask = 2;
+}
+
+// GetBookRequest carries no resource, so the mask falls back to the request.
+message GetBookRequest {
+  string name = 1;
+  bool allow_missing = 2;
+  google.protobuf.FieldMask read_mask = 3;
+}
+
+// SuffixMaskRequest names the field it masks directly.
+message SuffixMaskRequest {
+  Author author = 1;
+  Book book = 2;
+  google.protobuf.FieldMask book_mask = 3;
+}
+
+// MaskCollectionsRequest holds masks that are not fields of the request
+// themselves: a map value's parent is the synthetic map entry.
+message MaskCollectionsRequest {
+  Book book = 1;
+  map<string, google.protobuf.FieldMask> masks_by_name = 2;
+  repeated google.protobuf.FieldMask read_masks = 3;
+}

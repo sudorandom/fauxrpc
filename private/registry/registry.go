@@ -19,6 +19,8 @@ type ServiceRegistry interface {
 	ForEachService(cb func(protoreflect.ServiceDescriptor) bool)
 	ServiceCount() int
 	Files() *protoregistry.Files
+	Types() *protoregistry.Types
+	Resolver() *Resolver
 	NumFiles() int
 	Rebuild() error
 	// Act like protoreflect.Files
@@ -54,6 +56,7 @@ func (r *serviceRegistry) Reset() error {
 	r.lock.Lock()
 	r.services = map[string]protoreflect.ServiceDescriptor{}
 	r.files = new(protoregistry.Files)
+	r.types = new(protoregistry.Types)
 	r.filesOrdered = []protoreflect.FileDescriptor{}
 	r.lock.Unlock()
 	return AddServicesFromGlobal(r)
@@ -87,6 +90,7 @@ func (r *serviceRegistry) RegisterFile(fd protoreflect.FileDescriptor) error {
 		return err
 	}
 	r.filesOrdered = append(r.filesOrdered, fd)
+	r.addExtensions(fd)
 
 	svcs := fd.Services()
 	for i := 0; i < svcs.Len(); i++ {
@@ -94,6 +98,44 @@ func (r *serviceRegistry) RegisterFile(fd protoreflect.FileDescriptor) error {
 		r.addService(svc)
 	}
 	return nil
+}
+
+// addExtensions records every extension the file declares, at file scope and
+// inside its messages. Nothing else knows they exist: an extension is reachable
+// only by looking it up by the message it extends, which needs a type registry
+// to look in.
+func (r *serviceRegistry) addExtensions(container extensionContainer) {
+	exts := container.Extensions()
+	for i := 0; i < exts.Len(); i++ {
+		xd := exts.Get(i)
+		xt := extensionType(xd)
+		if err := r.types.RegisterExtension(xt); err != nil {
+			// A conflict means some other file already claimed this name, which
+			// is the same situation RegisterFile tolerates above.
+			slog.Debug("skipping extension", "name", xd.FullName(), "error", err)
+		}
+	}
+	msgs := container.Messages()
+	for i := 0; i < msgs.Len(); i++ {
+		r.addExtensions(msgs.Get(i))
+	}
+}
+
+// extensionContainer is what files and messages have in common: both can
+// declare extensions and hold nested messages that declare more.
+type extensionContainer interface {
+	Extensions() protoreflect.ExtensionDescriptors
+	Messages() protoreflect.MessageDescriptors
+}
+
+// extensionType prefers the extension compiled into this binary, so that
+// setting it on a generated message uses that message's own Go type. Schemas
+// loaded at runtime have no Go type and fall back to a dynamic one.
+func extensionType(xd protoreflect.ExtensionDescriptor) protoreflect.ExtensionType {
+	if xt, err := protoregistry.GlobalTypes.FindExtensionByName(xd.FullName()); err == nil {
+		return xt
+	}
+	return dynamicpb.NewExtensionType(xd)
 }
 
 func (r *serviceRegistry) addService(sd protoreflect.ServiceDescriptor) {
@@ -127,6 +169,14 @@ func (r *serviceRegistry) Files() *protoregistry.Files {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 	return r.files
+}
+
+// Types holds the extensions declared by every registered file. It doubles as
+// the resolver protojson needs to read back JSON that names an extension.
+func (r *serviceRegistry) Types() *protoregistry.Types {
+	r.lock.RLock()
+	defer r.lock.RUnlock()
+	return r.types
 }
 
 func (r *serviceRegistry) FindFileByPath(path string) (protoreflect.FileDescriptor, error) {

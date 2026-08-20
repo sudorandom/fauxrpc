@@ -629,17 +629,20 @@ func (s *server) startRecordDirWorker() {
 
 		// 5. Generate active_if from the request(s)
 		var activeIf string
+		// The bodies were written by this server, which may have put extension
+		// values in them, so reading them back needs the extensions too.
+		jsonOpts := protojson.UnmarshalOptions{Resolver: s.Resolver()}
 		if !isClientStream {
 			if len(entry.RequestBody) > 0 {
 				reqMsg := dynamicpb.NewMessage(method.Input())
-				if err := protojson.Unmarshal(entry.RequestBody, reqMsg); err == nil {
+				if err := jsonOpts.Unmarshal(entry.RequestBody, reqMsg); err == nil {
 					activeIf = stubs.ActiveIfFromProto(reqMsg)
 				}
 			}
 		} else {
 			if len(entry.RequestFrames) > 0 {
 				reqMsg := dynamicpb.NewMessage(method.Input())
-				if err := protojson.Unmarshal(entry.RequestFrames[0], reqMsg); err == nil {
+				if err := jsonOpts.Unmarshal(entry.RequestFrames[0], reqMsg); err == nil {
 					activeIf = stubs.ActiveIfFromProto(reqMsg)
 				}
 			}
@@ -664,7 +667,7 @@ func (s *server) startRecordDirWorker() {
 				_ = stubs.RecordErrorStub(filePath, target, activeIf, entry.Status, errMsg)
 			} else {
 				respMsg := dynamicpb.NewMessage(method.Output())
-				if err := protojson.Unmarshal(entry.ResponseBody, respMsg); err == nil {
+				if err := jsonOpts.Unmarshal(entry.ResponseBody, respMsg); err == nil {
 					_ = stubs.RecordSuccessStub(filePath, target, activeIf, respMsg)
 				}
 			}
@@ -686,7 +689,7 @@ func (s *server) startRecordDirWorker() {
 				_ = stubs.RecordErrorStub(filePath, target, activeIf, entry.Status, errMsg)
 			} else {
 				respMsg := dynamicpb.NewMessage(method.Output())
-				if err := protojson.Unmarshal(entry.ResponseBody, respMsg); err == nil {
+				if err := jsonOpts.Unmarshal(entry.ResponseBody, respMsg); err == nil {
 					_ = stubs.RecordSuccessStub(filePath, target, activeIf, respMsg)
 				}
 			}

@@ -1,0 +1,46 @@
+edition = "2024";
+
+package test.v1;
+
+// Event lends out 100 to 199 for fields it does not declare itself.
+message Event {
+  string id = 1;
+  string type = 2;
+
+  extensions 100 to 199;
+}
+
+// Normally these live in the file that owns the new fields, not next to Event.
+extend Event {
+  string trace_id = 100;
+  bool sampled = 101;
+  int32 retry_count = 102;
+  repeated string labels = 103;
+  EventSource source = 104;
+}
+
+message EventSource {
+  string service = 1;
+  string region = 2;
+}
+
+// EventService exists so the server can be asked for a message that carries
+// extensions.
+service EventService {
+  rpc GetEvent(GetEventRequest) returns (GetEventResponse);
+}
+
+message GetEventRequest {
+  string id = 1;
+}
+
+message GetEventResponse {
+  Event event = 1;
+}
+
+// EventBatch holds messages that carry extensions, so extension generation has
+// to reach nested messages too.
+message EventBatch {
+  repeated Event events = 1;
+  Event latest = 2;
+}

@@ -39,6 +39,9 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 
 	entries := make([]StubEntry, len(req.Msg.GetStubs()))
 	stubs := make([]*stubsv1.Stub, len(req.Msg.GetStubs()))
+	// A stub may name an extension of the message it stubs, which protojson
+	// only accepts when it can look the extension up.
+	jsonOpts := protojson.UnmarshalOptions{Resolver: h.registry.Resolver()}
 	var compiler *protocel.Compiler
 	for i, stub := range req.Msg.GetStubs() {
 		if !stub.HasRef() {
@@ -88,7 +91,7 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 		case stubsv1.Stub_Json_case:
 			if stub.GetJson() != "" {
 				msg := registry.NewMessage(md).Interface()
-				if err := protojson.Unmarshal([]byte(stub.GetJson()), msg); err != nil {
+				if err := jsonOpts.Unmarshal([]byte(stub.GetJson()), msg); err != nil {
 					return nil, err
 				}
 				entry.Message = msg
@@ -139,7 +142,7 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 					case stubsv1.StreamItem_Json_case:
 						if item.GetJson() != "" {
 							msg := registry.NewMessage(md).Interface()
-							if err := protojson.Unmarshal([]byte(item.GetJson()), msg); err != nil {
+							if err := jsonOpts.Unmarshal([]byte(item.GetJson()), msg); err != nil {
 								return nil, err
 							}
 							sie.Message = msg

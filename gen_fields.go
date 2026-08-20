@@ -101,6 +101,11 @@ func FieldValue(fd protoreflect.FieldDescriptor, opts GenOptions) *protoreflect.
 				v := protoreflect.ValueOf(val.ProtoReflect())
 				return &v
 			}
+		case "google.protobuf.FieldMask":
+			if val := GoogleFieldMask(fd, opts); val != nil {
+				v := protoreflect.ValueOf(val.ProtoReflect())
+				return &v
+			}
 		case "google.protobuf.Any":
 			return nil
 		case "google.protobuf.Value":

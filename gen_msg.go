@@ -50,6 +50,15 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) error {
 	msg := pm.ProtoReflect()
 	desc := msg.Descriptor()
 
+	// A FieldMask reached this way is the whole message, so there is no field
+	// around it to say what it masks. Its paths are generated rather than
+	// filled in like an ordinary repeated string field, which would put random
+	// sentences in them.
+	if desc.FullName() == "google.protobuf.FieldMask" {
+		setFieldMaskOnMessage(msg, opts)
+		return nil
+	}
+
 	oneOfs := desc.Oneofs()
 	// process one-of fields
 	for i := 0; i < oneOfs.Len(); i++ {
@@ -85,5 +94,6 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) error {
 			msg.Set(field, *v)
 		}
 	}
+	setExtensionsOnMessage(msg, opts)
 	return nil
 }

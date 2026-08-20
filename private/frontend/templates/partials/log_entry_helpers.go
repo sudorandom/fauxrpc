@@ -24,6 +24,8 @@ func generateStubYAML(entry *log.LogEntry, reg registry.ServiceRegistry) string 
 
 	var activeIf string
 	if reg != nil {
+		// The request may name an extension of the message it was sent to.
+		jsonOpts := protojson.UnmarshalOptions{Resolver: reg.Resolver()}
 		sd := reg.Get(entry.Service)
 		if sd != nil {
 			method := sd.Methods().ByName(protoreflect.Name(entry.Method))
@@ -32,14 +34,14 @@ func generateStubYAML(entry *log.LogEntry, reg registry.ServiceRegistry) string 
 				if !isClientStream {
 					if len(entry.RequestBody) > 0 {
 						reqMsg := dynamicpb.NewMessage(method.Input())
-						if err := protojson.Unmarshal(entry.RequestBody, reqMsg); err == nil {
+						if err := jsonOpts.Unmarshal(entry.RequestBody, reqMsg); err == nil {
 							activeIf = stubs.ActiveIfFromProto(reqMsg)
 						}
 					}
 				} else {
 					if len(entry.RequestFrames) > 0 {
 						reqMsg := dynamicpb.NewMessage(method.Input())
-						if err := protojson.Unmarshal(entry.RequestFrames[0], reqMsg); err == nil {
+						if err := jsonOpts.Unmarshal(entry.RequestFrames[0], reqMsg); err == nil {
 							activeIf = stubs.ActiveIfFromProto(reqMsg)
 						}
 					}

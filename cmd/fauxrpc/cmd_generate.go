@@ -70,6 +70,7 @@ func (c *GenerateCmd) Run(globals *Globals) error {
 		Faker:        gofakeit.NewFaker(fakeSrc, true),
 		StubFinder:   stubs.NewStubFinder(stubDB),
 		ViolateRules: c.ViolateRules,
+		Extensions:   theRegistry.Types(),
 	})
 	if err != nil {
 		return err

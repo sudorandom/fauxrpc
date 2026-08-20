@@ -202,6 +202,41 @@ A few things are never violated, so a message is not guaranteed to fail validati
 * Message-level rules and CEL expressions (`cel`, `cel_expression`), which no single field value can be reasoned about generically.
 * Rules where no counterexample exists, such as an `int32` bounded by `gte` at the type's minimum.
 
+## Generating Extension Fields
+
+A message that reserves an extension range lends those field numbers to fields declared elsewhere:
+
+```protobuf
+message Event {
+  string id = 1;
+  string type = 2;
+
+  extensions 100 to 199;
+}
+
+extend Event {
+  string trace_id = 100;
+  bool sampled = 101;
+}
+```
+
+Those fields are part of the schema, so FauxRPC fills them in like any other field. Each one gets its own roll, so about half of a message's extensions are set on any given response and no two responses carry quite the same set — an extension is an add-on, and a message where every add-on is present is not what clients see in practice.
+
+In JSON, an extension appears under its full name in brackets:
+
+```json
+{
+  "id": "evt_7f3a91",
+  "type": "checkout.completed",
+  "[playground.v1.trace_id]": "b9c14e2d",
+  "[playground.v1.sampled]": true
+}
+```
+
+Extensions of the `google.protobuf.*Options` messages are skipped. Every custom option in a schema is one of those, and they describe a schema rather than carry data.
+
+Stubs may name extensions in the same bracketed form.
+
 ## Making Requests with `fauxrpc curl`
 
 FauxRPC includes a handy built-in client, `fauxrpc curl`, for making requests to your services without needing external tools. It automatically sources the schema to provide a seamless testing experience.

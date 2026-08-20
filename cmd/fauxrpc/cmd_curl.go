@@ -137,7 +137,7 @@ func (c *CurlCmd) Run(globals *Globals) error {
 	}
 
 	for fullMethodName, methodDesc := range methodsToCall {
-		if err := c.callRPC(ctx, httpClient, fullMethodName, methodDesc, stubDB); err != nil {
+		if err := c.callRPC(ctx, httpClient, fullMethodName, methodDesc, stubDB, reg.Types()); err != nil {
 			return err
 		}
 	}
@@ -151,6 +151,7 @@ func (c *CurlCmd) callRPC(
 	fullMethodName string,
 	methodDesc protoreflect.MethodDescriptor,
 	stubDB stubs.StubDatabase,
+	extensions fauxrpc.ExtensionResolver,
 ) error {
 	slog.Debug("Calling RPC", "method", fullMethodName)
 
@@ -205,6 +206,7 @@ func (c *CurlCmd) callRPC(
 		Faker:        gofakeit.New(0),
 		Context:      protocel.WithCELContext(ctx, celCtx),
 		ViolateRules: c.ViolateRules,
+		Extensions:   extensions,
 	}
 
 	// Helper to print request

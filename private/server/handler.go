@@ -293,6 +293,10 @@ func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker
 				StubRecorder: func(stub fauxrpc.StubEntry) {
 					stubsUsed = append(stubsUsed, stub)
 				},
+				// Where the extensions of each generated message are found.
+				// Without it they stay unset, because a message descriptor
+				// cannot name the extensions declared against it.
+				Extensions: s.Types(),
 			}
 			if s.GetStaticSeed() {
 				genOpts.Faker = gofakeit.New(staticSeedForMethod(method.FullName()))

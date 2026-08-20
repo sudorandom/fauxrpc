@@ -2,7 +2,6 @@ package fauxrpc
 
 import (
 	"context"
-	"time"
 
 	"buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go/buf/validate"
 	"github.com/brianvoe/gofakeit/v7"
@@ -20,6 +19,14 @@ type StubFinder interface {
 
 type FieldGenOptions struct {
 	Message *validate.FieldRules
+}
+
+// ExtensionResolver hands back the extensions declared for a message. It is the
+// part of *protoregistry.Types that generation needs, and both
+// protoregistry.GlobalTypes and a registry built from a loaded schema satisfy
+// it.
+type ExtensionResolver interface {
+	RangeExtensionsByMessage(message protoreflect.FullName, f func(protoreflect.ExtensionType) bool)
 }
 
 type GenOptions struct {
@@ -43,6 +50,15 @@ type GenOptions struct {
 	// validation even at 1.0.
 	ViolateRules float64
 
+	// Extensions is where generation looks for the extensions of each message
+	// it fills in. It has no default: a message descriptor cannot name the
+	// extensions declared against it, so without a resolver to ask, extension
+	// fields are left unset.
+	//
+	// A registry that loaded the schema is the resolver to pass; for types
+	// compiled into the binary, protoregistry.GlobalTypes works.
+	Extensions ExtensionResolver
+
 	extraFieldConstraints *validate.FieldRules
 }
 
@@ -53,9 +69,18 @@ func (st GenOptions) GetContext() context.Context {
 	return st.Context
 }
 
+// defaultFaker backs a GenOptions that carries no Faker of its own. It is
+// created once, crypto-seeded by gofakeit.New(0), and safe for concurrent use.
+//
+// Creating a faker per call instead would seed each one from the wall clock,
+// whose resolution is coarser than the time it takes to generate a single
+// value, so consecutive values (list items, neighbouring fields) would come
+// out identical.
+var defaultFaker = gofakeit.New(0)
+
 func (st GenOptions) fake() *gofakeit.Faker {
 	if st.Faker == nil {
-		return gofakeit.New(uint64(time.Now().UnixNano()))
+		return defaultFaker
 	}
 	return st.Faker
 }
