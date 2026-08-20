@@ -77,8 +77,9 @@ func newRegistryClient(addr string) registryv1connect.RegistryServiceClient {
 	client := &http.Client{
 		Transport: &http2.Transport{
 			AllowHTTP: true,
-			DialTLS: func(network, addr string, _ *tls.Config) (net.Conn, error) {
-				return net.Dial(network, addr)
+			DialTLSContext: func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
+				var dialer net.Dialer
+				return dialer.DialContext(ctx, network, addr)
 			},
 		},
 	}

@@ -78,10 +78,10 @@ func fullVersion() string {
 	version, commit, date := getVersionInfo()
 	b.WriteString(version)
 	if commit != "" {
-		b.WriteString(fmt.Sprintf(" (%s)", commit))
+		fmt.Fprintf(&b, " (%s)", commit)
 	}
 	if date != "" {
-		b.WriteString(fmt.Sprintf(" @%s", commit))
+		fmt.Fprintf(&b, " @%s", date)
 	}
 	return b.String()
 }
