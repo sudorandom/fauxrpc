@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
-	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -12,7 +10,6 @@ import (
 	registryv1 "github.com/sudorandom/fauxrpc/private/gen/registry/v1"
 	"github.com/sudorandom/fauxrpc/private/gen/registry/v1/registryv1connect"
 	"github.com/sudorandom/fauxrpc/private/registry"
-	"golang.org/x/net/http2"
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
@@ -74,15 +71,11 @@ func (c *RegistryRemoveAllCmd) Run(globals *Globals) error {
 }
 
 func newRegistryClient(addr string) registryv1connect.RegistryServiceClient {
-	client := &http.Client{
-		Transport: &http2.Transport{
-			AllowHTTP: true,
-			DialTLSContext: func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
-				var dialer net.Dialer
-				return dialer.DialContext(ctx, network, addr)
-			},
-		},
-	}
+	transport := &http.Transport{}
+	transport.Protocols = new(http.Protocols)
+	transport.Protocols.SetHTTP2(true)
+	transport.Protocols.SetUnencryptedHTTP2(true)
+	client := &http.Client{Transport: transport}
 
 	return registryv1connect.NewRegistryServiceClient(client, addr)
 }

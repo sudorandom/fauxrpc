@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"os"
 	"strings"
@@ -10,7 +11,6 @@ import (
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/brianvoe/gofakeit/v7/source"
 	"github.com/sudorandom/fauxrpc"
-	"github.com/sudorandom/fauxrpc/private/grpc"
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/private/stubs"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -94,7 +94,14 @@ func (c *GenerateCmd) Run(globals *Globals) error {
 		if err != nil {
 			return err
 		}
-		if err := grpc.WriteGRPCMessage(os.Stdout, protoBytes); err != nil {
+		// Write the message with the gRPC length-prefixed framing: a
+		// one-byte compression flag followed by the big-endian size.
+		prefix := [5]byte{}
+		binary.BigEndian.PutUint32(prefix[1:], uint32(len(protoBytes))) //nolint:gosec // message sizes fit in uint32
+		if _, err := os.Stdout.Write(prefix[:]); err != nil {
+			return err
+		}
+		if _, err := os.Stdout.Write(protoBytes); err != nil {
 			return err
 		}
 	default:

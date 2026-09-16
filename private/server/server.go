@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/fs"
-	"log"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -18,6 +17,8 @@ import (
 
 	"buf.build/go/protovalidate"
 	"connectrpc.com/connect"
+	connectv2 "connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
 	connectcors "connectrpc.com/cors"
 	"connectrpc.com/grpcreflect"
 	"connectrpc.com/validate"
@@ -342,7 +343,6 @@ func (s *server) rebuildHandlers() error {
 	defer slog.Debug("Rebuilding handlers complete")
 
 	serviceNames := []string{}
-	vgservices := []*vanguard.Service{}
 	var validate protovalidate.Validator
 	if s.opts.WithValidate {
 		v, err := protovalidate.New()
@@ -361,25 +361,27 @@ func (s *server) rebuildHandlers() error {
 
 	faker := fauxrpc.NewMultiFaker(fakers)
 
+	rpcServer := connectv2.NewServer()
 	s.ForEachService(func(sd protoreflect.ServiceDescriptor) bool {
 		maxDepth := s.opts.MaxDepth
 		if maxDepth <= 0 {
 			maxDepth = 5
 		}
-		vgservice := vanguard.NewServiceWithSchema(
-			sd, NewHandler(sd, faker, validate, s, s.logger, maxDepth), // Pass the server instance here
-			vanguard.WithTargetProtocols(vanguard.ProtocolGRPC),
-			vanguard.WithTargetCodecs(vanguard.CodecProto))
-		vgservices = append(vgservices, vgservice)
+		rpcServer.Register(buildMethods(sd, faker, validate, s, s.logger, maxDepth)...)
 		serviceNames = append(serviceNames, string(sd.FullName()))
 		return true
 	})
 
-	transcoder, err := vanguard.NewTranscoder(vgservices)
-	if err != nil {
-		log.Fatalf("err: %s", err)
+	resolver := s.Resolver()
+	rpcMux := http.NewServeMux()
+	connecthttp.Mount(rpcMux, rpcServer,
+		connecthttp.WithCodecs(newBinaryCodec(resolver), newJSONCodec(resolver)),
+		connecthttp.WithHTTPGet(),
+	)
+	if err := vanguard.Mount(rpcMux, rpcServer, vanguard.WithTypeResolver(resolver)); err != nil {
+		return fmt.Errorf("failed to mount REST routes: %w", err)
 	}
-	s.handlerTranscoder.SetHandler(transcoder)
+	s.handlerTranscoder.SetHandler(rpcMux)
 	if s.opts.UseReflection {
 		reflector := grpcreflect.NewReflector(&staticNames{names: serviceNames}, grpcreflect.WithDescriptorResolver(s.ServiceRegistry))
 		_, v1Handler := grpcreflect.NewHandlerV1(reflector)
@@ -488,7 +490,7 @@ func (s *server) Handler() (http.Handler, error) {
 		})
 	}
 
-	mux.Mount("/", protocolMiddleware(s.handlerTranscoder))
+	mux.Mount("/", s.handlerTranscoder)
 	if s.opts.WithDashboard {
 		mux.Handle("/", http.RedirectHandler("/fauxrpc", http.StatusFound))
 		mux.Handle("/fauxrpc/assets/", http.StripPrefix("/fauxrpc/assets/", http.FileServer(http.Dir("private/frontend/assets"))))
@@ -546,35 +548,6 @@ func (h *wrappedHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h.lock.RLock()
 	defer h.lock.RUnlock()
 	h.handler.ServeHTTP(w, r)
-}
-
-func protocolMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		protocol := getClientProtocol(r)
-		ctx := context.WithValue(r.Context(), clientProtocolKey, protocol)
-
-		headers, _ := json.Marshal(maskHeaders(r.Header))
-		ctx = context.WithValue(ctx, requestHeadersKey, headers)
-
-		next.ServeHTTP(w, r.WithContext(ctx))
-	})
-}
-
-func getClientProtocol(r *http.Request) string {
-	contentType := r.Header.Get("Content-Type")
-	connectVersion := r.Header.Get("Connect-Protocol-Version")
-	// Connect-Protocol-Version
-	switch {
-	case strings.HasPrefix(contentType, "application/grpc-web"):
-		return "gRPC-Web"
-	case strings.HasPrefix(contentType, "application/grpc"):
-		return "gRPC"
-	case strings.HasPrefix(contentType, "application/connect"):
-		return "ConnectRPC"
-	case connectVersion != "":
-		return "ConnectRPC"
-	}
-	return "HTTP"
 }
 
 func maskHeaders(headers http.Header) http.Header {
