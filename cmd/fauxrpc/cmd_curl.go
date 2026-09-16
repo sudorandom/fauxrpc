@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"net"
 	"net/http"
 	"strings"
 
@@ -18,7 +17,6 @@ import (
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/private/stubs"
 	"github.com/sudorandom/fauxrpc/protocel"
-	"golang.org/x/net/http2"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -59,15 +57,11 @@ func (c *CurlCmd) Run(globals *Globals) error {
 			},
 		}
 	} else if c.HTTP2PriorKnowledge {
-		httpClient = &http.Client{
-			Transport: &http2.Transport{
-				AllowHTTP: true,
-				DialTLSContext: func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
-					var dialer net.Dialer
-					return dialer.DialContext(ctx, network, addr)
-				},
-			},
-		}
+		transport := &http.Transport{}
+		transport.Protocols = new(http.Protocols)
+		transport.Protocols.SetHTTP2(true)
+		transport.Protocols.SetUnencryptedHTTP2(true)
+		httpClient = &http.Client{Transport: transport}
 	} else {
 		httpClient = &http.Client{}
 	}
