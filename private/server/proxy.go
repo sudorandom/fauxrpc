@@ -160,6 +160,7 @@ func (h *methodHandler) handleProxy(
 		}
 		defer func() { _ = upstreamStream.Close() }()
 
+		var sendErr error
 		for {
 			msg, err := h.receive(info, stream)
 			if err != nil {
@@ -171,17 +172,23 @@ func (h *methodHandler) handleProxy(
 			reqFrameTracker.Add(msg)
 			if err := upstreamStream.Send(msg); err != nil {
 				msg.Release()
-				return err
+				sendErr = err
+				break
 			}
 			msg.Release()
 		}
-		if err := upstreamStream.CloseSend(); err != nil {
-			return err
+		if sendErr == nil {
+			if err := upstreamStream.CloseSend(); err != nil {
+				sendErr = err
+			}
 		}
 
 		res := dynamicpb.NewMessage(h.method.Output())
 		if err := upstreamStream.Receive(res); err != nil {
 			return err
+		}
+		if sendErr != nil {
+			return sendErr
 		}
 		relayResponseHeaders()
 		*responseBody = res
@@ -194,20 +201,25 @@ func (h *methodHandler) handleProxy(
 		}
 		defer func() { _ = upstreamStream.Close() }()
 
+		var sendErr error
 		var eg errgroup.Group
 		eg.Go(func() error {
 			for {
 				msg, err := h.receive(info, stream)
 				if err != nil {
 					if errors.Is(err, io.EOF) {
-						return upstreamStream.CloseSend()
+						if closeErr := upstreamStream.CloseSend(); closeErr != nil {
+							sendErr = closeErr
+						}
+						return nil
 					}
 					return err
 				}
 				reqFrameTracker.Add(msg)
 				if err := upstreamStream.Send(msg); err != nil {
 					msg.Release()
-					return err
+					sendErr = err
+					return nil
 				}
 				msg.Release()
 			}
@@ -232,7 +244,10 @@ func (h *methodHandler) handleProxy(
 				}
 			}
 		})
-		return eg.Wait()
+		if err := eg.Wait(); err != nil {
+			return err
+		}
+		return sendErr
 	}
 }
 
@@ -263,6 +278,12 @@ func copyFilteredHeaders(src, dst *connect.Header) {
 func isUnimplementedError(err error) bool {
 	if err == nil {
 		return false
+	}
+	if connect.CodeOf(err) == connect.CodeUnimplemented {
+		return true
+	}
+	if status.Code(err) == codes.Unimplemented {
+		return true
 	}
 	var connectErr *connect.Error
 	if errors.As(err, &connectErr) && connectErr.Code() == connect.CodeUnimplemented {
