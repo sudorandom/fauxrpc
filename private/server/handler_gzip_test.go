@@ -1,429 +1,63 @@
 package server
 
 import (
-	"bytes"
-	"compress/flate"
-	"compress/gzip"
-	"compress/zlib"
-	"encoding/binary"
+	"context"
+	"errors"
 	"io"
-	"net/http"
-	"net/http/httptest"
 	"testing"
+	"time"
 
+	"buf.build/gen/go/connectrpc/eliza/connectrpc/go/connectrpc/eliza/v1/elizav1connect"
 	elizav1 "buf.build/gen/go/connectrpc/eliza/protocolbuffers/go/connectrpc/eliza/v1"
-	"buf.build/go/protovalidate"
+	"connectrpc.com/connect"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/sudorandom/fauxrpc"
-	fauxlog "github.com/sudorandom/fauxrpc/private/log"
-	"github.com/sudorandom/fauxrpc/private/stubs"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/protobuf/proto"
 )
 
-// writeMsgGzip writes a gzip-compressed gRPC length-prefixed frame (flag=1).
-func writeMsgGzip(t *testing.T, w io.Writer, msg proto.Message) {
-	t.Helper()
-	b, err := proto.Marshal(msg)
-	require.NoError(t, err)
-
-	var compressed bytes.Buffer
-	gz := gzip.NewWriter(&compressed)
-	_, err = gz.Write(b)
-	require.NoError(t, err)
-	require.NoError(t, gz.Close())
-
-	payload := compressed.Bytes()
-	prefix := make([]byte, 5)
-	prefix[0] = 1 // compressed
-	binary.BigEndian.PutUint32(prefix[1:], uint32(len(payload)))
-	_, err = w.Write(prefix)
-	require.NoError(t, err)
-	_, err = w.Write(payload)
-	require.NoError(t, err)
-}
-
-// writeMsgDeflate writes a zlib-wrapped deflate gRPC frame (flag=1).
-func writeMsgDeflate(t *testing.T, w io.Writer, msg proto.Message) {
-	t.Helper()
-	b, err := proto.Marshal(msg)
-	require.NoError(t, err)
-
-	var compressed bytes.Buffer
-	zw := zlib.NewWriter(&compressed)
-	_, err = zw.Write(b)
-	require.NoError(t, err)
-	require.NoError(t, zw.Close())
-
-	payload := compressed.Bytes()
-	prefix := make([]byte, 5)
-	prefix[0] = 1 // compressed
-	binary.BigEndian.PutUint32(prefix[1:], uint32(len(payload)))
-	_, err = w.Write(prefix)
-	require.NoError(t, err)
-	_, err = w.Write(payload)
-	require.NoError(t, err)
-}
-
-// writeMsgRawDeflate writes a raw RFC 1951 deflate gRPC frame (flag=1).
-func writeMsgRawDeflate(t *testing.T, w io.Writer, msg proto.Message) {
-	t.Helper()
-	b, err := proto.Marshal(msg)
-	require.NoError(t, err)
-
-	var compressed bytes.Buffer
-	fw, err := flate.NewWriter(&compressed, flate.DefaultCompression)
-	require.NoError(t, err)
-	_, err = fw.Write(b)
-	require.NoError(t, err)
-	require.NoError(t, fw.Close())
-
-	payload := compressed.Bytes()
-	prefix := make([]byte, 5)
-	prefix[0] = 1 // compressed
-	binary.BigEndian.PutUint32(prefix[1:], uint32(len(payload)))
-	_, err = w.Write(prefix)
-	require.NoError(t, err)
-	_, err = w.Write(payload)
-	require.NoError(t, err)
-}
-
-// readGzipFrame reads one gRPC length-prefixed frame and decompresses it if flag=1.
-func readGzipFrame(t *testing.T, r io.Reader) ([]byte, bool) {
-	t.Helper()
-	prefix := make([]byte, 5)
-	_, err := io.ReadFull(r, prefix)
-	if err == io.EOF {
-		return nil, false
-	}
-	require.NoError(t, err)
-
-	isCompressed := prefix[0] == 1
-	size := binary.BigEndian.Uint32(prefix[1:])
-	if size == 0 {
-		return nil, true
-	}
-
-	payload := make([]byte, size)
-	_, err = io.ReadFull(r, payload)
-	require.NoError(t, err)
-
-	if !isCompressed {
-		return payload, true
-	}
-
-	gr, err := gzip.NewReader(bytes.NewReader(payload))
-	require.NoError(t, err)
-	decompressed, err := io.ReadAll(gr)
-	require.NoError(t, err)
-	return decompressed, true
-}
-
-// readDeflateFrame reads one zlib-wrapped deflate gRPC frame.
-func readDeflateFrame(t *testing.T, r io.Reader) ([]byte, bool) {
-	t.Helper()
-	prefix := make([]byte, 5)
-	_, err := io.ReadFull(r, prefix)
-	if err == io.EOF {
-		return nil, false
-	}
-	require.NoError(t, err)
-
-	isCompressed := prefix[0] == 1
-	size := binary.BigEndian.Uint32(prefix[1:])
-	if size == 0 {
-		return nil, true
-	}
-
-	payload := make([]byte, size)
-	_, err = io.ReadFull(r, payload)
-	require.NoError(t, err)
-
-	if !isCompressed {
-		return payload, true
-	}
-
-	zr, err := zlib.NewReader(bytes.NewReader(payload))
-	require.NoError(t, err)
-	decompressed, err := io.ReadAll(zr)
-	require.NoError(t, err)
-	require.NoError(t, zr.Close())
-	return decompressed, true
-}
-
-// newElizaHandler is a test helper to build a handler for the ElizaService.
-func newElizaHandler(t *testing.T) http.Handler {
-	t.Helper()
-	file := elizav1.File_connectrpc_eliza_v1_eliza_proto
-	service := file.Services().ByName("ElizaService")
-	require.NotNil(t, service)
-
-	validator, err := protovalidate.New()
-	require.NoError(t, err)
-
-	logger := fauxlog.NewLogger()
-	s := &mockServer{
-		ServiceRegistry: mustNewRegistry(),
-		StubDatabase:    stubs.NewStubDatabase(),
-		logger:          logger,
-	}
-
-	return NewHandler(service, fauxrpc.NewFauxFaker(), validator, s, logger, 20)
-}
-
-// TestHandler_GzipRequest_UnaryResponse sends a gzip-compressed request to the
-// unary Say method and verifies the handler decodes it correctly and returns a
-// valid (uncompressed) gRPC response.
+// TestHandler_GzipRequest_UnaryResponse sends a gzip-compressed request to
+// the unary Say method and verifies the server decodes it correctly.
 func TestHandler_GzipRequest_UnaryResponse(t *testing.T) {
-	handler := newElizaHandler(t)
+	_, ts, httpClient := setupTestServer(t, ServerOpts{}, elizav1.File_connectrpc_eliza_v1_eliza_proto)
 
-	// Build a gzip-compressed SayRequest body.
-	var body bytes.Buffer
-	writeMsgGzip(t, &body, &elizav1.SayRequest{Sentence: "hello from gzip"})
-
-	req := httptest.NewRequest("POST", "/connectrpc.eliza.v1.ElizaService/Say", &body)
-	req.Header.Set("Content-Type", "application/grpc")
-	req.Header.Set("grpc-encoding", "gzip")
-
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-
-	res := w.Result()
-	assert.Equal(t, http.StatusOK, res.StatusCode)
-
-	// Response should carry grpc-encoding: gzip (mirrored from request).
-	assert.Equal(t, "gzip", res.Header.Get("grpc-encoding"))
-
-	// The response body should be a valid, decompressible gRPC frame.
-	respBytes, ok := readGzipFrame(t, res.Body)
-	require.True(t, ok)
-
-	var respMsg elizav1.SayResponse
-	require.NoError(t, proto.Unmarshal(respBytes, &respMsg))
-	// FauxRPC generates a non-nil response; just check it parsed without error.
-
-	// gRPC status trailer should be OK (0).
-	// In httptest.ResponseRecorder, grpc trailers land in res.Trailer.
-	grpcStatus := res.Trailer.Get("Grpc-Status")
-	if grpcStatus == "" {
-		grpcStatus = res.Header.Get("Grpc-Status")
+	for _, opts := range [][]connect.ClientOption{
+		{connect.WithGRPC(), connect.WithSendGzip()},
+		{connect.WithSendGzip()},
+	} {
+		client := elizav1connect.NewElizaServiceClient(httpClient, ts.URL, opts...)
+		resp, err := client.Say(context.Background(), connect.NewRequest(&elizav1.SayRequest{Sentence: "hello from gzip"}))
+		require.NoError(t, err)
+		assert.NotEmpty(t, resp.Msg.Sentence)
 	}
-	assert.Equal(t, "0", grpcStatus)
 }
 
-func TestHandler_DeflateRequest_UnaryResponse(t *testing.T) {
-	handler := newElizaHandler(t)
-
-	var body bytes.Buffer
-	writeMsgDeflate(t, &body, &elizav1.SayRequest{Sentence: "hello from deflate"})
-
-	req := httptest.NewRequest("POST", "/connectrpc.eliza.v1.ElizaService/Say", &body)
-	req.Header.Set("Content-Type", "application/grpc")
-	req.Header.Set("grpc-encoding", "deflate")
-
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-
-	res := w.Result()
-	assert.Equal(t, http.StatusOK, res.StatusCode)
-	assert.Equal(t, "deflate", res.Header.Get("grpc-encoding"))
-	assert.Contains(t, res.Header.Get("grpc-accept-encoding"), "deflate")
-
-	respBytes, ok := readDeflateFrame(t, res.Body)
-	require.True(t, ok)
-
-	var respMsg elizav1.SayResponse
-	require.NoError(t, proto.Unmarshal(respBytes, &respMsg))
-}
-
-// TestHandler_UncompressedRequest_UncompressedResponse verifies the baseline
-// (no grpc-encoding header) still works correctly after the changes.
-func TestHandler_UncompressedRequest_UncompressedResponse(t *testing.T) {
-	handler := newElizaHandler(t)
-
-	var body bytes.Buffer
-	writeMsg(t, &body, &elizav1.SayRequest{Sentence: "hello plain"})
-
-	req := httptest.NewRequest("POST", "/connectrpc.eliza.v1.ElizaService/Say", &body)
-	req.Header.Set("Content-Type", "application/grpc")
-	// No grpc-encoding header.
-
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-
-	res := w.Result()
-	assert.Equal(t, http.StatusOK, res.StatusCode)
-	assert.Empty(t, res.Header.Get("grpc-encoding"), "no grpc-encoding header expected")
-	// gRPC status trailer should be OK (0).
-	grpcStatus := res.Trailer.Get("Grpc-Status")
-	if grpcStatus == "" {
-		grpcStatus = res.Header.Get("Grpc-Status")
-	}
-	assert.Equal(t, "0", grpcStatus)
-}
-
-// TestHandler_GzipRequest_StreamingResponse sends a gzip-compressed streaming
-// (bidi) request and verifies the handler decodes each frame correctly and
-// responds with gzip-compressed frames.
+// TestHandler_GzipRequest_StreamingResponse sends gzip-compressed streaming
+// frames and verifies the server decodes each one.
 func TestHandler_GzipRequest_StreamingResponse(t *testing.T) {
-	file := elizav1.File_connectrpc_eliza_v1_eliza_proto
-	service := file.Services().ByName("ElizaService")
-	require.NotNil(t, service)
-
-	validator, err := protovalidate.New()
-	require.NoError(t, err)
-
-	logger := fauxlog.NewLogger()
-	logCh, unsubscribe := logger.Subscribe()
+	srv, ts, httpClient := setupTestServer(t, ServerOpts{}, elizav1.File_connectrpc_eliza_v1_eliza_proto)
+	logCh, unsubscribe := srv.logger.Subscribe()
 	defer unsubscribe()
 
-	s := &mockServer{
-		ServiceRegistry: mustNewRegistry(),
-		StubDatabase:    stubs.NewStubDatabase(),
-		logger:          logger,
+	client := elizav1connect.NewElizaServiceClient(httpClient, ts.URL, connect.WithGRPC(), connect.WithSendGzip())
+	stream := client.Converse(context.Background())
+	require.NoError(t, stream.Send(&elizav1.ConverseRequest{Sentence: "ping gzip 1"}))
+	require.NoError(t, stream.Send(&elizav1.ConverseRequest{Sentence: "ping gzip 2"}))
+	require.NoError(t, stream.CloseRequest())
+
+	resp, err := stream.Receive()
+	require.NoError(t, err)
+	assert.NotEmpty(t, resp.Sentence)
+	for {
+		if _, err := stream.Receive(); err != nil {
+			require.True(t, errors.Is(err, io.EOF), "expected clean end of stream, got %v", err)
+			break
+		}
 	}
+	require.NoError(t, stream.CloseResponse())
 
-	handler := NewHandler(service, fauxrpc.NewFauxFaker(), validator, s, logger, 20)
-
-	pr, pw := io.Pipe()
-	req := httptest.NewRequest("POST", "/connectrpc.eliza.v1.ElizaService/Converse", pr)
-	req.Header.Set("Content-Type", "application/grpc")
-	req.Header.Set("grpc-encoding", "gzip")
-
-	w := httptest.NewRecorder()
-
-	done := make(chan struct{})
-	go func() {
-		handler.ServeHTTP(w, req)
-		close(done)
-	}()
-
-	writeMsgGzip(t, pw, &elizav1.ConverseRequest{Sentence: "ping gzip 1"})
-	writeMsgGzip(t, pw, &elizav1.ConverseRequest{Sentence: "ping gzip 2"})
-	require.NoError(t, pw.Close())
-
-	<-done
-
-	res := w.Result()
-	assert.Equal(t, "gzip", res.Header.Get("grpc-encoding"))
-
-	// Should have received at least one compressed response frame.
-	respBytes, ok := readGzipFrame(t, res.Body)
-	require.True(t, ok)
-	var respMsg elizav1.ConverseResponse
-	require.NoError(t, proto.Unmarshal(respBytes, &respMsg))
-
-	// Verify logs captured both gzip-decoded request frames.
 	select {
 	case entry := <-logCh:
 		assert.Len(t, entry.RequestFrames, 2)
-	default:
-		t.Fatal("expected log entry")
+	case <-time.After(5 * time.Second):
+		t.Fatal("timeout waiting for log entry")
 	}
-}
-
-// TestHandler_GzipRequest_InvalidPayload sends a frame with flag=1 but
-// invalid gzip bytes and expects the handler to return a gRPC error status.
-func TestHandler_GzipRequest_InvalidPayload(t *testing.T) {
-	handler := newElizaHandler(t)
-
-	// Craft a frame with compressed=1 but garbage payload.
-	garbage := []byte("this is not gzip")
-	prefix := make([]byte, 5)
-	prefix[0] = 1
-	binary.BigEndian.PutUint32(prefix[1:], uint32(len(garbage)))
-	body := append(prefix, garbage...)
-
-	req := httptest.NewRequest("POST", "/connectrpc.eliza.v1.ElizaService/Say",
-		bytes.NewReader(body))
-	req.Header.Set("Content-Type", "application/grpc")
-	req.Header.Set("grpc-encoding", "gzip")
-
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-
-	res := w.Result()
-	// The handler must return a non-OK gRPC status — not a 200 with empty body.
-	grpcStatus := res.Header.Get("Grpc-Status")
-	assert.NotEqual(t, "0", grpcStatus, "expected non-OK grpc status for invalid gzip payload")
-	assert.NotEmpty(t, grpcStatus)
-	// Specifically, this should be NotFound (4) or Internal (13), not OK (0).
-	assert.NotEqual(t, codes.OK.String(), grpcStatus)
-}
-
-func TestHandler_UnsupportedCompressedRequestEncoding(t *testing.T) {
-	handler := newElizaHandler(t)
-
-	var body bytes.Buffer
-	writeMsgGzip(t, &body, &elizav1.SayRequest{Sentence: "unsupported encoding"})
-
-	req := httptest.NewRequest("POST", "/connectrpc.eliza.v1.ElizaService/Say", &body)
-	req.Header.Set("Content-Type", "application/grpc")
-	req.Header.Set("grpc-encoding", "br")
-
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-
-	res := w.Result()
-	assert.Equal(t, "12", res.Header.Get("Grpc-Status"))
-	assert.Contains(t, res.Header.Get("Grpc-Message"), "unsupported grpc-encoding")
-	assert.Equal(t, "gzip,deflate", res.Header.Get("grpc-accept-encoding"))
-	assert.NotContains(t, res.Header.Get("grpc-accept-encoding"), "br")
-}
-
-func TestHandler_CompressedRequest_MissingGrpcEncoding(t *testing.T) {
-	handler := newElizaHandler(t)
-
-	var body bytes.Buffer
-	writeMsgGzip(t, &body, &elizav1.SayRequest{Sentence: "missing encoding"})
-
-	req := httptest.NewRequest("POST", "/connectrpc.eliza.v1.ElizaService/Say", &body)
-	req.Header.Set("Content-Type", "application/grpc")
-
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-
-	res := w.Result()
-	assert.Equal(t, "13", res.Header.Get("Grpc-Status"))
-	assert.Contains(t, res.Header.Get("Grpc-Message"), "compressed message missing grpc-encoding")
-	assert.Equal(t, "gzip,deflate", res.Header.Get("grpc-accept-encoding"))
-}
-
-func TestHandler_CompressedRequest_IdentityGrpcEncoding(t *testing.T) {
-	handler := newElizaHandler(t)
-
-	var body bytes.Buffer
-	writeMsgGzip(t, &body, &elizav1.SayRequest{Sentence: "identity encoding"})
-
-	req := httptest.NewRequest("POST", "/connectrpc.eliza.v1.ElizaService/Say", &body)
-	req.Header.Set("Content-Type", "application/grpc")
-	req.Header.Set("grpc-encoding", "identity")
-
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-
-	res := w.Result()
-	assert.Equal(t, "13", res.Header.Get("Grpc-Status"))
-	assert.Contains(t, res.Header.Get("Grpc-Message"), "compressed message missing grpc-encoding")
-}
-
-func TestHandler_DeflateRequest_RejectsRawDeflatePayload(t *testing.T) {
-	handler := newElizaHandler(t)
-
-	var body bytes.Buffer
-	writeMsgRawDeflate(t, &body, &elizav1.SayRequest{Sentence: "raw deflate"})
-
-	req := httptest.NewRequest("POST", "/connectrpc.eliza.v1.ElizaService/Say",
-		bytes.NewReader(body.Bytes()))
-	req.Header.Set("Content-Type", "application/grpc")
-	req.Header.Set("grpc-encoding", "deflate")
-
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-
-	res := w.Result()
-	grpcStatus := res.Header.Get("Grpc-Status")
-	assert.NotEqual(t, "0", grpcStatus, "expected non-OK grpc status for raw deflate payload")
-	assert.NotEmpty(t, grpcStatus)
 }

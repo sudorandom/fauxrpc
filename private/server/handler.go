@@ -1,7 +1,7 @@
 package server
 
 import (
-	"encoding/base64"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,345 +9,395 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"buf.build/go/protovalidate"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connectproto"
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/google/uuid"
 	"github.com/sudorandom/fauxrpc"
 	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
-	"github.com/sudorandom/fauxrpc/private/grpc"
 	fauxlog "github.com/sudorandom/fauxrpc/private/log"
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"github.com/sudorandom/fauxrpc/private/stubs"
 	"github.com/sudorandom/fauxrpc/protocel"
 	"golang.org/x/sync/errgroup"
 	statuspb "google.golang.org/genproto/googleapis/rpc/status"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
-	"google.golang.org/protobuf/runtime/protoiface"
+	"google.golang.org/protobuf/types/descriptorpb"
 )
 
-const maxMessageSize = 4 * 1024 * 1024
+// restProtocolName is the CallInfo.Protocol value vanguard sets for REST
+// calls. Vanguard's REST codec decodes into plain proto messages, so the
+// requestMessage fast path only applies to the other protocols.
+const restProtocolName = "rest"
 
-var bufferPool = sync.Pool{
-	New: func() any {
-		b := make([]byte, maxMessageSize)
-		return &b
-	},
+type methodHandler struct {
+	method   protoreflect.MethodDescriptor
+	faker    fauxrpc.ProtoFaker
+	validate protovalidate.Validator
+	server   Server
+	logger   *fauxlog.Logger
+	maxDepth int
 }
 
-func NewHandler(service protoreflect.ServiceDescriptor, faker fauxrpc.ProtoFaker, validate protovalidate.Validator, s Server, logger *fauxlog.Logger, maxDepth int) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		startTime := time.Now()
-		s.IncrementTotalRequests()
-
-		var finalStatus *status.Status
-		var requestBody releasableMessage
-		var responseBody proto.Message
-		var stubsUsed []fauxrpc.StubEntry
-		reqFrameTracker := NewFrameTracker(10)
-		resFrameTracker := NewFrameTracker(10)
-
-		parts := strings.Split(r.URL.Path, "/")
-		var serviceName, methodName string
-		if len(parts) == 3 {
-			serviceName = parts[1]
-			methodName = parts[2]
+// buildMethods returns one connect.Method per RPC of the service, each backed
+// by a handler that serves stub or generated responses without generated
+// code.
+func buildMethods(
+	sd protoreflect.ServiceDescriptor,
+	faker fauxrpc.ProtoFaker,
+	validate protovalidate.Validator,
+	s Server,
+	logger *fauxlog.Logger,
+	maxDepth int,
+) []connect.Method {
+	methods := sd.Methods()
+	out := make([]connect.Method, 0, methods.Len())
+	for i := 0; i < methods.Len(); i++ {
+		md := methods.Get(i)
+		handler := &methodHandler{
+			method:   md,
+			faker:    faker,
+			validate: validate,
+			server:   s,
+			logger:   logger,
+			maxDepth: maxDepth,
 		}
-
-		defer func() {
-			duration := time.Since(startTime)
-
-			clientProtocol := "unknown"
-			if protocol, ok := r.Context().Value(clientProtocolKey).(string); ok {
-				clientProtocol = protocol
-			}
-
-			var reqHeaders json.RawMessage
-			if headers, ok := r.Context().Value(requestHeadersKey).([]byte); ok {
-				reqHeaders = headers
-			}
-
-			resHeaders, _ := json.Marshal(w.Header())
-
-			var reqBodyBytes []byte
-			if requestBody != nil {
-				reqBodyBytes, _ = protojson.Marshal(requestBody)
-			}
-
-			var resBodyBytes []byte
-			if responseBody != nil {
-				resBodyBytes, _ = protojson.Marshal(responseBody)
-			}
-
-			code := codes.Unknown
-			if finalStatus != nil {
-				code = finalStatus.Code()
-			}
-
-			if code != codes.OK {
-				if statusDetailsBin := w.Header().Get("Grpc-Status-Details-Bin"); statusDetailsBin != "" {
-					decoded, err := base64.StdEncoding.DecodeString(statusDetailsBin)
-					if err == nil {
-						st := &statuspb.Status{}
-						if err := proto.Unmarshal(decoded, st); err == nil {
-							jsonBytes, err := protojson.Marshal(st)
-							if err == nil {
-								resBodyBytes = jsonBytes
-							}
-						}
-					}
-				}
-			}
-			logger.Log(&fauxlog.LogEntry{
-				ID:              uuid.New().String(),
-				Timestamp:       startTime,
-				Service:         serviceName,
-				Method:          methodName,
-				ClientProtocol:  clientProtocol,
-				Status:          int(code),
-				Duration:        duration,
-				RequestHeaders:  reqHeaders,
-				ResponseHeaders: resHeaders,
-				RequestBody:     reqBodyBytes,
-				ResponseBody:    resBodyBytes,
-				RequestFrames:   reqFrameTracker.Frames(),
-				ResponseFrames:  resFrameTracker.Frames(),
-				StubsUsed:       stubsUsed,
-			})
-			if requestBody != nil {
-				requestBody.Release()
-			}
-		}()
-
-		w.Header().Set("Trailer", "Grpc-Status,Grpc-Message,Grpc-Status-Details-Bin")
-		w.Header().Add("Content-Type", "application/grpc")
-		setSupportedRequestCompression(w)
-
-		writeMessage := grpc.WriteGRPCMessage
-		if enc := responseCompressionEncoding(r); enc != "" {
-			w.Header().Set("grpc-encoding", enc)
-			writeMessage = func(w io.Writer, msg []byte) error {
-				return grpc.WriteGRPCMessageCompressed(w, msg, enc)
-			}
-		}
-		if len(parts) != 3 {
-			s.IncrementErrors()
-			finalStatus = status.New(codes.NotFound, "")
-			grpcWriteStatus(w, finalStatus)
-			return
-		}
-
-		if serviceName != string(service.FullName()) {
-			s.IncrementErrors()
-			finalStatus = status.New(codes.NotFound, "service not found")
-			grpcWriteStatus(w, finalStatus)
-			return
-		}
-		method := service.Methods().ByName(protoreflect.Name(methodName))
-		if method == nil {
-			s.IncrementErrors()
-			finalStatus = status.New(codes.NotFound, "method not found")
-			grpcWriteStatus(w, finalStatus)
-			return
-		}
-
-		var isFallback bool
-		if s.GetProxyTo() != "" {
-			err := handleProxy(r.Context(), w, r, s, method, serviceName, methodName, reqFrameTracker, resFrameTracker, &requestBody, &responseBody)
-			if err != nil {
-				if isUnimplementedError(err) {
-					isFallback = true
-				} else {
-					s.IncrementErrors()
-					if st, ok := status.FromError(err); ok {
-						finalStatus = st
-					} else {
-						finalStatus = status.New(codes.Internal, err.Error())
-					}
-					grpcWriteStatus(w, finalStatus)
-					return
-				}
-			} else {
-				finalStatus = status.New(codes.OK, "")
-				grpcWriteStatus(w, finalStatus)
-				return
-			}
-		}
-
-		defer func() {
-			_ = r.Body.Close()
-		}()
-
-		readMessageBuf := bufferPool.Get().(*[]byte)
-		defer bufferPool.Put(readMessageBuf)
-		requestEncoding := strings.ToLower(strings.TrimSpace(r.Header.Get("grpc-encoding")))
-
-		readMessage := func() (releasableMessage, *status.Status) {
-			size, err := grpc.ReadGRPCMessageWithEncoding(r.Body, *readMessageBuf, requestEncoding)
-			if err != nil {
-				if errors.Is(err, io.EOF) {
-					return nil, nil
-				}
-				s.IncrementErrors()
-				return nil, grpcStatusFromReadError(err)
-			}
-
-			msg, err := unmarshalRequest(method.Input(), (*readMessageBuf)[:size])
-			if err != nil {
-				s.IncrementErrors()
-				return nil, status.New(codes.NotFound, err.Error())
-			}
-			if err := validate.Validate(msg); err != nil {
-				s.IncrementErrors()
-				grpcErr := status.New(codes.InvalidArgument, err.Error())
-				if validationErr := new(protovalidate.ValidationError); errors.As(err, &validationErr) {
-					grpcErr, err = grpcErr.WithDetails(validationErr.ToProto())
-					if err != nil {
-						slog.Error("error serializing validation details", "error", err)
-					}
-				}
-				return msg, grpcErr
-			}
-			return msg, nil
-		}
-
-		eg, ctx := errgroup.WithContext(r.Context())
-
-		// Handle reading requests
-		var input proto.Message
-		if isFallback {
-			input = requestBody
-		} else {
-			if method.IsStreamingClient() {
-				// completely ignore the body. Maybe later we'll need it as input to the response message
-				eg.Go(func() error {
-					for {
-						msg, st := readMessage()
-						if st != nil {
-							return st.Err()
-						}
-						if msg == nil {
-							return nil
-						}
-						reqFrameTracker.Add(msg)
-						msg.Release()
-					}
-				})
-			} else {
-				var st *status.Status
-				requestBody, st = readMessage()
-				input = requestBody
-				if st != nil {
-					s.IncrementErrors()
-					finalStatus = st
-					grpcWriteStatus(w, st)
-					return
-				}
-			}
-		}
-
-		// Handle writing response
-		eg.Go(func() error {
-			stubFaker := stubs.NewStubFaker(s)
-			celCtx := &protocel.CELContext{
-				MethodDescriptor: method,
-				Req:              input,
-			}
-			stubEntry, err := stubFaker.FindStub(ctx, celCtx, method.Output())
-			if err != nil {
-				return status.New(codes.Internal, err.Error()).Err()
-			}
-
-			if stubEntry != nil && stubEntry.Stream != nil {
-				stubsUsed = append(stubsUsed, stubEntry.Key)
-				setFauxRPCHeaders(w, stubsUsed)
-				return stubs.ExecuteStream(ctx, stubEntry.Stream, method.Output(), celCtx, func(msg proto.Message) error {
-					b, err := proto.Marshal(msg)
-					if err != nil {
-						return status.New(codes.Internal, err.Error()).Err()
-					}
-					if err := writeMessage(w, b); err != nil {
-						return err
-					}
-					resFrameTracker.Add(msg)
-					return nil
-				}, nil)
-			}
-
-			out := registry.NewMessage(method.Output()).Interface()
-			genOpts := fauxrpc.GenOptions{
-				MaxDepth:     maxDepth,
-				ViolateRules: s.GetViolateRules(),
-				Context: protocel.WithCELContext(ctx, &protocel.CELContext{
-					MethodDescriptor: method,
-					Req:              input,
-				}),
-				StubRecorder: func(stub fauxrpc.StubEntry) {
-					stubsUsed = append(stubsUsed, stub)
-				},
-				// Where the extensions of each generated message are found.
-				// Without it they stay unset, because a message descriptor
-				// cannot name the extensions declared against it.
-				Extensions: s.Types(),
-			}
-			if s.GetStaticSeed() {
-				genOpts.Faker = gofakeit.New(staticSeedForMethod(method.FullName()))
-			}
-			if err := faker.SetDataOnMessage(out, genOpts); err != nil {
-				var stubErr *stubs.StatusError
-				s.IncrementErrors()
-				switch {
-				case errors.Is(err, fauxrpc.ErrNotFaked):
-					// If we can't fake it, we should return the empty message instead of an error
-					// This ensures the client gets a valid response structure
-					slog.Warn("Failed to fake response data, returning empty message", "method", method.FullName(), "error", err)
-				case errors.As(err, &stubErr):
-					return grpcStatusFromError(stubErr.StubsError).Err()
-				default:
-					return status.New(codes.Internal, err.Error()).Err()
-				}
-			}
-			responseBody = out
-
-			b, err := proto.Marshal(out)
-			if err != nil {
-				s.IncrementErrors()
-				slog.Error(fmt.Sprintf("error marshalling msg: %s", err))
-				return status.New(codes.Internal, err.Error()).Err()
-			}
-			setFauxRPCHeaders(w, stubsUsed)
-			return writeMessage(w, b)
+		out = append(out, connect.Method{
+			Spec:    specForMethod(md),
+			Handler: handler.handle,
 		})
+	}
+	return out
+}
 
-		// Write response
-		if err := eg.Wait(); err != nil {
-			s.IncrementErrors()
-			var stubErr *stubs.StatusError
-			if errors.As(err, &stubErr) {
-				finalStatus = grpcStatusFromError(stubErr.StubsError)
-				grpcWriteStatus(w, finalStatus)
-				return
-			} else if st, ok := status.FromError(err); ok {
-				finalStatus = st
-				grpcWriteStatus(w, finalStatus)
-				return
-			} else {
-				finalStatus = status.New(codes.Internal, err.Error())
-				grpcWriteStatus(w, finalStatus)
-				return
+func specForMethod(md protoreflect.MethodDescriptor) connect.Spec {
+	streamType := connect.StreamTypeUnary
+	if md.IsStreamingClient() {
+		streamType |= connect.StreamTypeClient
+	}
+	if md.IsStreamingServer() {
+		streamType |= connect.StreamTypeServer
+	}
+	var idempotency connect.IdempotencyLevel
+	if opts, ok := md.Options().(*descriptorpb.MethodOptions); ok && opts != nil {
+		idempotency = connect.IdempotencyLevel(opts.GetIdempotencyLevel())
+	}
+	return connect.Spec{
+		Procedure:        fmt.Sprintf("/%s/%s", md.Parent().FullName(), md.Name()),
+		StreamType:       streamType,
+		IdempotencyLevel: idempotency,
+		Schema:           md,
+	}
+}
+
+func (h *methodHandler) handle(ctx context.Context, _ connect.Spec, stream connect.ServerStream) (retErr error) {
+	startTime := time.Now()
+	h.server.IncrementTotalRequests()
+	info, _ := connect.CallInfoForServerContext(ctx)
+
+	var requestBody releasableMessage
+	var responseBody proto.Message
+	var stubsUsed []fauxrpc.StubEntry
+	reqFrameTracker := NewFrameTracker(10)
+	resFrameTracker := NewFrameTracker(10)
+
+	defer func() {
+		h.logCall(startTime, info, requestBody, responseBody, stubsUsed, reqFrameTracker, resFrameTracker, retErr)
+		if requestBody != nil {
+			requestBody.Release()
+		}
+	}()
+
+	var isFallback bool
+	if h.server.GetProxyTo() != "" {
+		err := h.handleProxy(ctx, info, stream, reqFrameTracker, resFrameTracker, &requestBody, &responseBody)
+		if err == nil {
+			return nil
+		}
+		if !isUnimplementedError(err) {
+			h.server.IncrementErrors()
+			return err
+		}
+		isFallback = true
+	}
+
+	eg, egCtx := errgroup.WithContext(ctx)
+
+	// Handle reading requests
+	var input proto.Message
+	switch {
+	case isFallback:
+		if requestBody != nil {
+			input = requestBody
+		}
+	case h.method.IsStreamingClient():
+		// Drain the request stream concurrently with the response; the
+		// frames only feed the request log.
+		eg.Go(func() error {
+			for {
+				msg, err := h.receive(info, stream)
+				if err != nil {
+					if errors.Is(err, io.EOF) {
+						return nil
+					}
+					return err
+				}
+				if err := h.validateMessage(msg); err != nil {
+					msg.Release()
+					return err
+				}
+				reqFrameTracker.Add(msg)
+				msg.Release()
+			}
+		})
+	default:
+		msg, err := h.receive(info, stream)
+		if err != nil && !errors.Is(err, io.EOF) {
+			h.server.IncrementErrors()
+			return err
+		}
+		if msg != nil {
+			requestBody = msg
+			input = msg
+			if err := h.validateMessage(msg); err != nil {
+				h.server.IncrementErrors()
+				return err
 			}
 		}
-		finalStatus = status.New(codes.OK, "")
-		grpcWriteStatus(w, finalStatus)
+	}
+
+	// Handle writing the response
+	eg.Go(func() error {
+		stubFaker := stubs.NewStubFaker(h.server)
+		celCtx := &protocel.CELContext{
+			MethodDescriptor: h.method,
+			Req:              input,
+		}
+		stubEntry, err := stubFaker.FindStub(egCtx, celCtx, h.method.Output())
+		if err != nil {
+			return connect.NewError(connect.CodeInternal, err.Error())
+		}
+
+		if stubEntry != nil && stubEntry.Stream != nil {
+			stubsUsed = append(stubsUsed, stubEntry.Key)
+			setFauxRPCHeaders(info, stubsUsed)
+			return stubs.ExecuteStream(egCtx, stubEntry.Stream, h.method.Output(), celCtx, func(msg proto.Message) error {
+				if err := stream.Send(msg); err != nil {
+					return err
+				}
+				resFrameTracker.Add(msg)
+				return nil
+			}, nil)
+		}
+
+		out := registry.NewMessage(h.method.Output()).Interface()
+		genOpts := fauxrpc.GenOptions{
+			MaxDepth:     h.maxDepth,
+			ViolateRules: h.server.GetViolateRules(),
+			Context: protocel.WithCELContext(egCtx, &protocel.CELContext{
+				MethodDescriptor: h.method,
+				Req:              input,
+			}),
+			StubRecorder: func(stub fauxrpc.StubEntry) {
+				stubsUsed = append(stubsUsed, stub)
+			},
+			// Where the extensions of each generated message are found.
+			// Without it they stay unset, because a message descriptor
+			// cannot name the extensions declared against it.
+			Extensions: h.server.Types(),
+		}
+		if h.server.GetStaticSeed() {
+			genOpts.Faker = gofakeit.New(staticSeedForMethod(h.method.FullName()))
+		}
+		if err := h.faker.SetDataOnMessage(out, genOpts); err != nil {
+			var stubErr *stubs.StatusError
+			switch {
+			case errors.Is(err, fauxrpc.ErrNotFaked):
+				// If we can't fake it, we should return the empty message instead of an error
+				// This ensures the client gets a valid response structure
+				slog.Warn("Failed to fake response data, returning empty message", "method", h.method.FullName(), "error", err)
+			case errors.As(err, &stubErr):
+				return connectErrorFromStub(stubErr.StubsError)
+			default:
+				return connect.NewError(connect.CodeInternal, err.Error())
+			}
+		}
+		responseBody = out
+		setFauxRPCHeaders(info, stubsUsed)
+		if err := stream.Send(out); err != nil {
+			return err
+		}
+		resFrameTracker.Add(out)
+		return nil
 	})
+
+	if err := eg.Wait(); err != nil {
+		h.server.IncrementErrors()
+		var stubErr *stubs.StatusError
+		if errors.As(err, &stubErr) {
+			return connectErrorFromStub(stubErr.StubsError)
+		}
+		return err
+	}
+	return nil
+}
+
+// receive reads the next request message from the stream. Everything served
+// by connecthttp goes through this package's codecs, which understand the
+// requestMessage fast path; vanguard's REST codec needs a plain message.
+func (h *methodHandler) receive(info *connect.CallInfo, stream connect.ServerStream) (releasableMessage, error) {
+	if info != nil && info.Protocol != restProtocolName {
+		req := &requestMessage{desc: h.method.Input()}
+		if err := stream.Receive(req); err != nil {
+			return nil, err
+		}
+		return req.msg, nil
+	}
+	msg := registry.NewMessage(h.method.Input()).Interface()
+	if err := stream.Receive(msg); err != nil {
+		return nil, err
+	}
+	return plainMessage{Message: msg}, nil
+}
+
+func (h *methodHandler) validateMessage(msg proto.Message) error {
+	if h.validate == nil {
+		return nil
+	}
+	err := h.validate.Validate(msg)
+	if err == nil {
+		return nil
+	}
+	connectErr := connect.NewError(connect.CodeInvalidArgument, err.Error())
+	if validationErr := new(protovalidate.ValidationError); errors.As(err, &validationErr) {
+		if detail, detailErr := connectproto.NewErrorDetail(validationErr.ToProto()); detailErr == nil {
+			connectErr = connectErr.WithDetail(detail)
+		} else {
+			slog.Error("error serializing validation details", "error", detailErr)
+		}
+	}
+	return connectErr
+}
+
+func (h *methodHandler) logCall(
+	startTime time.Time,
+	info *connect.CallInfo,
+	requestBody releasableMessage,
+	responseBody proto.Message,
+	stubsUsed []fauxrpc.StubEntry,
+	reqFrameTracker, resFrameTracker *FrameTracker,
+	retErr error,
+) {
+	duration := time.Since(startTime)
+
+	clientProtocol := "unknown"
+	var reqHeaders, resHeaders json.RawMessage
+	if info != nil {
+		clientProtocol = displayProtocol(info.Protocol)
+		reqHeaders, _ = json.Marshal(maskHeaders(httpHeaderFromConnect(info.RequestHeader())))
+		merged := httpHeaderFromConnect(info.ResponseHeader())
+		for key, values := range info.ResponseTrailer().All() {
+			for _, value := range values {
+				merged.Add(key, value)
+			}
+		}
+		resHeaders, _ = json.Marshal(merged)
+	}
+
+	var reqBodyBytes []byte
+	if requestBody != nil {
+		reqBodyBytes, _ = protojson.Marshal(requestBody)
+	}
+	var resBodyBytes []byte
+	if responseBody != nil {
+		resBodyBytes, _ = protojson.Marshal(responseBody)
+	}
+
+	code := 0 // OK
+	if retErr != nil {
+		connectErr := asConnectError(retErr)
+		code = int(connectErr.Code())
+		st := &statuspb.Status{
+			Code:    int32(code), //nolint:gosec // connect codes are small
+			Message: connectErr.Message(),
+		}
+		for _, detail := range connectErr.Details() {
+			st.Details = append(st.Details, connectproto.ErrorDetailToAny(detail))
+		}
+		if jsonBytes, err := protojson.Marshal(st); err == nil {
+			resBodyBytes = jsonBytes
+		}
+	}
+
+	h.logger.Log(&fauxlog.LogEntry{
+		ID:              uuid.New().String(),
+		Timestamp:       startTime,
+		Service:         string(h.method.Parent().FullName()),
+		Method:          string(h.method.Name()),
+		ClientProtocol:  clientProtocol,
+		Status:          code,
+		Duration:        duration,
+		RequestHeaders:  reqHeaders,
+		ResponseHeaders: resHeaders,
+		RequestBody:     reqBodyBytes,
+		ResponseBody:    resBodyBytes,
+		RequestFrames:   reqFrameTracker.Frames(),
+		ResponseFrames:  resFrameTracker.Frames(),
+		StubsUsed:       stubsUsed,
+	})
+}
+
+func displayProtocol(protocol string) string {
+	switch protocol {
+	case connect.ProtocolNameGRPC:
+		return "gRPC"
+	case connect.ProtocolNameGRPCWeb:
+		return "gRPC-Web"
+	case connect.ProtocolNameConnect:
+		return "ConnectRPC"
+	case restProtocolName:
+		return "HTTP"
+	default:
+		return "unknown"
+	}
+}
+
+func httpHeaderFromConnect(header *connect.Header) http.Header {
+	out := make(http.Header)
+	if header == nil {
+		return out
+	}
+	for key, values := range header.All() {
+		for _, value := range values {
+			out.Add(key, value)
+		}
+	}
+	return out
+}
+
+func asConnectError(err error) *connect.Error {
+	connectErr := new(connect.Error)
+	if errors.As(err, &connectErr) {
+		return connectErr
+	}
+	return connect.NewError(connect.CodeUnknown, err.Error())
+}
+
+func connectErrorFromStub(e *stubsv1.Error) *connect.Error {
+	connectErr := connect.NewError(connect.Code(e.GetCode()), e.GetMessage())
+	for _, detail := range e.GetDetails() {
+		connectErr = connectErr.WithDetail(&connect.ErrorDetail{
+			Type:  strings.TrimPrefix(detail.GetTypeUrl(), "type.googleapis.com/"),
+			Value: detail.GetValue(),
+		})
+	}
+	return connectErr
 }
 
 func staticSeedForMethod(method protoreflect.FullName) uint64 {
@@ -356,42 +406,13 @@ func staticSeedForMethod(method protoreflect.FullName) uint64 {
 	return hasher.Sum64()
 }
 
-func grpcWriteStatus(w http.ResponseWriter, st *status.Status) {
-	w.Header().Set("Grpc-Status", strconv.FormatInt(int64(st.Code()), 10))
-	w.Header().Set("Grpc-Message", st.Message())
-
-	p := st.Proto()
-	if len(p.Details) == 0 {
+func setFauxRPCHeaders(info *connect.CallInfo, stubsUsed []fauxrpc.StubEntry) {
+	if info == nil {
 		return
 	}
-
-	if details, err := proto.Marshal(p); err != nil {
-		slog.Error("error serializing validation details", "error", err)
-	} else {
-		w.Header().Set("Grpc-Status-Details-Bin", base64.StdEncoding.EncodeToString(details))
-	}
-}
-
-func grpcStatusFromError(e *stubsv1.Error) *status.Status {
-	status := status.New(codes.Code(e.GetCode()), e.GetMessage())
-	if len(e.GetDetails()) > 0 {
-		details := make([]protoiface.MessageV1, len(e.GetDetails()))
-		for i, detail := range e.GetDetails() {
-			details[i] = detail
-		}
-		s, err := status.WithDetails(details...)
-		if err != nil {
-			slog.Warn("unable to add details to status", "error", err)
-		} else {
-			status = s
-		}
-	}
-	return status
-}
-
-func setFauxRPCHeaders(w http.ResponseWriter, stubsUsed []fauxrpc.StubEntry) {
+	header := info.ResponseHeader()
 	if len(stubsUsed) > 0 {
-		w.Header().Set("x-fauxrpc-source", "stub")
+		header.Set("x-fauxrpc-source", "stub")
 		var ids []string
 		for _, stub := range stubsUsed {
 			if id := stub.GetID(); id != "" {
@@ -399,9 +420,9 @@ func setFauxRPCHeaders(w http.ResponseWriter, stubsUsed []fauxrpc.StubEntry) {
 			}
 		}
 		if len(ids) > 0 {
-			w.Header().Set("x-fauxrpc-mock-ids", strings.Join(ids, ", "))
+			header.Set("x-fauxrpc-mock-ids", strings.Join(ids, ", "))
 		}
 	} else {
-		w.Header().Set("x-fauxrpc-source", "fake")
+		header.Set("x-fauxrpc-source", "fake")
 	}
 }

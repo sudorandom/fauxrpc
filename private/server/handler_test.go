@@ -1,155 +1,24 @@
 package server
 
 import (
-	"bytes"
 	"context"
-	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
+	"buf.build/gen/go/connectrpc/eliza/connectrpc/go/connectrpc/eliza/v1/elizav1connect"
 	elizav1 "buf.build/gen/go/connectrpc/eliza/protocolbuffers/go/connectrpc/eliza/v1"
-	"buf.build/go/protovalidate"
+	"connectrpc.com/connect"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/sudorandom/fauxrpc"
-	fauxlog "github.com/sudorandom/fauxrpc/private/log"
-	"github.com/sudorandom/fauxrpc/private/metrics"
 	"github.com/sudorandom/fauxrpc/private/registry"
-	"github.com/sudorandom/fauxrpc/private/stub"
-	"github.com/sudorandom/fauxrpc/private/stubs"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
-
-type mockServer struct {
-	registry.ServiceRegistry
-	stubs.StubDatabase
-	logger     *fauxlog.Logger
-	staticSeed bool
-}
-
-func (m *mockServer) GetStats() *metrics.Stats                                     { return nil }
-func (m *mockServer) IncrementTotalRequests()                                      {}
-func (m *mockServer) IncrementErrors()                                             {}
-func (m *mockServer) GetLogger() *fauxlog.Logger                                   { return m.logger }
-func (m *mockServer) GetMaxDepth() int                                             { return 20 }
-func (m *mockServer) GetViolateRules() float64                                     { return 0 }
-func (m *mockServer) GetProxyTo() string                                           { return "" }
-func (m *mockServer) GetRecordDir() string                                         { return "" }
-func (m *mockServer) GetStaticSeed() bool                                          { return m.staticSeed }
-func (m *mockServer) GetProxyClient() *http.Client                                 { return nil }
-func (m *mockServer) OpenAPIRouterCount() int                                      { return 0 }
-func (m *mockServer) AddOpenAPISchema(ctx context.Context, pathOrURL string) error { return nil }
-func (m *mockServer) GetUnifiedRegistry() stub.Registry                            { return nil }
-func (m *mockServer) HasProtobufServices() bool                                    { return true }
-func (m *mockServer) HasOpenAPIRoutes() bool                                       { return true }
-
-func TestHandler_Logging_Streaming(t *testing.T) {
-	// Setup
-	logger := fauxlog.NewLogger()
-	logCh, unsubscribe := logger.Subscribe()
-	defer unsubscribe()
-
-	s := &mockServer{
-		ServiceRegistry: mustNewRegistry(),
-		StubDatabase:    stubs.NewStubDatabase(),
-		logger:          logger,
-	}
-
-	validator, err := protovalidate.New()
-	require.NoError(t, err)
-
-	faker := fauxrpc.NewFauxFaker()
-
-	// Eliza Service
-	file := elizav1.File_connectrpc_eliza_v1_eliza_proto
-	service := file.Services().ByName("ElizaService")
-	require.NotNil(t, service)
-
-	handler := NewHandler(service, faker, validator, s, logger, 20)
-
-	// Test Client Streaming (Converse is Bidi, so it counts as client streaming)
-	converseMethod := service.Methods().ByName("Converse")
-	require.NotNil(t, converseMethod)
-	require.True(t, converseMethod.IsStreamingClient())
-
-	// Create a pipe to simulate streaming body
-	pr, pw := io.Pipe()
-
-	req := httptest.NewRequest("POST", "/connectrpc.eliza.v1.ElizaService/Converse", pr)
-	req.Header.Set("Content-Type", "application/grpc")
-
-	w := httptest.NewRecorder()
-
-	// Start handler in goroutine
-	done := make(chan struct{})
-	go func() {
-		handler.ServeHTTP(w, req)
-		close(done)
-	}()
-
-	// Write some messages to the pipe
-	msg1 := &elizav1.ConverseRequest{Sentence: "Hello"}
-	writeMsg(t, pw, msg1)
-
-	msg2 := &elizav1.ConverseRequest{Sentence: "World"}
-	writeMsg(t, pw, msg2)
-
-	require.NoError(t, pw.Close())
-
-	<-done
-
-	// Verify logs
-	select {
-	case entry := <-logCh:
-		assert.Equal(t, "connectrpc.eliza.v1.ElizaService", entry.Service)
-		assert.Equal(t, "Converse", entry.Method)
-
-		assert.Len(t, entry.RequestFrames, 2)
-
-		var req1 map[string]interface{}
-		err := json.Unmarshal(entry.RequestFrames[0], &req1)
-		require.NoError(t, err)
-		assert.Equal(t, "Hello", req1["sentence"])
-
-		var req2 map[string]interface{}
-		err = json.Unmarshal(entry.RequestFrames[1], &req2)
-		require.NoError(t, err)
-		assert.Equal(t, "World", req2["sentence"])
-
-	case <-time.After(1 * time.Second):
-		t.Fatal("timeout waiting for log entry")
-	}
-}
-
-func TestHandler_StaticSeedProducesStableProtobufResponses(t *testing.T) {
-	logger := fauxlog.NewLogger()
-	s := &mockServer{
-		ServiceRegistry: mustNewRegistry(),
-		StubDatabase:    stubs.NewStubDatabase(),
-		logger:          logger,
-		staticSeed:      true,
-	}
-	validator, err := protovalidate.New()
-	require.NoError(t, err)
-	service := elizav1.File_connectrpc_eliza_v1_eliza_proto.Services().ByName("ElizaService")
-	handler := NewHandler(service, fauxrpc.NewFauxFaker(), validator, s, logger, 20)
-
-	request := func() []byte {
-		var body bytes.Buffer
-		writeMsg(t, &body, &elizav1.SayRequest{Sentence: "hello"})
-		req := httptest.NewRequest(http.MethodPost, "/connectrpc.eliza.v1.ElizaService/Say", &body)
-		req.Header.Set("Content-Type", "application/grpc")
-		response := httptest.NewRecorder()
-		handler.ServeHTTP(response, req)
-		return response.Body.Bytes()
-	}
-
-	assert.Equal(t, request(), request())
-}
 
 func mustNewRegistry() registry.ServiceRegistry {
 	r, err := registry.NewServiceRegistry()
@@ -159,82 +28,129 @@ func mustNewRegistry() registry.ServiceRegistry {
 	return r
 }
 
-func writeMsg(t *testing.T, w io.Writer, msg proto.Message) {
-	b, err := proto.Marshal(msg)
-	require.NoError(t, err)
+// setupTestServer builds a full FauxRPC server hosting the given files and
+// serves it over HTTP/1.1 and unencrypted HTTP/2, returning an HTTP client
+// that speaks both.
+func setupTestServer(tb testing.TB, opts ServerOpts, files ...protoreflect.FileDescriptor) (*server, *httptest.Server, *http.Client) {
+	tb.Helper()
+	reg := mustNewRegistry()
+	for _, fd := range files {
+		require.NoError(tb, reg.RegisterFile(fd))
+	}
+	if opts.Addr == "" {
+		opts.Addr = "127.0.0.1:0"
+	}
+	srv, err := NewServer(opts)
+	require.NoError(tb, err)
+	srv.ServiceRegistry = reg
 
-	// Prefix: 0 (not compressed) + 4 bytes length (big endian)
-	prefix := make([]byte, 5)
-	length := len(b)
-	prefix[1] = byte(length >> 24)
-	prefix[2] = byte(length >> 16)
-	prefix[3] = byte(length >> 8)
-	prefix[4] = byte(length)
+	mux, err := srv.Handler()
+	require.NoError(tb, err)
+	ts := httptest.NewUnstartedServer(mux)
+	ts.Config.Protocols = new(http.Protocols)
+	ts.Config.Protocols.SetHTTP1(true)
+	ts.Config.Protocols.SetUnencryptedHTTP2(true)
+	ts.Start()
+	tb.Cleanup(ts.Close)
 
-	_, err = w.Write(prefix)
-	require.NoError(t, err)
-	_, err = w.Write(b)
-	require.NoError(t, err)
+	tr := &http.Transport{}
+	tr.Protocols = new(http.Protocols)
+	tr.Protocols.SetUnencryptedHTTP2(true)
+	return srv, ts, &http.Client{Transport: tr}
 }
 
-func BenchmarkHandler_Streaming_Messages(b *testing.B) {
-	// Setup
-	logger := fauxlog.NewLogger()
-	s := &mockServer{
-		ServiceRegistry: mustNewRegistry(),
-		StubDatabase:    stubs.NewStubDatabase(),
-		logger:          logger,
-	}
+func TestHandler_Logging_Streaming(t *testing.T) {
+	srv, ts, httpClient := setupTestServer(t, ServerOpts{}, elizav1.File_connectrpc_eliza_v1_eliza_proto)
+	logCh, unsubscribe := srv.logger.Subscribe()
+	defer unsubscribe()
 
-	validator, err := protovalidate.New()
-	require.NoError(b, err)
+	client := elizav1connect.NewElizaServiceClient(httpClient, ts.URL, connect.WithGRPC())
+	stream := client.Converse(context.Background())
+	require.NoError(t, stream.Send(&elizav1.ConverseRequest{Sentence: "Hello"}))
+	require.NoError(t, stream.Send(&elizav1.ConverseRequest{Sentence: "World"}))
+	require.NoError(t, stream.CloseRequest())
 
-	faker := fauxrpc.NewFauxFaker()
-
-	// Eliza Service
-	file := elizav1.File_connectrpc_eliza_v1_eliza_proto
-	service := file.Services().ByName("ElizaService")
-	require.NotNil(b, service)
-
-	handler := NewHandler(service, faker, validator, s, logger, 20)
-
-	// Create a pipe to simulate streaming body
-	pr, pw := io.Pipe()
-
-	req := httptest.NewRequest("POST", "/connectrpc.eliza.v1.ElizaService/Converse", pr)
-	req.Header.Set("Content-Type", "application/grpc")
-
-	w := httptest.NewRecorder()
-
-	// Start handler in goroutine
-	done := make(chan struct{})
-	go func() {
-		handler.ServeHTTP(w, req)
-		close(done)
-	}()
-
-	// Prepare a message
-	msg := &elizav1.ConverseRequest{Sentence: "Hello World"}
-	msgBytes, err := proto.Marshal(msg)
-	require.NoError(b, err)
-
-	// Prepare framed message
-	framedMsg := make([]byte, 5+len(msgBytes))
-	framedMsg[0] = 0 // not compressed
-	length := len(msgBytes)
-	binary.BigEndian.PutUint32(framedMsg[1:], uint32(length))
-	copy(framedMsg[5:], msgBytes)
-
-	b.ResetTimer()
-	b.ReportAllocs()
-
-	for i := 0; i < b.N; i++ {
-		_, err := pw.Write(framedMsg)
-		if err != nil {
-			b.Fatal(err)
+	// The fake bidi handler responds with a single message and then closes.
+	_, err := stream.Receive()
+	require.NoError(t, err)
+	for {
+		if _, err := stream.Receive(); err != nil {
+			require.True(t, errors.Is(err, io.EOF), "expected clean end of stream, got %v", err)
+			break
 		}
 	}
+	require.NoError(t, stream.CloseResponse())
 
-	require.NoError(b, pw.Close())
-	<-done
+	select {
+	case entry := <-logCh:
+		assert.Equal(t, "connectrpc.eliza.v1.ElizaService", entry.Service)
+		assert.Equal(t, "Converse", entry.Method)
+		assert.Equal(t, "gRPC", entry.ClientProtocol)
+		assert.Equal(t, 0, entry.Status)
+
+		require.Len(t, entry.RequestFrames, 2)
+		var req1 map[string]any
+		require.NoError(t, json.Unmarshal(entry.RequestFrames[0], &req1))
+		assert.Equal(t, "Hello", req1["sentence"])
+		var req2 map[string]any
+		require.NoError(t, json.Unmarshal(entry.RequestFrames[1], &req2))
+		assert.Equal(t, "World", req2["sentence"])
+
+		require.NotEmpty(t, entry.ResponseFrames)
+	case <-time.After(5 * time.Second):
+		t.Fatal("timeout waiting for log entry")
+	}
+}
+
+func TestHandler_StaticSeedProducesStableProtobufResponses(t *testing.T) {
+	_, ts, httpClient := setupTestServer(t,
+		ServerOpts{StaticSeed: true},
+		elizav1.File_connectrpc_eliza_v1_eliza_proto)
+
+	client := elizav1connect.NewElizaServiceClient(httpClient, ts.URL, connect.WithGRPC())
+	request := func() *elizav1.SayResponse {
+		resp, err := client.Say(context.Background(), connect.NewRequest(&elizav1.SayRequest{Sentence: "hello"}))
+		require.NoError(t, err)
+		return resp.Msg
+	}
+
+	first, second := request(), request()
+	assert.True(t, proto.Equal(first, second), "expected identical responses, got %v and %v", first, second)
+}
+
+// TestHandler_AllProtocols exercises the same unary RPC over each protocol
+// connecthttp serves.
+func TestHandler_AllProtocols(t *testing.T) {
+	_, ts, httpClient := setupTestServer(t, ServerOpts{}, elizav1.File_connectrpc_eliza_v1_eliza_proto)
+
+	protocols := map[string][]connect.ClientOption{
+		"connect":  nil,
+		"grpc":     {connect.WithGRPC()},
+		"grpcweb":  {connect.WithGRPCWeb()},
+		"jsoncall": {connect.WithProtoJSON()},
+	}
+	for name, opts := range protocols {
+		t.Run(name, func(t *testing.T) {
+			client := elizav1connect.NewElizaServiceClient(httpClient, ts.URL, opts...)
+			resp, err := client.Say(context.Background(), connect.NewRequest(&elizav1.SayRequest{Sentence: "hello"}))
+			require.NoError(t, err)
+			assert.NotEmpty(t, resp.Msg.Sentence)
+			assert.Equal(t, "fake", resp.Header().Get("x-fauxrpc-source"))
+		})
+	}
+}
+
+// TestHandler_UnknownMethod verifies RPC-shaped requests for a method the
+// service does not define get a proper RPC error.
+func TestHandler_UnknownMethod(t *testing.T) {
+	_, ts, httpClient := setupTestServer(t, ServerOpts{}, elizav1.File_connectrpc_eliza_v1_eliza_proto)
+
+	client := connect.NewClient[elizav1.SayRequest, elizav1.SayResponse](
+		httpClient,
+		ts.URL+"/connectrpc.eliza.v1.ElizaService/NoSuchMethod",
+		connect.WithGRPC(),
+	)
+	_, err := client.CallUnary(context.Background(), connect.NewRequest(&elizav1.SayRequest{Sentence: "hi"}))
+	require.Error(t, err)
+	assert.Equal(t, connect.CodeUnimplemented, connect.CodeOf(err))
 }

@@ -4,19 +4,17 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"strings"
 
-	"connectrpc.com/connect"
-	"github.com/sudorandom/fauxrpc/private/grpc"
-	"golang.org/x/net/http2"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
+	"github.com/sudorandom/fauxrpc/private/registry"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
-	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/dynamicpb"
 )
 
@@ -42,7 +40,9 @@ func newProxyClient() *http.Client {
 			InsecureSkipVerify: true,
 		},
 	}
-	_ = http2.ConfigureTransport(httpsTrans)
+	httpsTrans.Protocols = new(http.Protocols)
+	httpsTrans.Protocols.SetHTTP1(true)
+	httpsTrans.Protocols.SetHTTP2(true)
 	return &http.Client{
 		Transport: &proxyTransport{
 			httpTransport:  httpTrans,
@@ -51,374 +51,213 @@ func newProxyClient() *http.Client {
 	}
 }
 
-type dynamicProtoCodec struct {
-	methodDesc protoreflect.MethodDescriptor
-}
-
-func (c *dynamicProtoCodec) Name() string {
-	return "proto"
-}
-
-func (c *dynamicProtoCodec) Marshal(msg any) ([]byte, error) {
-	switch m := msg.(type) {
-	case proto.Message:
-		return proto.Marshal(m)
-	case **dynamicpb.Message:
-		if *m == nil {
-			return nil, fmt.Errorf("cannot marshal nil **dynamicpb.Message")
-		}
-		return proto.Marshal(*m)
-	case dynamicpb.Message:
-		return proto.Marshal(&m)
-	default:
-		return nil, fmt.Errorf("can't marshal %T", msg)
-	}
-}
-
-func (c *dynamicProtoCodec) Unmarshal(binary []byte, msg any) error {
-	if ptr, ok := msg.(**dynamicpb.Message); ok {
-		newMsg := dynamicpb.NewMessage(c.methodDesc.Output())
-		if err := proto.Unmarshal(binary, newMsg); err != nil {
-			return err
-		}
-		*ptr = newMsg
-		return nil
-	}
-	if m, ok := msg.(*dynamicpb.Message); ok {
-		newMsg := dynamicpb.NewMessage(c.methodDesc.Output())
-		if err := proto.Unmarshal(binary, newMsg); err != nil {
-			return err
-		}
-		*m = *newMsg
-		return nil
-	}
-	p, ok := msg.(proto.Message)
-	if !ok {
-		return fmt.Errorf("can't unmarshal into %T", msg)
-	}
-	return proto.Unmarshal(binary, p)
-}
-
-func handleProxy(
+// handleProxy relays the call to the upstream configured with ProxyTo over
+// gRPC, mirroring headers and frames in both directions. A CodeUnimplemented
+// error from upstream is returned so the caller can fall back to a generated
+// response.
+func (h *methodHandler) handleProxy(
 	ctx context.Context,
-	w http.ResponseWriter,
-	r *http.Request,
-	s Server,
-	method protoreflect.MethodDescriptor,
-	serviceName, methodName string,
+	info *connect.CallInfo,
+	stream connect.ServerStream,
 	reqFrameTracker, resFrameTracker *FrameTracker,
 	requestBody *releasableMessage,
 	responseBody *proto.Message,
 ) error {
-	upstream := s.GetProxyTo()
+	upstream := h.server.GetProxyTo()
 	if !strings.HasPrefix(upstream, "http://") && !strings.HasPrefix(upstream, "https://") {
 		upstream = "http://" + upstream
 	}
 	upstream = strings.TrimSuffix(upstream, "/")
 
-	client := connect.NewClient[dynamicpb.Message, dynamicpb.Message](
-		s.GetProxyClient(),
-		upstream+"/"+serviceName+"/"+methodName,
-		connect.WithGRPC(),
-		connect.WithCodec(&dynamicProtoCodec{methodDesc: method}),
-	)
+	transport := connecthttp.NewTransport(h.server.GetProxyClient(), upstream, connecthttp.WithGRPC())
+	client := connect.NewClient(transport)
+	spec := specForMethod(h.method)
 
-	isClientStream := method.IsStreamingClient()
-	isServerStream := method.IsStreamingServer()
-
-	copyHeaders := func(src http.Header, dst http.Header) {
-		for k, vv := range src {
-			kl := strings.ToLower(k)
-			if strings.HasPrefix(kl, "content-") ||
-				strings.HasPrefix(kl, "grpc-") ||
-				strings.HasPrefix(kl, "connect-") ||
-				kl == "connection" ||
-				kl == "te" ||
-				kl == "trailer" ||
-				kl == "host" ||
-				kl == "accept-encoding" {
-				continue
-			}
-			for _, v := range vv {
-				dst.Add(k, v)
-			}
-		}
+	callCtx, callInfo := connect.NewClientContext(ctx)
+	if info != nil {
+		copyFilteredHeaders(info.RequestHeader(), callInfo.RequestHeader())
 	}
 
-	responseEncoding := responseCompressionEncoding(r)
-	writeMessage := grpc.WriteGRPCMessage
-	if responseEncoding != "" {
-		writeMessage = func(w io.Writer, msg []byte) error {
-			return grpc.WriteGRPCMessageCompressed(w, msg, responseEncoding)
+	relayResponseHeaders := func() {
+		if info == nil {
+			return
 		}
-	}
-	requestEncoding := strings.ToLower(strings.TrimSpace(r.Header.Get("grpc-encoding")))
-
-	if !isClientStream && !isServerStream {
-		reqMsg, st := readUnaryRequest(r, method.Input(), requestEncoding)
-		if st != nil {
-			return st.Err()
-		}
-		*requestBody = reqMsg
-
-		reqBytes, err := proto.Marshal(reqMsg)
-		if err != nil {
-			return err
-		}
-		dynamicReq := dynamicpb.NewMessage(method.Input())
-		if err := proto.Unmarshal(reqBytes, dynamicReq); err != nil {
-			return err
-		}
-		req := connect.NewRequest(dynamicReq)
-		copyHeaders(r.Header, req.Header())
-
-		resp, err := client.CallUnary(ctx, req)
-		if err != nil {
-			return err
-		}
-
-		copyHeaders(resp.Header(), w.Header())
-		w.Header().Set("x-fauxrpc-source", "proxy")
-		if responseEncoding != "" {
-			w.Header().Set("grpc-encoding", responseEncoding)
-		}
-		*responseBody = resp.Msg
-
-		b, err := proto.Marshal(resp.Msg)
-		if err != nil {
-			return err
-		}
-		return writeMessage(w, b)
+		copyFilteredHeaders(callInfo.ResponseHeader(), info.ResponseHeader())
+		info.ResponseHeader().Set("x-fauxrpc-source", "proxy")
 	}
 
-	if !isClientStream && isServerStream {
-		reqMsg, st := readUnaryRequest(r, method.Input(), requestEncoding)
-		if st != nil {
-			return st.Err()
-		}
-		*requestBody = reqMsg
+	isClientStream := h.method.IsStreamingClient()
+	isServerStream := h.method.IsStreamingServer()
 
-		reqBytes, err := proto.Marshal(reqMsg)
+	switch {
+	case !isClientStream && !isServerStream:
+		reqMsg, err := h.receive(info, stream)
+		if err != nil && !errors.Is(err, io.EOF) {
+			return err
+		}
+		var req proto.Message
+		if reqMsg != nil {
+			*requestBody = reqMsg
+			req = reqMsg
+		} else {
+			req = registry.NewMessage(h.method.Input()).Interface()
+		}
+
+		res := dynamicpb.NewMessage(h.method.Output())
+		if err := client.CallUnary(callCtx, spec, req, res); err != nil {
+			return err
+		}
+		relayResponseHeaders()
+		*responseBody = res
+		return stream.Send(res)
+
+	case !isClientStream && isServerStream:
+		reqMsg, err := h.receive(info, stream)
+		if err != nil && !errors.Is(err, io.EOF) {
+			return err
+		}
+		var req proto.Message
+		if reqMsg != nil {
+			*requestBody = reqMsg
+			req = reqMsg
+		} else {
+			req = registry.NewMessage(h.method.Input()).Interface()
+		}
+
+		upstreamStream, err := client.CallServerStream(callCtx, spec, req)
 		if err != nil {
 			return err
 		}
-		dynamicReq := dynamicpb.NewMessage(method.Input())
-		if err := proto.Unmarshal(reqBytes, dynamicReq); err != nil {
-			return err
-		}
-		req := connect.NewRequest(dynamicReq)
-		copyHeaders(r.Header, req.Header())
+		defer func() { _ = upstreamStream.Close() }()
 
-		stream, err := client.CallServerStream(ctx, req)
-		if err != nil {
-			return err
-		}
-
-		copyHeaders(stream.ResponseHeader(), w.Header())
-		w.Header().Set("x-fauxrpc-source", "proxy")
-		if responseEncoding != "" {
-			w.Header().Set("grpc-encoding", responseEncoding)
-		}
-
-		for stream.Receive() {
-			respMsg := stream.Msg()
-			resFrameTracker.Add(respMsg)
-
-			respBytes, err := proto.Marshal(respMsg)
-			if err != nil {
+		headersRelayed := false
+		for {
+			res := dynamicpb.NewMessage(h.method.Output())
+			if err := upstreamStream.Receive(res); err != nil {
+				if errors.Is(err, io.EOF) {
+					break
+				}
 				return err
 			}
-			if err := writeMessage(w, respBytes); err != nil {
+			if !headersRelayed {
+				relayResponseHeaders()
+				headersRelayed = true
+			}
+			resFrameTracker.Add(res)
+			if err := stream.Send(res); err != nil {
 				return err
 			}
 		}
-
-		if err := stream.Err(); err != nil {
-			return err
+		if !headersRelayed {
+			relayResponseHeaders()
 		}
-
 		return nil
-	}
 
-	if isClientStream && !isServerStream {
-		stream := client.CallClientStream(ctx)
-		copyHeaders(r.Header, stream.RequestHeader())
-
-		var firstReq proto.Message
-
-		readMessageBuf := bufferPool.Get().(*[]byte)
-		defer bufferPool.Put(readMessageBuf)
+	case isClientStream && !isServerStream:
+		upstreamStream, err := client.CallClientStream(callCtx, spec)
+		if err != nil {
+			return err
+		}
+		defer func() { _ = upstreamStream.Close() }()
 
 		for {
-			size, err := grpc.ReadGRPCMessageWithEncoding(r.Body, *readMessageBuf, requestEncoding)
+			msg, err := h.receive(info, stream)
 			if err != nil {
 				if errors.Is(err, io.EOF) {
 					break
 				}
-				return grpcStatusFromReadError(err).Err()
-			}
-			msg, err := unmarshalRequest(method.Input(), (*readMessageBuf)[:size])
-			if err != nil {
 				return err
 			}
 			reqFrameTracker.Add(msg)
-
-			reqBytes, err := proto.Marshal(msg)
-			if err != nil {
+			if err := upstreamStream.Send(msg); err != nil {
 				msg.Release()
 				return err
 			}
-			dynamicReq := dynamicpb.NewMessage(method.Input())
-			if err := proto.Unmarshal(reqBytes, dynamicReq); err != nil {
-				msg.Release()
-				return err
-			}
-
-			if firstReq == nil {
-				firstReq = msg
-			} else {
-				msg.Release()
-			}
-
-			if err := stream.Send(dynamicReq); err != nil {
-				if firstReq != nil {
-					firstReq.(releasableMessage).Release()
-				}
-				return err
-			}
+			msg.Release()
 		}
-
-		if firstReq != nil {
-			firstReq.(releasableMessage).Release()
-		}
-
-		resp, err := stream.CloseAndReceive()
-		if err != nil {
+		if err := upstreamStream.CloseSend(); err != nil {
 			return err
 		}
 
-		copyHeaders(resp.Header(), w.Header())
-		w.Header().Set("x-fauxrpc-source", "proxy")
-		if responseEncoding != "" {
-			w.Header().Set("grpc-encoding", responseEncoding)
+		res := dynamicpb.NewMessage(h.method.Output())
+		if err := upstreamStream.Receive(res); err != nil {
+			return err
 		}
-		*responseBody = resp.Msg
+		relayResponseHeaders()
+		*responseBody = res
+		return stream.Send(res)
 
-		respBytes, err := proto.Marshal(resp.Msg)
+	default: // bidi
+		upstreamStream, err := client.CallClientStream(callCtx, spec)
 		if err != nil {
 			return err
 		}
-		return writeMessage(w, respBytes)
-	}
+		defer func() { _ = upstreamStream.Close() }()
 
-	if isClientStream && isServerStream {
-		bidiStream := client.CallBidiStream(ctx)
-		copyHeaders(r.Header, bidiStream.RequestHeader())
-
-		var firstReq proto.Message
-
-		eg, _ := errgroup.WithContext(ctx)
-		var receiveErr error
+		var eg errgroup.Group
 		eg.Go(func() error {
-			readMessageBuf := bufferPool.Get().(*[]byte)
-			defer bufferPool.Put(readMessageBuf)
-
 			for {
-				size, err := grpc.ReadGRPCMessageWithEncoding(r.Body, *readMessageBuf, requestEncoding)
+				msg, err := h.receive(info, stream)
 				if err != nil {
 					if errors.Is(err, io.EOF) {
-						break
+						return upstreamStream.CloseSend()
 					}
-					return grpcStatusFromReadError(err).Err()
-				}
-				msg, err := unmarshalRequest(method.Input(), (*readMessageBuf)[:size])
-				if err != nil {
 					return err
 				}
 				reqFrameTracker.Add(msg)
-
-				reqBytes, err := proto.Marshal(msg)
-				if err != nil {
+				if err := upstreamStream.Send(msg); err != nil {
 					msg.Release()
 					return err
 				}
-				dynamicReq := dynamicpb.NewMessage(method.Input())
-				if err := proto.Unmarshal(reqBytes, dynamicReq); err != nil {
-					msg.Release()
-					return err
-				}
-
-				if firstReq == nil {
-					firstReq = msg
-				} else {
-					msg.Release()
-				}
-
-				if err := bidiStream.Send(dynamicReq); err != nil {
-					return err
-				}
+				msg.Release()
 			}
-			return bidiStream.CloseRequest()
 		})
-
 		eg.Go(func() error {
+			headersRelayed := false
 			for {
-				respMsg, err := bidiStream.Receive()
-				if err != nil {
+				res := dynamicpb.NewMessage(h.method.Output())
+				if err := upstreamStream.Receive(res); err != nil {
 					if errors.Is(err, io.EOF) {
 						return nil
 					}
-					receiveErr = err
 					return err
 				}
-				resFrameTracker.Add(respMsg)
-
-				respBytes, err := proto.Marshal(respMsg)
-				if err != nil {
-					return err
+				if !headersRelayed {
+					relayResponseHeaders()
+					headersRelayed = true
 				}
-				if err := writeMessage(w, respBytes); err != nil {
+				resFrameTracker.Add(res)
+				if err := stream.Send(res); err != nil {
 					return err
 				}
 			}
 		})
-
-		err := eg.Wait()
-		if firstReq != nil {
-			firstReq.(releasableMessage).Release()
-		}
-		if isUnimplementedError(receiveErr) {
-			return receiveErr
-		}
-
-		copyHeaders(bidiStream.ResponseHeader(), w.Header())
-		w.Header().Set("x-fauxrpc-source", "proxy")
-		if responseEncoding != "" {
-			w.Header().Set("grpc-encoding", responseEncoding)
-		}
-
-		return err
+		return eg.Wait()
 	}
-
-	return nil
 }
 
-func readUnaryRequest(r *http.Request, md protoreflect.MessageDescriptor, encoding string) (releasableMessage, *status.Status) {
-	readMessageBuf := bufferPool.Get().(*[]byte)
-	defer bufferPool.Put(readMessageBuf)
-
-	size, err := grpc.ReadGRPCMessageWithEncoding(r.Body, *readMessageBuf, encoding)
-	if err != nil {
-		if errors.Is(err, io.EOF) {
-			return nil, nil
+// copyFilteredHeaders copies user headers between connect header maps,
+// skipping protocol-managed keys.
+func copyFilteredHeaders(src, dst *connect.Header) {
+	if src == nil || dst == nil {
+		return
+	}
+	for key, values := range src.All() {
+		keyLower := strings.ToLower(key)
+		if strings.HasPrefix(keyLower, "content-") ||
+			strings.HasPrefix(keyLower, "grpc-") ||
+			strings.HasPrefix(keyLower, "connect-") ||
+			keyLower == "connection" ||
+			keyLower == "te" ||
+			keyLower == "trailer" ||
+			keyLower == "host" ||
+			keyLower == "accept-encoding" {
+			continue
 		}
-		return nil, grpcStatusFromReadError(err)
+		for _, value := range values {
+			dst.Add(key, value)
+		}
 	}
-	msg, err := unmarshalRequest(md, (*readMessageBuf)[:size])
-	if err != nil {
-		return nil, status.New(codes.NotFound, err.Error())
-	}
-	return msg, nil
 }
 
 func isUnimplementedError(err error) bool {

@@ -3,19 +3,16 @@ package main
 import (
 	"cmp"
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
-	"net"
 	"net/http"
 	"slices"
 
 	"connectrpc.com/connect"
 	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
 	"github.com/sudorandom/fauxrpc/private/gen/stubs/v1/stubsv1connect"
-	"golang.org/x/net/http2"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 )
@@ -199,15 +196,11 @@ func outputStubs(stubs []*stubsv1.Stub) {
 }
 
 func newStubClient(addr string) stubsv1connect.StubsServiceClient {
-	client := &http.Client{
-		Transport: &http2.Transport{
-			AllowHTTP: true,
-			DialTLSContext: func(ctx context.Context, network, addr string, _ *tls.Config) (net.Conn, error) {
-				var dialer net.Dialer
-				return dialer.DialContext(ctx, network, addr)
-			},
-		},
-	}
+	transport := &http.Transport{}
+	transport.Protocols = new(http.Protocols)
+	transport.Protocols.SetHTTP2(true)
+	transport.Protocols.SetUnencryptedHTTP2(true)
+	client := &http.Client{Transport: transport}
 
 	return stubsv1connect.NewStubsServiceClient(client, addr)
 }

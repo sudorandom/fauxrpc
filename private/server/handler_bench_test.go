@@ -1,97 +1,49 @@
 package server
 
 import (
-	"bytes"
-	"encoding/binary"
-	"net/http"
-	"net/http/httptest"
+	"context"
 	"testing"
 
+	"buf.build/gen/go/connectrpc/eliza/connectrpc/go/connectrpc/eliza/v1/elizav1connect"
 	elizav1 "buf.build/gen/go/connectrpc/eliza/protocolbuffers/go/connectrpc/eliza/v1"
-	"buf.build/go/protovalidate"
+	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
-	"github.com/sudorandom/fauxrpc"
-	fauxlog "github.com/sudorandom/fauxrpc/private/log"
-	"github.com/sudorandom/fauxrpc/private/stubs"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/proto"
 )
 
-func BenchmarkHandler_RequestAllocation(b *testing.B) {
-	// Setup
-	logger := fauxlog.NewLogger()
-	s := &mockServer{
-		ServiceRegistry: mustNewRegistry(),
-		StubDatabase:    stubs.NewStubDatabase(),
-		logger:          logger,
-	}
+func BenchmarkHandler_Unary(b *testing.B) {
+	_, ts, httpClient := setupTestServer(b, ServerOpts{}, elizav1.File_connectrpc_eliza_v1_eliza_proto)
+	client := elizav1connect.NewElizaServiceClient(httpClient, ts.URL, connect.WithGRPC())
 
-	validator, err := protovalidate.New()
-	require.NoError(b, err)
-
-	faker := fauxrpc.NewFauxFaker()
-
-	// Eliza Service
-	file := elizav1.File_connectrpc_eliza_v1_eliza_proto
-	service := file.Services().ByName("ElizaService")
-	require.NotNil(b, service)
-
-	handler := NewHandler(service, faker, validator, s, logger, 20)
-
-	// Use Converse method
-	method := service.Methods().ByName("Converse")
-	require.NotNil(b, method)
-	url := "/connectrpc.eliza.v1.ElizaService/Converse"
-
-	// Prepare a message
-	msg := &elizav1.ConverseRequest{Sentence: "Hello World"}
-	msgBytes, err := proto.Marshal(msg)
-	require.NoError(b, err)
-
-	// Prepare framed message
-	framedMsg := make([]byte, 5+len(msgBytes))
-	framedMsg[0] = 0 // not compressed
-	length := len(msgBytes)
-	binary.BigEndian.PutUint32(framedMsg[1:], uint32(length))
-	copy(framedMsg[5:], msgBytes)
-
+	b.ResetTimer()
 	b.ReportAllocs()
-
-	for b.Loop() {
-		req := httptest.NewRequest("POST", url, bytes.NewReader(framedMsg))
-		req.Header.Set("Content-Type", "application/grpc")
-		w := httptest.NewRecorder()
-
-		handler.ServeHTTP(w, req)
-	}
-}
-
-type mockWriter struct {
-	h http.Header
-}
-
-func (m *mockWriter) Header() http.Header {
-	return m.h
-}
-
-func (m *mockWriter) Write([]byte) (int, error) {
-	return 0, nil
-}
-
-func (m *mockWriter) WriteHeader(statusCode int) {}
-
-func BenchmarkGRPCWriteStatus(b *testing.B) {
-	st := status.New(codes.NotFound, "not found")
-	w := &mockWriter{h: make(http.Header)}
-
-	b.ReportAllocs()
-
-	for b.Loop() {
-		grpcWriteStatus(w, st)
-		// Reset header
-		for k := range w.h {
-			delete(w.h, k)
+	for i := 0; i < b.N; i++ {
+		_, err := client.Say(context.Background(), connect.NewRequest(&elizav1.SayRequest{Sentence: "Hello World"}))
+		if err != nil {
+			b.Fatal(err)
 		}
 	}
+}
+
+func BenchmarkHandler_Streaming_Messages(b *testing.B) {
+	_, ts, httpClient := setupTestServer(b, ServerOpts{}, elizav1.File_connectrpc_eliza_v1_eliza_proto)
+	client := elizav1connect.NewElizaServiceClient(httpClient, ts.URL, connect.WithGRPC())
+
+	stream := client.Converse(context.Background())
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for i := 0; i < b.N; i++ {
+		if err := stream.Send(&elizav1.ConverseRequest{Sentence: "Hello World"}); err != nil {
+			b.Fatal(err)
+		}
+	}
+	b.StopTimer()
+
+	require.NoError(b, stream.CloseRequest())
+	for {
+		if _, err := stream.Receive(); err != nil {
+			break
+		}
+	}
+	require.NoError(b, stream.CloseResponse())
 }
