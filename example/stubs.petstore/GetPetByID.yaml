@@ -35,9 +35,19 @@ stubs:
   cel_content: |
     {
         'id': req.pet_id,
+        'name': fake_pet_name(),
         'status': ['available', 'pending', 'sold'][fake_int() % 3],
-        'category': [{'id': 1, 'name': 'cat'}, {'id': 1, 'name': 'cat'}][fake_int() % 2],
-        'name': ['Mr', 'Ms'][fake_int() % 2] + ' ' + fake_first_name(),
-        'photoUrls': ['https://picsum.photos/200'],
-        'tags': [{'id': gen, 'name': gen}]
+        'category': {
+            'id': fake_int() % 10 + 1,
+            'name': ['dog', 'cat', 'bird', 'fish', 'reptile'][fake_int() % 5]
+        },
+        'photo_urls': [
+            'https://picsum.photos/seed/' + string(req.pet_id) + '/200/300'
+        ],
+        'tags': [
+            {
+                'id': fake_int() % 100 + 1,
+                'name': fake_adjective()
+            }
+        ]
     }

@@ -52,3 +52,35 @@ func TestPolyResolverSelectsDiscriminatorMapping(t *testing.T) {
 	assert.Equal(t, true, resultMap["meows"])
 	assert.NotContains(t, resultMap, "barks")
 }
+
+func TestPolyResolverResolveAllOfSingleScalar(t *testing.T) {
+	strSchema := openapi3.NewStringSchema()
+	strSchema.Example = "test-value"
+	ref := &openapi3.SchemaRef{Value: strSchema}
+
+	result, err := NewPolyResolver().ResolveAllOf(
+		NewWalker(true),
+		NewGenerationContext(42, 5),
+		[]*openapi3.SchemaRef{ref},
+	)
+	require.NoError(t, err)
+	assert.Equal(t, "test-value", result)
+}
+
+func TestPolyResolverResolveAllOfMergedObjects(t *testing.T) {
+	schema1 := openapi3.NewObjectSchema().WithProperty("propA", openapi3.NewStringSchema())
+	schema1.Properties["propA"].Value.Example = "valA"
+	schema2 := openapi3.NewObjectSchema().WithProperty("propB", openapi3.NewStringSchema())
+	schema2.Properties["propB"].Value.Example = "valB"
+
+	result, err := NewPolyResolver().ResolveAllOf(
+		NewWalker(true),
+		NewGenerationContext(42, 5),
+		[]*openapi3.SchemaRef{{Value: schema1}, {Value: schema2}},
+	)
+	require.NoError(t, err)
+	resultMap, ok := result.(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "valA", resultMap["propA"])
+	assert.Equal(t, "valB", resultMap["propB"])
+}

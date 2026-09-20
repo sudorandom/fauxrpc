@@ -16,8 +16,11 @@ func NewPolyResolver() *PolyResolver {
 
 // ResolveAllOf evaluates all subschemas in an allOf array and merges their properties.
 func (p *PolyResolver) ResolveAllOf(walker *Walker, ctx *GenerationContext, allOf []*openapi3.SchemaRef) (any, error) {
-	merged := make(map[string]any)
+	if len(allOf) == 1 && allOf[0] != nil && allOf[0].Value != nil {
+		return walker.generateSchema(ctx, allOf[0].Value)
+	}
 
+	merged := make(map[string]any)
 	for _, ref := range allOf {
 		if ref == nil || ref.Value == nil {
 			continue
@@ -28,8 +31,10 @@ func (p *PolyResolver) ResolveAllOf(walker *Walker, ctx *GenerationContext, allO
 		}
 		if subMap, ok := subVal.(map[string]any); ok {
 			for k, v := range subMap {
-				merged[k] = v // Conflict handling: last subschema overrides earlier properties
+				merged[k] = v
 			}
+		} else if len(allOf) == 1 {
+			return subVal, nil
 		}
 	}
 

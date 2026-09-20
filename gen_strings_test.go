@@ -319,4 +319,47 @@ func TestString(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("image heuristics", func(t *testing.T) {
+		opts := fauxrpc.GenOptions{Faker: gofakeit.New(0)}
+		imageRegex := regexp.MustCompile(`^https://picsum\.photos/seed/[a-zA-Z0-9_-]+/200/300$`)
+
+		imageFieldNames := []string{
+			"photo_url",
+			"photo_urls",
+			"image_url",
+			"image_urls",
+			"avatar_url",
+			"picture_url",
+			"thumbnail_url",
+			"photo",
+			"image",
+			"avatar",
+			"picture",
+			"thumbnail",
+		}
+
+		for _, name := range imageFieldNames {
+			t.Run(name, func(t *testing.T) {
+				fd := &mockFieldDescriptor{
+					name: protoreflect.Name(name),
+					kind: protoreflect.StringKind,
+				}
+				s := fauxrpc.String(fd, opts)
+				assert.Regexp(t, imageRegex, s)
+			})
+		}
+
+		// Non-image URL should use regular fake URL
+		t.Run("non-image url", func(t *testing.T) {
+			fd := &mockFieldDescriptor{
+				name: "website_url",
+				kind: protoreflect.StringKind,
+			}
+			s := fauxrpc.String(fd, opts)
+			assert.NotRegexp(t, imageRegex, s)
+			assert.NotEmpty(t, s)
+		})
+	})
 }
+

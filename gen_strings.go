@@ -1,6 +1,7 @@
 package fauxrpc
 
 import (
+	"fmt"
 	"math"
 	"strconv"
 	"strings"
@@ -91,12 +92,12 @@ func stringByHeuristics(fd protoreflect.FieldDescriptor, opts GenOptions) (strin
 		} else {
 			f = func(opts GenOptions) string { return opts.fake().FirstName() }
 		}
-	case strings.Contains(lowerName, "url"):
-		if strings.Contains(lowerName, "photo") {
-			f = func(opts GenOptions) string { return "https://picsum.photos/400" }
-		} else {
-			f = func(opts GenOptions) string { return opts.fake().URL() }
+	case isImageField(lowerName):
+		f = func(opts GenOptions) string {
+			return fmt.Sprintf("https://picsum.photos/seed/%s/200/300", strings.ToLower(opts.fake().Word()))
 		}
+	case strings.Contains(lowerName, "url"):
+		f = func(opts GenOptions) string { return opts.fake().URL() }
 	case strings.Contains(lowerName, "version"):
 		f = func(opts GenOptions) string { return opts.fake().AppVersion() }
 	case strings.Contains(lowerName, "status"):
@@ -194,8 +195,12 @@ func String(fd protoreflect.FieldDescriptor, opts GenOptions) string {
 			generatedString = opts.fake().IPv4Address()
 		case *validate.StringRules_Ipv6:
 			generatedString = opts.fake().IPv6Address()
-		case *validate.StringRules_Uri:
-			generatedString = opts.fake().URL()
+		case *validate.StringRules_Uri, *validate.StringRules_UriRef:
+			if s, ok := stringByHeuristics(fd, opts); ok {
+				generatedString = s
+			} else {
+				generatedString = opts.fake().URL()
+			}
 		case *validate.StringRules_Address:
 			generatedString = opts.fake().DomainName()
 		case *validate.StringRules_Uuid:
@@ -352,3 +357,22 @@ func isTimeField(lowerName string) bool {
 		lowerName == "timestamp" ||
 		strings.HasSuffix(lowerName, "_timestamp")
 }
+
+func isImageField(lowerName string) bool {
+	if strings.Contains(lowerName, "type") ||
+		strings.Contains(lowerName, "format") ||
+		strings.Contains(lowerName, "encoding") ||
+		strings.Contains(lowerName, "size") ||
+		strings.Contains(lowerName, "width") ||
+		strings.Contains(lowerName, "height") {
+		return false
+	}
+	return strings.Contains(lowerName, "photo") ||
+		strings.Contains(lowerName, "image") ||
+		strings.Contains(lowerName, "picture") ||
+		strings.Contains(lowerName, "avatar") ||
+		strings.Contains(lowerName, "thumbnail") ||
+		strings.Contains(lowerName, "icon_url") ||
+		strings.Contains(lowerName, "logo_url")
+}
+
