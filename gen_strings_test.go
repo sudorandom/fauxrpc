@@ -350,6 +350,30 @@ func TestString(t *testing.T) {
 			})
 		}
 
+		t.Run("URI constrained photo URLs", func(t *testing.T) {
+			fd := createFieldDescriptorWithConstraints(stringField, &validate.FieldRules{
+				Type: &validate.FieldRules_Repeated{
+					Repeated: &validate.RepeatedRules{
+						Items: &validate.FieldRules{
+							Type: &validate.FieldRules_String_{
+								String_: &validate.StringRules{
+									WellKnown: &validate.StringRules_Uri{Uri: true},
+								},
+							},
+						},
+					},
+				},
+			})
+			fd = &mockFieldDescriptor{
+				FieldDescriptor: fd,
+				name:            "photo_urls",
+				kind:            protoreflect.StringKind,
+			}
+
+			s := fauxrpc.String(fd, opts)
+			assert.Regexp(t, imageRegex, s)
+		})
+
 		// Non-image URL should use regular fake URL
 		t.Run("non-image url", func(t *testing.T) {
 			fd := &mockFieldDescriptor{
@@ -362,4 +386,3 @@ func TestString(t *testing.T) {
 		})
 	})
 }
-

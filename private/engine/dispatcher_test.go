@@ -261,6 +261,52 @@ func TestDispatcherWriteResponsePreservesContentType(t *testing.T) {
 	}
 }
 
+func TestEngineDispatcherSecuredOperation(t *testing.T) {
+	loader := openapi3.NewLoader()
+	doc, err := loader.LoadFromData([]byte(`
+openapi: 3.0.0
+info:
+  title: Sample API
+  version: 1.0.0
+paths:
+  /hello:
+    get:
+      summary: Say Hello
+      operationId: sayHello
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+`))
+	require.NoError(t, err)
+
+	router, err := openapi.NewRouter(doc)
+	require.NoError(t, err)
+
+	dispatcher := NewDispatcher(newMockStubRegistry(), router, 5, false, false, nil)
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/hello", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+
+	handled := dispatcher.ServeHTTP(rec, req)
+	assert.True(t, handled)
+	assert.Equal(t, http.StatusOK, rec.Code)
+	assert.Contains(t, rec.Body.String(), "message")
+}
+
 type zeroReader struct{}
 
 func (zeroReader) Read(target []byte) (int, error) {
