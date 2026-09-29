@@ -66,7 +66,7 @@ fauxrpc run --schema=buf.build/bufbuild/eliza
 fauxrpc run --schema=openapi.yaml
 ```
 
-OpenAPI specifications can be YAML or JSON files, URLs, or directories containing specifications. See [OpenAPI Support](#openapi-support) for a complete example.
+OpenAPI specifications must be passed explicitly as YAML or JSON file paths or URLs. Directory inputs load Protobuf schemas, using `buf.yaml` when present; they do not discover OpenAPI specifications. To serve multiple OpenAPI documents, repeat `--schema` for each file. See [OpenAPI Support](#openapi-support) for a complete example.
 
 #### From multiple sources at once
 

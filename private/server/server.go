@@ -4,11 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/fs"
 	"log/slog"
 	"net/http"
 	"net/url"
-	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -187,23 +185,6 @@ func (s *server) RegisterFile(fd protoreflect.FileDescriptor) error {
 }
 
 func (s *server) AddOpenAPISchema(ctx context.Context, pathOrURL string) error {
-	stat, err := os.Stat(pathOrURL)
-	if err == nil && stat.IsDir() {
-		return fs.WalkDir(os.DirFS(pathOrURL), ".", func(childpath string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			if d.IsDir() {
-				return nil
-			}
-			fullPath := filepath.Join(pathOrURL, childpath)
-			if openapi.IsOpenAPISpec(fullPath) {
-				return s.AddOpenAPISchema(ctx, fullPath)
-			}
-			return nil
-		})
-	}
-
 	doc, err := openapi.LoadSchema(ctx, pathOrURL)
 	if err != nil {
 		return fmt.Errorf("failed to load openapi schema %s: %w", pathOrURL, err)
@@ -240,23 +221,6 @@ func (s *server) AddFileFromPath(ctx context.Context, path string) error {
 	if openapi.IsOpenAPISpec(path) {
 		slog.Info("Detected OpenAPI specification", "path", path)
 		return s.AddOpenAPISchema(ctx, path)
-	}
-	stat, err := os.Stat(path)
-	if err == nil && stat.IsDir() {
-		// Check if directory contains any openapi specs
-		containsOpenAPI := false
-		_ = fs.WalkDir(os.DirFS(path), ".", func(childpath string, d fs.DirEntry, err error) error {
-			if err == nil && !d.IsDir() {
-				if openapi.IsOpenAPISpec(filepath.Join(path, childpath)) {
-					containsOpenAPI = true
-				}
-			}
-			return nil
-		})
-		if containsOpenAPI {
-			slog.Info("Detected OpenAPI specification directory", "path", path)
-			return s.AddOpenAPISchema(ctx, path)
-		}
 	}
 	return registry.AddServicesFromPath(ctx, s.ServiceRegistry, path)
 }

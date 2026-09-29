@@ -19,7 +19,7 @@ import (
 )
 
 type RunCmd struct {
-	Schema        []string `help:"The schemas to serve. It can be protobuf descriptors (binpb, json, yaml), an OpenAPI specification, a URL, or a directory of schemas."`
+	Schema        []string `help:"The schemas to serve. It can be protobuf descriptors (binpb, json, yaml), an explicit OpenAPI file, a URL, or a Protobuf directory (using buf.yaml when present)."`
 	Addr          string   `short:"a" help:"Address to bind to." default:"127.0.0.1:6660"`
 	NoReflection  bool     `help:"Disables the server reflection service."`
 	NoHTTPLog     bool     `help:"Disables the HTTP log."`

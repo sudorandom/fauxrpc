@@ -559,8 +559,8 @@ const file_test_v1_extensions_proto_rawDesc = "" +
 	"\vretry_count\x12\x0e.test.v1.Event\x18f \x01(\x05R\n" +
 	"retryCount:&\n" +
 	"\x06labels\x12\x0e.test.v1.Event\x18g \x03(\tR\x06labels:<\n" +
-	"\x06source\x12\x0e.test.v1.Event\x18h \x01(\v2\x14.test.v1.EventSourceR\x06sourceB\x95\x01\n" +
-	"\vcom.test.v1B\x0fExtensionsProtoP\x01Z8github.com/sudorandom/fauxrpc/private/gen/test/v1;testv1\xa2\x02\x03TXX\xaa\x02\aTest.V1\xca\x02\aTest\\V1\xe2\x02\x13Test\\V1\\GPBMetadata\xea\x02\bTest::V1b\beditionsp\xe9\a"
+	"\x06source\x12\x0e.test.v1.Event\x18h \x01(\v2\x14.test.v1.EventSourceR\x06sourceB\x93\x01\n" +
+	"\vcom.test.v1B\x0fExtensionsProtoZ8github.com/sudorandom/fauxrpc/private/gen/test/v1;testv1\xa2\x02\x03TXX\xaa\x02\aTest.V1\xca\x02\aTest\\V1\xe2\x02\x13Test\\V1\\GPBMetadata\xea\x02\bTest::V1b\beditionsp\xe9\a"
 
 var file_test_v1_extensions_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_test_v1_extensions_proto_goTypes = []any{
