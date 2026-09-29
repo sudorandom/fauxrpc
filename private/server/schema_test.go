@@ -45,7 +45,7 @@ service TestService { rpc Call(Request) returns (Response); }
 	srv, err := NewServer(ServerOpts{})
 	require.NoError(t, err)
 	require.NoError(t, srv.AddFileFromPath(context.Background(), dir))
-	require.NotNil(t, srv.ServiceRegistry.Get("test.TestService"))
+	require.NotNil(t, srv.Get("test.TestService"))
 	require.Zero(t, srv.OpenAPIRouterCount())
 
 	// Explicit OpenAPI inputs still work beside a Buf module.
