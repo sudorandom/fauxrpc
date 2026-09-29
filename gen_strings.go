@@ -375,4 +375,3 @@ func isImageField(lowerName string) bool {
 		strings.Contains(lowerName, "icon_url") ||
 		strings.Contains(lowerName, "logo_url")
 }
-
