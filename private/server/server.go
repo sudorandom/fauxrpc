@@ -14,11 +14,10 @@ import (
 	"time"
 
 	"buf.build/go/protovalidate"
-	"connectrpc.com/connect"
-	connectv2 "connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2"
 	"connectrpc.com/connect/v2/connecthttp"
 	connectcors "connectrpc.com/cors"
-	"connectrpc.com/grpcreflect"
+	"connectrpc.com/grpcreflect/v2"
 	"connectrpc.com/validate"
 	"connectrpc.com/vanguard"
 	"github.com/MadAppGang/httplog"
@@ -89,11 +88,9 @@ type server struct {
 	stubs.StubDatabase
 	lock *sync.Mutex
 
-	handlerDocs             *wrappedHandler
-	handlerOpenAPIDocs      *wrappedHandler
-	handlerReflectorV1      *wrappedHandler
-	handlerReflectorV1Alpha *wrappedHandler
-	handlerTranscoder       *wrappedHandler
+	handlerDocs        *wrappedHandler
+	handlerOpenAPIDocs *wrappedHandler
+	handlerTranscoder  *wrappedHandler
 
 	opts               ServerOpts
 	stats              *metrics.Stats
@@ -133,14 +130,12 @@ func NewServer(opts ServerOpts) (*server, error) {
 		return nil, err
 	}
 	s := &server{
-		lock:                    &sync.Mutex{},
-		ServiceRegistry:         serviceRegistry,
-		StubDatabase:            stubs.NewStubDatabase(),
-		handlerDocs:             NewWrappedHandler(),
-		handlerOpenAPIDocs:      NewWrappedHandler(),
-		handlerReflectorV1:      NewWrappedHandler(),
-		handlerReflectorV1Alpha: NewWrappedHandler(),
-		handlerTranscoder:       NewWrappedHandler(),
+		lock:               &sync.Mutex{},
+		ServiceRegistry:    serviceRegistry,
+		StubDatabase:       stubs.NewStubDatabase(),
+		handlerDocs:        NewWrappedHandler(),
+		handlerOpenAPIDocs: NewWrappedHandler(),
+		handlerTranscoder:  NewWrappedHandler(),
 		opts:                    opts,
 		stats: &metrics.Stats{
 			StartedAt:      time.Now(),
@@ -325,7 +320,7 @@ func (s *server) rebuildHandlers() error {
 
 	faker := fauxrpc.NewMultiFaker(fakers)
 
-	rpcServer := connectv2.NewServer()
+	rpcServer := connect.NewServer()
 	s.ForEachService(func(sd protoreflect.ServiceDescriptor) bool {
 		maxDepth := s.opts.MaxDepth
 		if maxDepth <= 0 {
@@ -335,6 +330,13 @@ func (s *server) rebuildHandlers() error {
 		serviceNames = append(serviceNames, string(sd.FullName()))
 		return true
 	})
+
+	if s.opts.UseReflection {
+		grpcreflect.Register(rpcServer,
+			grpcreflect.WithDescriptorResolver(s.ServiceRegistry),
+			grpcreflect.WithNamer(&staticNames{names: serviceNames}),
+		)
+	}
 
 	resolver := s.Resolver()
 	rpcMux := http.NewServeMux()
@@ -346,14 +348,6 @@ func (s *server) rebuildHandlers() error {
 		return fmt.Errorf("failed to mount REST routes: %w", err)
 	}
 	s.handlerTranscoder.SetHandler(rpcMux)
-	if s.opts.UseReflection {
-		reflector := grpcreflect.NewReflector(&staticNames{names: serviceNames}, grpcreflect.WithDescriptorResolver(s.ServiceRegistry))
-		_, v1Handler := grpcreflect.NewHandlerV1(reflector)
-		s.handlerReflectorV1.SetHandler(v1Handler)
-
-		_, v1alphaHandler := grpcreflect.NewHandlerV1Alpha(reflector)
-		s.handlerReflectorV1Alpha.SetHandler(v1alphaHandler)
-	}
 
 	if s.opts.RenderDocPage {
 		descBuilder := strings.Builder{}
@@ -461,11 +455,6 @@ func (s *server) Handler() (http.Handler, error) {
 		mux.Mount("/fauxrpc", frontend.DashboardHandler(s))
 	}
 
-	if s.opts.UseReflection {
-		mux.Mount("/grpc.reflection.v1.ServerReflection/", s.handlerReflectorV1)
-		mux.Mount("/grpc.reflection.v1alpha.ServerReflection/", s.handlerReflectorV1Alpha)
-	}
-
 	// Docs Stuff
 	if s.opts.RenderDocPage {
 		mux.Get("/fauxrpc/docs", http.RedirectHandler("/fauxrpc/docs/", http.StatusMovedPermanently).ServeHTTP)
@@ -475,9 +464,10 @@ func (s *server) Handler() (http.Handler, error) {
 		mux.Handle("/fauxrpc/openapi-docs/*", s.handlerOpenAPIDocs)
 	}
 
-	validateInterceptor := validate.NewInterceptor()
-	mux.Mount(stubsv1connect.NewStubsServiceHandler(stubs.NewHandler(s, s), connect.WithInterceptors(validateInterceptor)))
-	mux.Mount(registryv1connect.NewRegistryServiceHandler(registry.NewHandler(s), connect.WithInterceptors(validateInterceptor)))
+	managementServer := connect.NewServer(validate.NewServerInterceptor())
+	stubsv1connect.RegisterStubsServiceHandler(managementServer, stubs.NewHandler(s, s))
+	registryv1connect.RegisterRegistryServiceHandler(managementServer, registry.NewHandler(s))
+	connecthttp.Mount(mux, managementServer)
 
 	return mux, nil
 }

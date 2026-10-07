@@ -4,7 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	testv1 "github.com/sudorandom/fauxrpc/private/gen/test/v1"
@@ -17,7 +18,7 @@ import (
 // registered in reaching generation and the response codec.
 func TestHandler_Extensions(t *testing.T) {
 	_, ts, httpClient := setupTestServer(t, ServerOpts{}, testv1.File_test_v1_extensions_proto)
-	client := testv1connect.NewEventServiceClient(httpClient, ts.URL, connect.WithGRPC())
+	client := testv1connect.NewEventServiceClient(connect.NewClient(connecthttp.NewTransport(httpClient, ts.URL, connecthttp.WithReadMaxBytes(0), connecthttp.WithGRPC())))
 
 	call := func(t *testing.T) *testv1.Event {
 		t.Helper()
@@ -25,10 +26,10 @@ func TestHandler_Extensions(t *testing.T) {
 		// the opaque API: fields are set through setters, not struct literals.
 		request := &testv1.GetEventRequest{}
 		request.SetId("evt_7f3a91")
-		resp, err := client.GetEvent(context.Background(), connect.NewRequest(request))
+		resp, err := client.GetEvent(context.Background(), request)
 		require.NoError(t, err)
-		require.NotNil(t, resp.Msg.GetEvent())
-		return resp.Msg.GetEvent()
+		require.NotNil(t, resp.GetEvent())
+		return resp.GetEvent()
 	}
 
 	var sawExtension bool

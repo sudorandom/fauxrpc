@@ -13,7 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
 	"github.com/sudorandom/fauxrpc/private/registry"
@@ -223,7 +222,7 @@ func LoadStubsFromFile(registry registry.ServiceRegistry, stubdb StubDatabase, s
 			return fmt.Errorf("%s: %w", path, err)
 		}
 
-		if _, err := h.AddStubs(context.Background(), connect.NewRequest(req)); err != nil {
+		if _, err := h.AddStubs(context.Background(), req); err != nil {
 			return fmt.Errorf("%s: %w", path, err)
 		}
 		return nil

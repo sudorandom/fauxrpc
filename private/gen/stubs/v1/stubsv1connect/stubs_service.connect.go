@@ -5,190 +5,201 @@
 package stubsv1connect
 
 import (
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
 	v1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// StubsServiceName is the fully-qualified name of the StubsService service.
 	StubsServiceName = "stubs.v1.StubsService"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// StubsServiceAddStubsProcedure is the fully-qualified name of the StubsService's AddStubs RPC.
+	// StubsServiceAddStubsProcedure is the procedure name of the StubsService's AddStubs RPC.
 	StubsServiceAddStubsProcedure = "/stubs.v1.StubsService/AddStubs"
-	// StubsServiceRemoveStubsProcedure is the fully-qualified name of the StubsService's RemoveStubs
-	// RPC.
+	// StubsServiceRemoveStubsProcedure is the procedure name of the StubsService's RemoveStubs RPC.
 	StubsServiceRemoveStubsProcedure = "/stubs.v1.StubsService/RemoveStubs"
-	// StubsServiceRemoveAllStubsProcedure is the fully-qualified name of the StubsService's
-	// RemoveAllStubs RPC.
+	// StubsServiceRemoveAllStubsProcedure is the procedure name of the StubsService's RemoveAllStubs
+	// RPC.
 	StubsServiceRemoveAllStubsProcedure = "/stubs.v1.StubsService/RemoveAllStubs"
-	// StubsServiceListStubsProcedure is the fully-qualified name of the StubsService's ListStubs RPC.
+	// StubsServiceListStubsProcedure is the procedure name of the StubsService's ListStubs RPC.
 	StubsServiceListStubsProcedure = "/stubs.v1.StubsService/ListStubs"
+)
+
+var (
+	stubsServiceAddStubsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_stubs_v1_stubs_service_proto.Services().ByName("StubsService").Methods().ByName("AddStubs"),
+			Procedure:  StubsServiceAddStubsProcedure,
+		}
+	})
+	stubsServiceRemoveStubsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_stubs_v1_stubs_service_proto.Services().ByName("StubsService").Methods().ByName("RemoveStubs"),
+			Procedure:  StubsServiceRemoveStubsProcedure,
+		}
+	})
+	stubsServiceRemoveAllStubsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_stubs_v1_stubs_service_proto.Services().ByName("StubsService").Methods().ByName("RemoveAllStubs"),
+			Procedure:  StubsServiceRemoveAllStubsProcedure,
+		}
+	})
+	stubsServiceListStubsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_stubs_v1_stubs_service_proto.Services().ByName("StubsService").Methods().ByName("ListStubs"),
+			Procedure:  StubsServiceListStubsProcedure,
+		}
+	})
 )
 
 // StubsServiceClient is a client for the stubs.v1.StubsService service.
 type StubsServiceClient interface {
-	AddStubs(context.Context, *connect.Request[v1.AddStubsRequest]) (*connect.Response[v1.AddStubsResponse], error)
-	RemoveStubs(context.Context, *connect.Request[v1.RemoveStubsRequest]) (*connect.Response[v1.RemoveStubsResponse], error)
-	RemoveAllStubs(context.Context, *connect.Request[v1.RemoveAllStubsRequest]) (*connect.Response[v1.RemoveAllStubsResponse], error)
-	ListStubs(context.Context, *connect.Request[v1.ListStubsRequest]) (*connect.Response[v1.ListStubsResponse], error)
+	AddStubs(context.Context, *v1.AddStubsRequest) (*v1.AddStubsResponse, error)
+	RemoveStubs(context.Context, *v1.RemoveStubsRequest) (*v1.RemoveStubsResponse, error)
+	RemoveAllStubs(context.Context, *v1.RemoveAllStubsRequest) (*v1.RemoveAllStubsResponse, error)
+	ListStubs(context.Context, *v1.ListStubsRequest) (*v1.ListStubsResponse, error)
 }
 
-// NewStubsServiceClient constructs a client for the stubs.v1.StubsService service. By default, it
-// uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses, and sends
-// uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the connect.WithGRPC() or
-// connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewStubsServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) StubsServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	stubsServiceMethods := v1.File_stubs_v1_stubs_service_proto.Services().ByName("StubsService").Methods()
-	return &stubsServiceClient{
-		addStubs: connect.NewClient[v1.AddStubsRequest, v1.AddStubsResponse](
-			httpClient,
-			baseURL+StubsServiceAddStubsProcedure,
-			connect.WithSchema(stubsServiceMethods.ByName("AddStubs")),
-			connect.WithClientOptions(opts...),
-		),
-		removeStubs: connect.NewClient[v1.RemoveStubsRequest, v1.RemoveStubsResponse](
-			httpClient,
-			baseURL+StubsServiceRemoveStubsProcedure,
-			connect.WithSchema(stubsServiceMethods.ByName("RemoveStubs")),
-			connect.WithClientOptions(opts...),
-		),
-		removeAllStubs: connect.NewClient[v1.RemoveAllStubsRequest, v1.RemoveAllStubsResponse](
-			httpClient,
-			baseURL+StubsServiceRemoveAllStubsProcedure,
-			connect.WithSchema(stubsServiceMethods.ByName("RemoveAllStubs")),
-			connect.WithClientOptions(opts...),
-		),
-		listStubs: connect.NewClient[v1.ListStubsRequest, v1.ListStubsResponse](
-			httpClient,
-			baseURL+StubsServiceListStubsProcedure,
-			connect.WithSchema(stubsServiceMethods.ByName("ListStubs")),
-			connect.WithClientOptions(opts...),
-		),
-	}
-}
-
-// stubsServiceClient implements StubsServiceClient.
-type stubsServiceClient struct {
-	addStubs       *connect.Client[v1.AddStubsRequest, v1.AddStubsResponse]
-	removeStubs    *connect.Client[v1.RemoveStubsRequest, v1.RemoveStubsResponse]
-	removeAllStubs *connect.Client[v1.RemoveAllStubsRequest, v1.RemoveAllStubsResponse]
-	listStubs      *connect.Client[v1.ListStubsRequest, v1.ListStubsResponse]
-}
-
-// AddStubs calls stubs.v1.StubsService.AddStubs.
-func (c *stubsServiceClient) AddStubs(ctx context.Context, req *connect.Request[v1.AddStubsRequest]) (*connect.Response[v1.AddStubsResponse], error) {
-	return c.addStubs.CallUnary(ctx, req)
-}
-
-// RemoveStubs calls stubs.v1.StubsService.RemoveStubs.
-func (c *stubsServiceClient) RemoveStubs(ctx context.Context, req *connect.Request[v1.RemoveStubsRequest]) (*connect.Response[v1.RemoveStubsResponse], error) {
-	return c.removeStubs.CallUnary(ctx, req)
-}
-
-// RemoveAllStubs calls stubs.v1.StubsService.RemoveAllStubs.
-func (c *stubsServiceClient) RemoveAllStubs(ctx context.Context, req *connect.Request[v1.RemoveAllStubsRequest]) (*connect.Response[v1.RemoveAllStubsResponse], error) {
-	return c.removeAllStubs.CallUnary(ctx, req)
-}
-
-// ListStubs calls stubs.v1.StubsService.ListStubs.
-func (c *stubsServiceClient) ListStubs(ctx context.Context, req *connect.Request[v1.ListStubsRequest]) (*connect.Response[v1.ListStubsResponse], error) {
-	return c.listStubs.CallUnary(ctx, req)
+// NewStubsServiceClient constructs a client for the stubs.v1.StubsService service. Multiple service
+// clients may share a single connect.Client.
+func NewStubsServiceClient(client *connect.Client) StubsServiceClient {
+	return &stubsServiceClient{client: client}
 }
 
 // StubsServiceHandler is an implementation of the stubs.v1.StubsService service.
 type StubsServiceHandler interface {
-	AddStubs(context.Context, *connect.Request[v1.AddStubsRequest]) (*connect.Response[v1.AddStubsResponse], error)
-	RemoveStubs(context.Context, *connect.Request[v1.RemoveStubsRequest]) (*connect.Response[v1.RemoveStubsResponse], error)
-	RemoveAllStubs(context.Context, *connect.Request[v1.RemoveAllStubsRequest]) (*connect.Response[v1.RemoveAllStubsResponse], error)
-	ListStubs(context.Context, *connect.Request[v1.ListStubsRequest]) (*connect.Response[v1.ListStubsResponse], error)
+	AddStubs(context.Context, *v1.AddStubsRequest) (*v1.AddStubsResponse, error)
+	RemoveStubs(context.Context, *v1.RemoveStubsRequest) (*v1.RemoveStubsResponse, error)
+	RemoveAllStubs(context.Context, *v1.RemoveAllStubsRequest) (*v1.RemoveAllStubsResponse, error)
+	ListStubs(context.Context, *v1.ListStubsRequest) (*v1.ListStubsResponse, error)
 }
 
-// NewStubsServiceHandler builds an HTTP handler from the service implementation. It returns the
-// path on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewStubsServiceHandler(svc StubsServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	stubsServiceMethods := v1.File_stubs_v1_stubs_service_proto.Services().ByName("StubsService").Methods()
-	stubsServiceAddStubsHandler := connect.NewUnaryHandler(
-		StubsServiceAddStubsProcedure,
-		svc.AddStubs,
-		connect.WithSchema(stubsServiceMethods.ByName("AddStubs")),
-		connect.WithHandlerOptions(opts...),
+// RegisterStubsServiceHandler registers svc as the stubs.v1.StubsService implementation on server.
+func RegisterStubsServiceHandler(server *connect.Server, svc StubsServiceHandler) {
+	adapter := stubsServiceHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: stubsServiceAddStubsSpec(), Handler: adapter.addStubs},
+		connect.Method{Spec: stubsServiceRemoveStubsSpec(), Handler: adapter.removeStubs},
+		connect.Method{Spec: stubsServiceRemoveAllStubsSpec(), Handler: adapter.removeAllStubs},
+		connect.Method{Spec: stubsServiceListStubsSpec(), Handler: adapter.listStubs},
 	)
-	stubsServiceRemoveStubsHandler := connect.NewUnaryHandler(
-		StubsServiceRemoveStubsProcedure,
-		svc.RemoveStubs,
-		connect.WithSchema(stubsServiceMethods.ByName("RemoveStubs")),
-		connect.WithHandlerOptions(opts...),
-	)
-	stubsServiceRemoveAllStubsHandler := connect.NewUnaryHandler(
-		StubsServiceRemoveAllStubsProcedure,
-		svc.RemoveAllStubs,
-		connect.WithSchema(stubsServiceMethods.ByName("RemoveAllStubs")),
-		connect.WithHandlerOptions(opts...),
-	)
-	stubsServiceListStubsHandler := connect.NewUnaryHandler(
-		StubsServiceListStubsProcedure,
-		svc.ListStubs,
-		connect.WithSchema(stubsServiceMethods.ByName("ListStubs")),
-		connect.WithHandlerOptions(opts...),
-	)
-	return "/stubs.v1.StubsService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case StubsServiceAddStubsProcedure:
-			stubsServiceAddStubsHandler.ServeHTTP(w, r)
-		case StubsServiceRemoveStubsProcedure:
-			stubsServiceRemoveStubsHandler.ServeHTTP(w, r)
-		case StubsServiceRemoveAllStubsProcedure:
-			stubsServiceRemoveAllStubsHandler.ServeHTTP(w, r)
-		case StubsServiceListStubsProcedure:
-			stubsServiceListStubsHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
 }
 
 // UnimplementedStubsServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedStubsServiceHandler struct{}
 
-func (UnimplementedStubsServiceHandler) AddStubs(context.Context, *connect.Request[v1.AddStubsRequest]) (*connect.Response[v1.AddStubsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stubs.v1.StubsService.AddStubs is not implemented"))
+func (UnimplementedStubsServiceHandler) AddStubs(context.Context, *v1.AddStubsRequest) (*v1.AddStubsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "stubs.v1.StubsService.AddStubs is not implemented")
 }
 
-func (UnimplementedStubsServiceHandler) RemoveStubs(context.Context, *connect.Request[v1.RemoveStubsRequest]) (*connect.Response[v1.RemoveStubsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stubs.v1.StubsService.RemoveStubs is not implemented"))
+func (UnimplementedStubsServiceHandler) RemoveStubs(context.Context, *v1.RemoveStubsRequest) (*v1.RemoveStubsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "stubs.v1.StubsService.RemoveStubs is not implemented")
 }
 
-func (UnimplementedStubsServiceHandler) RemoveAllStubs(context.Context, *connect.Request[v1.RemoveAllStubsRequest]) (*connect.Response[v1.RemoveAllStubsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stubs.v1.StubsService.RemoveAllStubs is not implemented"))
+func (UnimplementedStubsServiceHandler) RemoveAllStubs(context.Context, *v1.RemoveAllStubsRequest) (*v1.RemoveAllStubsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "stubs.v1.StubsService.RemoveAllStubs is not implemented")
 }
 
-func (UnimplementedStubsServiceHandler) ListStubs(context.Context, *connect.Request[v1.ListStubsRequest]) (*connect.Response[v1.ListStubsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("stubs.v1.StubsService.ListStubs is not implemented"))
+func (UnimplementedStubsServiceHandler) ListStubs(context.Context, *v1.ListStubsRequest) (*v1.ListStubsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "stubs.v1.StubsService.ListStubs is not implemented")
+}
+
+type stubsServiceClient struct {
+	client *connect.Client
+}
+
+func (c *stubsServiceClient) AddStubs(ctx context.Context, req *v1.AddStubsRequest) (*v1.AddStubsResponse, error) {
+	var res v1.AddStubsResponse
+	if err := c.client.CallUnary(ctx, stubsServiceAddStubsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *stubsServiceClient) RemoveStubs(ctx context.Context, req *v1.RemoveStubsRequest) (*v1.RemoveStubsResponse, error) {
+	var res v1.RemoveStubsResponse
+	if err := c.client.CallUnary(ctx, stubsServiceRemoveStubsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *stubsServiceClient) RemoveAllStubs(ctx context.Context, req *v1.RemoveAllStubsRequest) (*v1.RemoveAllStubsResponse, error) {
+	var res v1.RemoveAllStubsResponse
+	if err := c.client.CallUnary(ctx, stubsServiceRemoveAllStubsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *stubsServiceClient) ListStubs(ctx context.Context, req *v1.ListStubsRequest) (*v1.ListStubsResponse, error) {
+	var res v1.ListStubsResponse
+	if err := c.client.CallUnary(ctx, stubsServiceListStubsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+type stubsServiceHandler struct{ svc StubsServiceHandler }
+
+func (h stubsServiceHandler) addStubs(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.AddStubsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.AddStubs(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h stubsServiceHandler) removeStubs(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.RemoveStubsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.RemoveStubs(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h stubsServiceHandler) removeAllStubs(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.RemoveAllStubsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.RemoveAllStubs(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h stubsServiceHandler) listStubs(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ListStubsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.ListStubs(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
 }

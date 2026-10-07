@@ -7,11 +7,12 @@ import (
 	"testing"
 	"time"
 
-	"buf.build/gen/go/connectrpc/eliza/connectrpc/go/connectrpc/eliza/v1/elizav1connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
 	elizav1 "buf.build/gen/go/connectrpc/eliza/protocolbuffers/go/connectrpc/eliza/v1"
-	"connectrpc.com/connect"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/sudorandom/fauxrpc/private/elizav1connect"
 )
 
 // TestHandler_GzipRequest_UnaryResponse sends a gzip-compressed request to
@@ -19,14 +20,14 @@ import (
 func TestHandler_GzipRequest_UnaryResponse(t *testing.T) {
 	_, ts, httpClient := setupTestServer(t, ServerOpts{}, elizav1.File_connectrpc_eliza_v1_eliza_proto)
 
-	for _, opts := range [][]connect.ClientOption{
-		{connect.WithGRPC(), connect.WithSendGzip()},
-		{connect.WithSendGzip()},
+	for _, opts := range [][]connecthttp.Option{
+		{connecthttp.WithGRPC(), connecthttp.WithSendGzip()},
+		{connecthttp.WithSendGzip()},
 	} {
-		client := elizav1connect.NewElizaServiceClient(httpClient, ts.URL, opts...)
-		resp, err := client.Say(context.Background(), connect.NewRequest(&elizav1.SayRequest{Sentence: "hello from gzip"}))
+		client := elizav1connect.NewElizaServiceClient(connect.NewClient(connecthttp.NewTransport(httpClient, ts.URL, opts...)))
+		resp, err := client.Say(context.Background(), &elizav1.SayRequest{Sentence: "hello from gzip"})
 		require.NoError(t, err)
-		assert.NotEmpty(t, resp.Msg.Sentence)
+		assert.NotEmpty(t, resp.Sentence)
 	}
 }
 
@@ -37,11 +38,12 @@ func TestHandler_GzipRequest_StreamingResponse(t *testing.T) {
 	logCh, unsubscribe := srv.logger.Subscribe()
 	defer unsubscribe()
 
-	client := elizav1connect.NewElizaServiceClient(httpClient, ts.URL, connect.WithGRPC(), connect.WithSendGzip())
-	stream := client.Converse(context.Background())
+	client := elizav1connect.NewElizaServiceClient(connect.NewClient(connecthttp.NewTransport(httpClient, ts.URL, connecthttp.WithGRPC(), connecthttp.WithSendGzip())))
+	stream, err := client.Converse(context.Background())
+	require.NoError(t, err)
 	require.NoError(t, stream.Send(&elizav1.ConverseRequest{Sentence: "ping gzip 1"}))
 	require.NoError(t, stream.Send(&elizav1.ConverseRequest{Sentence: "ping gzip 2"}))
-	require.NoError(t, stream.CloseRequest())
+	require.NoError(t, stream.CloseSend())
 
 	resp, err := stream.Receive()
 	require.NoError(t, err)
@@ -52,7 +54,6 @@ func TestHandler_GzipRequest_StreamingResponse(t *testing.T) {
 			break
 		}
 	}
-	require.NoError(t, stream.CloseResponse())
 
 	select {
 	case entry := <-logCh:

@@ -5,133 +5,130 @@
 package registryv1connect
 
 import (
-	connect "connectrpc.com/connect"
+	connect "connectrpc.com/connect/v2"
 	context "context"
-	errors "errors"
 	v1 "github.com/sudorandom/fauxrpc/private/gen/registry/v1"
-	http "net/http"
-	strings "strings"
+	sync "sync"
 )
-
-// This is a compile-time assertion to ensure that this generated file and the connect package are
-// compatible. If you get a compiler error that this constant is not defined, this code was
-// generated with a version of connect newer than the one compiled into your binary. You can fix the
-// problem by either regenerating this code with an older version of connect or updating the connect
-// version compiled into your binary.
-const _ = connect.IsAtLeastVersion1_13_0
 
 const (
 	// RegistryServiceName is the fully-qualified name of the RegistryService service.
 	RegistryServiceName = "registry.v1.RegistryService"
 )
 
-// These constants are the fully-qualified names of the RPCs defined in this package. They're
-// exposed at runtime as Spec.Procedure and as the final two segments of the HTTP route.
+// These constants are the procedure names of the RPCs defined in this package. They're exposed at
+// runtime as Spec.Procedure and as the final two segments of the HTTP route.
 //
 // Note that these are different from the fully-qualified method names used by
 // google.golang.org/protobuf/reflect/protoreflect. To convert from these constants to
 // reflection-formatted method names, remove the leading slash and convert the remaining slash to a
 // period.
 const (
-	// RegistryServiceAddDescriptorsProcedure is the fully-qualified name of the RegistryService's
+	// RegistryServiceAddDescriptorsProcedure is the procedure name of the RegistryService's
 	// AddDescriptors RPC.
 	RegistryServiceAddDescriptorsProcedure = "/registry.v1.RegistryService/AddDescriptors"
-	// RegistryServiceResetProcedure is the fully-qualified name of the RegistryService's Reset RPC.
+	// RegistryServiceResetProcedure is the procedure name of the RegistryService's Reset RPC.
 	RegistryServiceResetProcedure = "/registry.v1.RegistryService/Reset"
+)
+
+var (
+	registryServiceAddDescriptorsSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_registry_v1_registry_service_proto.Services().ByName("RegistryService").Methods().ByName("AddDescriptors"),
+			Procedure:  RegistryServiceAddDescriptorsProcedure,
+		}
+	})
+	registryServiceResetSpec = sync.OnceValue(func() connect.Spec {
+		return connect.Spec{
+			StreamType: connect.StreamTypeUnary,
+			Schema:     v1.File_registry_v1_registry_service_proto.Services().ByName("RegistryService").Methods().ByName("Reset"),
+			Procedure:  RegistryServiceResetProcedure,
+		}
+	})
 )
 
 // RegistryServiceClient is a client for the registry.v1.RegistryService service.
 type RegistryServiceClient interface {
-	AddDescriptors(context.Context, *connect.Request[v1.AddDescriptorsRequest]) (*connect.Response[v1.AddDescriptorsResponse], error)
-	Reset(context.Context, *connect.Request[v1.ResetRequest]) (*connect.Response[v1.ResetResponse], error)
+	AddDescriptors(context.Context, *v1.AddDescriptorsRequest) (*v1.AddDescriptorsResponse, error)
+	Reset(context.Context, *v1.ResetRequest) (*v1.ResetResponse, error)
 }
 
-// NewRegistryServiceClient constructs a client for the registry.v1.RegistryService service. By
-// default, it uses the Connect protocol with the binary Protobuf Codec, asks for gzipped responses,
-// and sends uncompressed requests. To use the gRPC or gRPC-Web protocols, supply the
-// connect.WithGRPC() or connect.WithGRPCWeb() options.
-//
-// The URL supplied here should be the base URL for the Connect or gRPC server (for example,
-// http://api.acme.com or https://acme.com/grpc).
-func NewRegistryServiceClient(httpClient connect.HTTPClient, baseURL string, opts ...connect.ClientOption) RegistryServiceClient {
-	baseURL = strings.TrimRight(baseURL, "/")
-	registryServiceMethods := v1.File_registry_v1_registry_service_proto.Services().ByName("RegistryService").Methods()
-	return &registryServiceClient{
-		addDescriptors: connect.NewClient[v1.AddDescriptorsRequest, v1.AddDescriptorsResponse](
-			httpClient,
-			baseURL+RegistryServiceAddDescriptorsProcedure,
-			connect.WithSchema(registryServiceMethods.ByName("AddDescriptors")),
-			connect.WithClientOptions(opts...),
-		),
-		reset: connect.NewClient[v1.ResetRequest, v1.ResetResponse](
-			httpClient,
-			baseURL+RegistryServiceResetProcedure,
-			connect.WithSchema(registryServiceMethods.ByName("Reset")),
-			connect.WithClientOptions(opts...),
-		),
-	}
-}
-
-// registryServiceClient implements RegistryServiceClient.
-type registryServiceClient struct {
-	addDescriptors *connect.Client[v1.AddDescriptorsRequest, v1.AddDescriptorsResponse]
-	reset          *connect.Client[v1.ResetRequest, v1.ResetResponse]
-}
-
-// AddDescriptors calls registry.v1.RegistryService.AddDescriptors.
-func (c *registryServiceClient) AddDescriptors(ctx context.Context, req *connect.Request[v1.AddDescriptorsRequest]) (*connect.Response[v1.AddDescriptorsResponse], error) {
-	return c.addDescriptors.CallUnary(ctx, req)
-}
-
-// Reset calls registry.v1.RegistryService.Reset.
-func (c *registryServiceClient) Reset(ctx context.Context, req *connect.Request[v1.ResetRequest]) (*connect.Response[v1.ResetResponse], error) {
-	return c.reset.CallUnary(ctx, req)
+// NewRegistryServiceClient constructs a client for the registry.v1.RegistryService service.
+// Multiple service clients may share a single connect.Client.
+func NewRegistryServiceClient(client *connect.Client) RegistryServiceClient {
+	return &registryServiceClient{client: client}
 }
 
 // RegistryServiceHandler is an implementation of the registry.v1.RegistryService service.
 type RegistryServiceHandler interface {
-	AddDescriptors(context.Context, *connect.Request[v1.AddDescriptorsRequest]) (*connect.Response[v1.AddDescriptorsResponse], error)
-	Reset(context.Context, *connect.Request[v1.ResetRequest]) (*connect.Response[v1.ResetResponse], error)
+	AddDescriptors(context.Context, *v1.AddDescriptorsRequest) (*v1.AddDescriptorsResponse, error)
+	Reset(context.Context, *v1.ResetRequest) (*v1.ResetResponse, error)
 }
 
-// NewRegistryServiceHandler builds an HTTP handler from the service implementation. It returns the
-// path on which to mount the handler and the handler itself.
-//
-// By default, handlers support the Connect, gRPC, and gRPC-Web protocols with the binary Protobuf
-// and JSON codecs. They also support gzip compression.
-func NewRegistryServiceHandler(svc RegistryServiceHandler, opts ...connect.HandlerOption) (string, http.Handler) {
-	registryServiceMethods := v1.File_registry_v1_registry_service_proto.Services().ByName("RegistryService").Methods()
-	registryServiceAddDescriptorsHandler := connect.NewUnaryHandler(
-		RegistryServiceAddDescriptorsProcedure,
-		svc.AddDescriptors,
-		connect.WithSchema(registryServiceMethods.ByName("AddDescriptors")),
-		connect.WithHandlerOptions(opts...),
+// RegisterRegistryServiceHandler registers svc as the registry.v1.RegistryService implementation on
+// server.
+func RegisterRegistryServiceHandler(server *connect.Server, svc RegistryServiceHandler) {
+	adapter := registryServiceHandler{svc: svc}
+	server.Register(
+		connect.Method{Spec: registryServiceAddDescriptorsSpec(), Handler: adapter.addDescriptors},
+		connect.Method{Spec: registryServiceResetSpec(), Handler: adapter.reset},
 	)
-	registryServiceResetHandler := connect.NewUnaryHandler(
-		RegistryServiceResetProcedure,
-		svc.Reset,
-		connect.WithSchema(registryServiceMethods.ByName("Reset")),
-		connect.WithHandlerOptions(opts...),
-	)
-	return "/registry.v1.RegistryService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch r.URL.Path {
-		case RegistryServiceAddDescriptorsProcedure:
-			registryServiceAddDescriptorsHandler.ServeHTTP(w, r)
-		case RegistryServiceResetProcedure:
-			registryServiceResetHandler.ServeHTTP(w, r)
-		default:
-			http.NotFound(w, r)
-		}
-	})
 }
 
 // UnimplementedRegistryServiceHandler returns CodeUnimplemented from all methods.
 type UnimplementedRegistryServiceHandler struct{}
 
-func (UnimplementedRegistryServiceHandler) AddDescriptors(context.Context, *connect.Request[v1.AddDescriptorsRequest]) (*connect.Response[v1.AddDescriptorsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("registry.v1.RegistryService.AddDescriptors is not implemented"))
+func (UnimplementedRegistryServiceHandler) AddDescriptors(context.Context, *v1.AddDescriptorsRequest) (*v1.AddDescriptorsResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "registry.v1.RegistryService.AddDescriptors is not implemented")
 }
 
-func (UnimplementedRegistryServiceHandler) Reset(context.Context, *connect.Request[v1.ResetRequest]) (*connect.Response[v1.ResetResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("registry.v1.RegistryService.Reset is not implemented"))
+func (UnimplementedRegistryServiceHandler) Reset(context.Context, *v1.ResetRequest) (*v1.ResetResponse, error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, "registry.v1.RegistryService.Reset is not implemented")
+}
+
+type registryServiceClient struct {
+	client *connect.Client
+}
+
+func (c *registryServiceClient) AddDescriptors(ctx context.Context, req *v1.AddDescriptorsRequest) (*v1.AddDescriptorsResponse, error) {
+	var res v1.AddDescriptorsResponse
+	if err := c.client.CallUnary(ctx, registryServiceAddDescriptorsSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+func (c *registryServiceClient) Reset(ctx context.Context, req *v1.ResetRequest) (*v1.ResetResponse, error) {
+	var res v1.ResetResponse
+	if err := c.client.CallUnary(ctx, registryServiceResetSpec(), req, &res); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+type registryServiceHandler struct{ svc RegistryServiceHandler }
+
+func (h registryServiceHandler) addDescriptors(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.AddDescriptorsRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.AddDescriptors(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
+}
+
+func (h registryServiceHandler) reset(ctx context.Context, _ connect.Spec, stream connect.ServerStream) error {
+	var req v1.ResetRequest
+	if err := stream.Receive(&req); err != nil {
+		return err
+	}
+	res, err := h.svc.Reset(ctx, &req)
+	if err != nil {
+		return err
+	}
+	return stream.Send(res)
 }

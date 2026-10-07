@@ -4,7 +4,8 @@ import (
 	"context"
 	"net/http"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
 	"github.com/google/uuid"
 	registryv1 "github.com/sudorandom/fauxrpc/private/gen/registry/v1"
 	"github.com/sudorandom/fauxrpc/private/gen/registry/v1/registryv1connect"
@@ -65,16 +66,16 @@ func (c *FauxRPCContainer) BaseURL(ctx context.Context) (string, error) {
 
 // MustRegistryClient returns a client for managing types in the FauxRPC registry. A panic happens if anything fails.
 func (c *FauxRPCContainer) MustRegistryClient(ctx context.Context) registryv1connect.RegistryServiceClient {
-	return registryv1connect.NewRegistryServiceClient(http.DefaultClient, c.MustBaseURL(ctx))
+	return registryv1connect.NewRegistryServiceClient(connect.NewClient(connecthttp.NewTransport(http.DefaultClient, c.MustBaseURL(ctx))))
 }
 
-// MustRegistryClient returns a client for managing types in the FauxRPC registry.
+// RegistryClient returns a client for managing types in the FauxRPC registry.
 func (c *FauxRPCContainer) RegistryClient(ctx context.Context) (registryv1connect.RegistryServiceClient, error) {
 	baseURL, err := c.BaseURL(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return registryv1connect.NewRegistryServiceClient(http.DefaultClient, baseURL), nil
+	return registryv1connect.NewRegistryServiceClient(connect.NewClient(connecthttp.NewTransport(http.DefaultClient, baseURL))), nil
 }
 
 // MustAddFileDescriptor adds the given file descriptor to the FauxRPC registry. A panic happens if anything fails.
@@ -90,14 +91,13 @@ func (c *FauxRPCContainer) AddFileDescriptor(ctx context.Context, fd protoreflec
 	if err != nil {
 		return err
 	}
-	_, err = client.AddDescriptors(ctx, connect.NewRequest(
-		registryv1.AddDescriptorsRequest_builder{
-			Descriptors: &descriptorpb.FileDescriptorSet{
-				File: []*descriptorpb.FileDescriptorProto{
-					protodesc.ToFileDescriptorProto(fd),
-				},
+	_, err = client.AddDescriptors(ctx, registryv1.AddDescriptorsRequest_builder{
+		Descriptors: &descriptorpb.FileDescriptorSet{
+			File: []*descriptorpb.FileDescriptorProto{
+				protodesc.ToFileDescriptorProto(fd),
 			},
-		}.Build()))
+		},
+	}.Build())
 	return err
 }
 
@@ -137,11 +137,9 @@ func (c *FauxRPCContainer) AddFiles(ctx context.Context, files *protoregistry.Fi
 		return true
 	})
 
-	_, err = client.AddDescriptors(ctx, connect.NewRequest(
-		registryv1.AddDescriptorsRequest_builder{
-			Descriptors: fds,
-		}.Build(),
-	))
+	_, err = client.AddDescriptors(ctx, registryv1.AddDescriptorsRequest_builder{
+		Descriptors: fds,
+	}.Build())
 	return err
 }
 
@@ -158,13 +156,13 @@ func (c *FauxRPCContainer) ResetRegistry(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	_, err = client.Reset(ctx, connect.NewRequest(&registryv1.ResetRequest{}))
+	_, err = client.Reset(ctx, &registryv1.ResetRequest{})
 	return err
 }
 
 // MustStubsClient returns a client for managing stubs in the FauxRPC registry. A panic happens if anything fails.
 func (c *FauxRPCContainer) MustStubsClient(ctx context.Context) stubsv1connect.StubsServiceClient {
-	return stubsv1connect.NewStubsServiceClient(http.DefaultClient, c.MustBaseURL(ctx))
+	return stubsv1connect.NewStubsServiceClient(connect.NewClient(connecthttp.NewTransport(http.DefaultClient, c.MustBaseURL(ctx))))
 }
 
 // MustStubsClient returns a client for managing stubs in the FauxRPC registry.
@@ -173,7 +171,7 @@ func (c *FauxRPCContainer) StubsClient(ctx context.Context) (stubsv1connect.Stub
 	if err != nil {
 		return nil, err
 	}
-	return stubsv1connect.NewStubsServiceClient(http.DefaultClient, baseURL), nil
+	return stubsv1connect.NewStubsServiceClient(connect.NewClient(connecthttp.NewTransport(http.DefaultClient, baseURL))), nil
 }
 
 // MustAddStub adds a stub to the FauxRPC stub database. A panic happens if anything fails.
@@ -184,11 +182,6 @@ func (c *FauxRPCContainer) MustAddStub(ctx context.Context, target string, msg p
 }
 
 // AddStub adds a stub to the FauxRPC stub database. Target is the full protobuf path to the type or service method.
-//
-// Examples:
-//
-//	err := AddStub(ctx, "connectrpc.eliza.v1.SayResponse", &elizav1.SayResponse{Sentence: "example"})
-//	err := AddStub(ctx, "connectrpc.eliza.v1.ElizaService/Say", &elizav1.SayResponse{Sentence: "example"})
 func (c *FauxRPCContainer) AddStub(ctx context.Context, target string, msg proto.Message) error {
 	client, err := c.StubsClient(ctx)
 	if err != nil {
@@ -198,19 +191,17 @@ func (c *FauxRPCContainer) AddStub(ctx context.Context, target string, msg proto
 	if err != nil {
 		return err
 	}
-	_, err = client.AddStubs(ctx, connect.NewRequest(
-		stubsv1.AddStubsRequest_builder{
-			Stubs: []*stubsv1.Stub{
-				stubsv1.Stub_builder{
-					Ref: stubsv1.StubRef_builder{
-						Id:     proto.String(uuid.New().String()),
-						Target: proto.String(target),
-					}.Build(),
-					Proto: msgpb,
+	_, err = client.AddStubs(ctx, stubsv1.AddStubsRequest_builder{
+		Stubs: []*stubsv1.Stub{
+			stubsv1.Stub_builder{
+				Ref: stubsv1.StubRef_builder{
+					Id:     proto.String(uuid.New().String()),
+					Target: proto.String(target),
 				}.Build(),
-			},
-		}.Build(),
-	))
+				Proto: msgpb,
+			}.Build(),
+		},
+	}.Build())
 	return err
 }
 
@@ -222,17 +213,12 @@ func (c *FauxRPCContainer) MustAddStubError(ctx context.Context, target string, 
 }
 
 // AddStubError adds a stub error response to the FauxRPC stub database. A panic happens if anything fails.
-//
-// Examples:
-//
-//	err := AddStub(ctx, "connectrpc.eliza.v1.SayResponse", "invalid argument", stubsv1.ErrorCode_ERROR_CODE_INVALID_ARGUMENT)
-//	err := AddStub(ctx, "connectrpc.eliza.v1.ElizaService/Say", "not found", stubsv1.ErrorCode_ERROR_CODE_NOT_FOUND)
 func (c *FauxRPCContainer) AddStubError(ctx context.Context, target string, msg string, code stubsv1.ErrorCode) error {
 	client, err := c.StubsClient(ctx)
 	if err != nil {
 		return err
 	}
-	_, err = client.AddStubs(ctx, connect.NewRequest(stubsv1.AddStubsRequest_builder{
+	_, err = client.AddStubs(ctx, stubsv1.AddStubsRequest_builder{
 		Stubs: []*stubsv1.Stub{
 			stubsv1.Stub_builder{
 				Ref: stubsv1.StubRef_builder{
@@ -245,7 +231,7 @@ func (c *FauxRPCContainer) AddStubError(ctx context.Context, target string, msg 
 				}.Build(),
 			}.Build(),
 		},
-	}.Build()))
+	}.Build())
 	return err
 }
 
@@ -262,6 +248,6 @@ func (c *FauxRPCContainer) ResetStubs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	_, err = client.RemoveAllStubs(ctx, connect.NewRequest(&stubsv1.RemoveAllStubsRequest{}))
+	_, err = client.RemoveAllStubs(ctx, &stubsv1.RemoveAllStubsRequest{})
 	return err
 }

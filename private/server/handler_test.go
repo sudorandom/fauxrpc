@@ -10,11 +10,12 @@ import (
 	"testing"
 	"time"
 
-	"buf.build/gen/go/connectrpc/eliza/connectrpc/go/connectrpc/eliza/v1/elizav1connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
 	elizav1 "buf.build/gen/go/connectrpc/eliza/protocolbuffers/go/connectrpc/eliza/v1"
-	"connectrpc.com/connect"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/sudorandom/fauxrpc/private/elizav1connect"
 	"github.com/sudorandom/fauxrpc/private/registry"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -64,14 +65,15 @@ func TestHandler_Logging_Streaming(t *testing.T) {
 	logCh, unsubscribe := srv.logger.Subscribe()
 	defer unsubscribe()
 
-	client := elizav1connect.NewElizaServiceClient(httpClient, ts.URL, connect.WithGRPC())
-	stream := client.Converse(context.Background())
+	client := elizav1connect.NewElizaServiceClient(connect.NewClient(connecthttp.NewTransport(httpClient, ts.URL, connecthttp.WithGRPC())))
+	stream, err := client.Converse(context.Background())
+	require.NoError(t, err)
 	require.NoError(t, stream.Send(&elizav1.ConverseRequest{Sentence: "Hello"}))
 	require.NoError(t, stream.Send(&elizav1.ConverseRequest{Sentence: "World"}))
-	require.NoError(t, stream.CloseRequest())
+	require.NoError(t, stream.CloseSend())
 
 	// The fake bidi handler responds with a single message and then closes.
-	_, err := stream.Receive()
+	_, err = stream.Receive()
 	require.NoError(t, err)
 	for {
 		if _, err := stream.Receive(); err != nil {
@@ -79,7 +81,6 @@ func TestHandler_Logging_Streaming(t *testing.T) {
 			break
 		}
 	}
-	require.NoError(t, stream.CloseResponse())
 
 	select {
 	case entry := <-logCh:
@@ -107,11 +108,11 @@ func TestHandler_StaticSeedProducesStableProtobufResponses(t *testing.T) {
 		ServerOpts{StaticSeed: true},
 		elizav1.File_connectrpc_eliza_v1_eliza_proto)
 
-	client := elizav1connect.NewElizaServiceClient(httpClient, ts.URL, connect.WithGRPC())
+	client := elizav1connect.NewElizaServiceClient(connect.NewClient(connecthttp.NewTransport(httpClient, ts.URL, connecthttp.WithGRPC())))
 	request := func() *elizav1.SayResponse {
-		resp, err := client.Say(context.Background(), connect.NewRequest(&elizav1.SayRequest{Sentence: "hello"}))
+		resp, err := client.Say(context.Background(), &elizav1.SayRequest{Sentence: "hello"})
 		require.NoError(t, err)
-		return resp.Msg
+		return resp
 	}
 
 	first, second := request(), request()
@@ -123,19 +124,20 @@ func TestHandler_StaticSeedProducesStableProtobufResponses(t *testing.T) {
 func TestHandler_AllProtocols(t *testing.T) {
 	_, ts, httpClient := setupTestServer(t, ServerOpts{}, elizav1.File_connectrpc_eliza_v1_eliza_proto)
 
-	protocols := map[string][]connect.ClientOption{
+	protocols := map[string][]connecthttp.Option{
 		"connect":  nil,
-		"grpc":     {connect.WithGRPC()},
-		"grpcweb":  {connect.WithGRPCWeb()},
-		"jsoncall": {connect.WithProtoJSON()},
+		"grpc":     {connecthttp.WithGRPC()},
+		"grpcweb":  {connecthttp.WithGRPCWeb()},
+		"jsoncall": {connecthttp.WithProtoJSON()},
 	}
 	for name, opts := range protocols {
 		t.Run(name, func(t *testing.T) {
-			client := elizav1connect.NewElizaServiceClient(httpClient, ts.URL, opts...)
-			resp, err := client.Say(context.Background(), connect.NewRequest(&elizav1.SayRequest{Sentence: "hello"}))
+			client := elizav1connect.NewElizaServiceClient(connect.NewClient(connecthttp.NewTransport(httpClient, ts.URL, opts...)))
+			callCtx, callInfo := connect.NewClientContext(context.Background())
+			resp, err := client.Say(callCtx, &elizav1.SayRequest{Sentence: "hello"})
 			require.NoError(t, err)
-			assert.NotEmpty(t, resp.Msg.Sentence)
-			assert.Equal(t, "fake", resp.Header().Get("x-fauxrpc-source"))
+			assert.NotEmpty(t, resp.Sentence)
+			assert.Equal(t, "fake", callInfo.ResponseHeader().Get("x-fauxrpc-source"))
 		})
 	}
 }
@@ -145,12 +147,14 @@ func TestHandler_AllProtocols(t *testing.T) {
 func TestHandler_UnknownMethod(t *testing.T) {
 	_, ts, httpClient := setupTestServer(t, ServerOpts{}, elizav1.File_connectrpc_eliza_v1_eliza_proto)
 
-	client := connect.NewClient[elizav1.SayRequest, elizav1.SayResponse](
-		httpClient,
-		ts.URL+"/connectrpc.eliza.v1.ElizaService/NoSuchMethod",
-		connect.WithGRPC(),
+	client := connect.NewClient(
+		connecthttp.NewTransport(httpClient, ts.URL, connecthttp.WithGRPC()),
 	)
-	_, err := client.CallUnary(context.Background(), connect.NewRequest(&elizav1.SayRequest{Sentence: "hi"}))
+	var resp elizav1.SayResponse
+	err := client.CallUnary(context.Background(), connect.Spec{
+		Procedure:  "/connectrpc.eliza.v1.ElizaService/NoSuchMethod",
+		StreamType: connect.StreamTypeUnary,
+	}, &elizav1.SayRequest{Sentence: "hi"}, &resp)
 	require.Error(t, err)
 	assert.Equal(t, connect.CodeUnimplemented, connect.CodeOf(err))
 }

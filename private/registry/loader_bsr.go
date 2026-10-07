@@ -15,13 +15,12 @@ import (
 	"strings"
 
 	modulev1 "buf.build/gen/go/bufbuild/registry/protocolbuffers/go/buf/registry/module/v1"
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
-
-	"buf.build/gen/go/bufbuild/registry/connectrpc/go/buf/registry/module/v1/modulev1connect"
 )
 
 // errCacheMiss removed
@@ -105,7 +104,6 @@ func resolveBSRCommitID(ctx context.Context, httpClient *http.Client, module, re
 	remote, owner, repoAndRef := parts[0], parts[1], parts[2]
 	repo, _, _ := strings.Cut(repoAndRef, ":")
 	apiURL := "https://" + remote
-	labelClient := modulev1connect.NewLabelServiceClient(httpClient, apiURL)
 
 	// A 32-character hex string is likely a commit ID already.
 	if len(ref) == 32 && !strings.ContainsAny(ref, "ghijklmnopqrstuvwxyz") {
@@ -113,7 +111,12 @@ func resolveBSRCommitID(ctx context.Context, httpClient *http.Client, module, re
 		return ref, nil
 	}
 
-	getLabelsResp, err := labelClient.GetLabels(ctx, connect.NewRequest(&modulev1.GetLabelsRequest{
+	client := connect.NewClient(connecthttp.NewTransport(httpClient, apiURL))
+	var getLabelsResp modulev1.GetLabelsResponse
+	err := client.CallUnary(ctx, connect.Spec{
+		Procedure:  "/buf.registry.module.v1.LabelService/GetLabels",
+		StreamType: connect.StreamTypeUnary,
+	}, &modulev1.GetLabelsRequest{
 		LabelRefs: []*modulev1.LabelRef{
 			{
 				Value: &modulev1.LabelRef_Name_{
@@ -125,14 +128,14 @@ func resolveBSRCommitID(ctx context.Context, httpClient *http.Client, module, re
 				},
 			},
 		},
-	}))
+	}, &getLabelsResp)
 	if err != nil {
 		return "", fmt.Errorf("failed to get label for ref %q: %w", ref, err)
 	}
-	if len(getLabelsResp.Msg.Labels) == 0 {
+	if len(getLabelsResp.Labels) == 0 {
 		return "", fmt.Errorf("no label found for ref %q", ref)
 	}
-	return getLabelsResp.Msg.Labels[0].CommitId, nil
+	return getLabelsResp.Labels[0].CommitId, nil
 }
 
 // handleCacheLoadError logs a warning and attempts to delete the corrupted cache file.
@@ -233,8 +236,12 @@ func loadFromBSR(ctx context.Context, httpClient *http.Client, module, rootCommi
 	repo, _, _ := strings.Cut(repoAndRef, ":")
 	apiURL := "https://" + remote
 
-	fdsClient := modulev1connect.NewFileDescriptorSetServiceClient(httpClient, apiURL)
-	fdsRes, err := fdsClient.GetFileDescriptorSet(ctx, connect.NewRequest(&modulev1.GetFileDescriptorSetRequest{
+	client := connect.NewClient(connecthttp.NewTransport(httpClient, apiURL, connecthttp.WithReadMaxBytes(0)))
+	var fdsRes modulev1.GetFileDescriptorSetResponse
+	err := client.CallUnary(ctx, connect.Spec{
+		Procedure:  "/buf.registry.module.v1.FileDescriptorSetService/GetFileDescriptorSet",
+		StreamType: connect.StreamTypeUnary,
+	}, &modulev1.GetFileDescriptorSetRequest{
 		ResourceRef: modulev1.ResourceRef_builder{
 			Name: modulev1.ResourceRef_Name_builder{
 				Owner:  owner,
@@ -245,12 +252,12 @@ func loadFromBSR(ctx context.Context, httpClient *http.Client, module, rootCommi
 		ExcludeImports:                false,
 		IncludeSourceCodeInfo:         true,
 		IncludeSourceRetentionOptions: true,
-	}))
+	}, &fdsRes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get file descriptor set for commit %s: %w", rootCommitID, err)
 	}
 
-	return fdsRes.Msg.GetFileDescriptorSet(), nil
+	return fdsRes.GetFileDescriptorSet(), nil
 }
 
 func newBufHttpClient() *http.Client {

@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -11,42 +10,36 @@ import (
 	"testing"
 	"time"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
+	elizav1 "buf.build/gen/go/connectrpc/eliza/protocolbuffers/go/connectrpc/eliza/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/sudorandom/fauxrpc/private/elizav1connect"
 	"github.com/sudorandom/fauxrpc/private/stubs"
-
-	"buf.build/gen/go/connectrpc/eliza/connectrpc/go/connectrpc/eliza/v1/elizav1connect"
-	elizav1 "buf.build/gen/go/connectrpc/eliza/protocolbuffers/go/connectrpc/eliza/v1"
 )
 
 type mockElizaImpl struct {
 	elizav1connect.UnimplementedElizaServiceHandler
-	sayFunc       func(context.Context, *connect.Request[elizav1.SayRequest]) (*connect.Response[elizav1.SayResponse], error)
-	introduceFunc func(context.Context, *connect.Request[elizav1.IntroduceRequest], *connect.ServerStream[elizav1.IntroduceResponse]) error
+	sayFunc func(context.Context, *elizav1.SayRequest) (*elizav1.SayResponse, error)
 }
 
-func (m *mockElizaImpl) Say(ctx context.Context, req *connect.Request[elizav1.SayRequest]) (*connect.Response[elizav1.SayResponse], error) {
+func (m *mockElizaImpl) Say(ctx context.Context, req *elizav1.SayRequest) (*elizav1.SayResponse, error) {
 	if m.sayFunc != nil {
 		return m.sayFunc(ctx, req)
 	}
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("unimplemented"))
+	return nil, connect.NewError(connect.CodeUnimplemented, "unimplemented")
 }
 
-func (m *mockElizaImpl) Introduce(ctx context.Context, req *connect.Request[elizav1.IntroduceRequest], stream *connect.ServerStream[elizav1.IntroduceResponse]) error {
-	if m.introduceFunc != nil {
-		return m.introduceFunc(ctx, req, stream)
-	}
-	return connect.NewError(connect.CodeUnimplemented, errors.New("unimplemented"))
-}
-
-func setupMockUpstream(t *testing.T, path string, handler http.Handler) *httptest.Server {
+func setupMockUpstream(t *testing.T, impl elizav1connect.ElizaServiceHandler) *httptest.Server {
 	mux := http.NewServeMux()
-	mux.Handle(path, handler)
-	srv := httptest.NewUnstartedServer(mux)
-	srv.EnableHTTP2 = true
-	srv.StartTLS()
-	return srv
+	srv := connect.NewServer()
+	elizav1connect.RegisterElizaServiceHandler(srv, impl)
+	connecthttp.Mount(mux, srv)
+	ts := httptest.NewUnstartedServer(mux)
+	ts.EnableHTTP2 = true
+	ts.StartTLS()
+	return ts
 }
 
 func setupFauxRPCProxyServer(t *testing.T, upstreamURL string, recordDir string) (*server, *httptest.Server, elizav1connect.ElizaServiceClient) {
@@ -85,8 +78,7 @@ func setupFauxRPCProxyServer(t *testing.T, upstreamURL string, recordDir string)
 		Transport: tr,
 	}
 	client := elizav1connect.NewElizaServiceClient(
-		hc,
-		ts.URL,
+		connect.NewClient(connecthttp.NewTransport(hc, ts.URL)),
 	)
 	return srv, ts, client
 }
@@ -95,28 +87,28 @@ func TestProxyIngestion(t *testing.T) {
 	recordDir := t.TempDir()
 
 	sayCalled := false
-	path, handler := elizav1connect.NewElizaServiceHandler(&mockElizaImpl{
-		sayFunc: func(ctx context.Context, req *connect.Request[elizav1.SayRequest]) (*connect.Response[elizav1.SayResponse], error) {
+	upstream := setupMockUpstream(t, &mockElizaImpl{
+		sayFunc: func(ctx context.Context, req *elizav1.SayRequest) (*elizav1.SayResponse, error) {
 			sayCalled = true
-			assert.Equal(t, "Hello upstream", req.Msg.Sentence)
-			return connect.NewResponse(&elizav1.SayResponse{
+			assert.Equal(t, "Hello upstream", req.Sentence)
+			return &elizav1.SayResponse{
 				Sentence: "Hello from upstream response",
-			}), nil
+			}, nil
 		},
 	})
-	upstream := setupMockUpstream(t, path, handler)
 	defer upstream.Close()
 
 	_, fauxrpc, client := setupFauxRPCProxyServer(t, upstream.URL, recordDir)
 	defer fauxrpc.Close()
 
-	resp, err := client.Say(context.Background(), connect.NewRequest(&elizav1.SayRequest{
+	callCtx, callInfo := connect.NewClientContext(context.Background())
+	resp, err := client.Say(callCtx, &elizav1.SayRequest{
 		Sentence: "Hello upstream",
-	}))
+	})
 	require.NoError(t, err)
 	assert.True(t, sayCalled)
-	assert.Equal(t, "Hello from upstream response", resp.Msg.Sentence)
-	assert.Equal(t, "proxy", resp.Header().Get("x-fauxrpc-source"))
+	assert.Equal(t, "Hello from upstream response", resp.Sentence)
+	assert.Equal(t, "proxy", callInfo.ResponseHeader().Get("x-fauxrpc-source"))
 
 	// Verify recorded stubs file in its structured location
 	recordedFilePath := filepath.Join(recordDir, "connectrpc.eliza.v1.ElizaService/Say.json")
@@ -143,26 +135,25 @@ func TestProxyIngestion(t *testing.T) {
 }
 
 func TestProxyUnimplementedFallback(t *testing.T) {
-	path, handler := elizav1connect.NewElizaServiceHandler(&mockElizaImpl{})
-	upstream := setupMockUpstream(t, path, handler)
+	upstream := setupMockUpstream(t, &mockElizaImpl{})
 	defer upstream.Close()
 
 	_, fauxrpc, client := setupFauxRPCProxyServer(t, upstream.URL, "")
 	defer fauxrpc.Close()
 
-	resp, err := client.Say(context.Background(), connect.NewRequest(&elizav1.SayRequest{
+	callCtx, callInfo := connect.NewClientContext(context.Background())
+	resp, err := client.Say(callCtx, &elizav1.SayRequest{
 		Sentence: "Hello upstream fallback",
-	}))
+	})
 	require.NoError(t, err)
 
-	assert.Equal(t, "fake", resp.Header().Get("x-fauxrpc-source"))
-	assert.Empty(t, resp.Header().Get("x-fauxrpc-mock-ids"))
-	assert.NotEmpty(t, resp.Msg.Sentence)
+	assert.Equal(t, "fake", callInfo.ResponseHeader().Get("x-fauxrpc-source"))
+	assert.Empty(t, callInfo.ResponseHeader().Get("x-fauxrpc-mock-ids"))
+	assert.NotEmpty(t, resp.Sentence)
 }
 
 func TestProxyUnimplementedFallbackWithStub(t *testing.T) {
-	path, handler := elizav1connect.NewElizaServiceHandler(&mockElizaImpl{})
-	upstream := setupMockUpstream(t, path, handler)
+	upstream := setupMockUpstream(t, &mockElizaImpl{})
 	defer upstream.Close()
 
 	srv, fauxrpc, client := setupFauxRPCProxyServer(t, upstream.URL, "")
@@ -179,27 +170,27 @@ func TestProxyUnimplementedFallbackWithStub(t *testing.T) {
 		},
 	})
 
-	resp, err := client.Say(context.Background(), connect.NewRequest(&elizav1.SayRequest{
+	callCtx, callInfo := connect.NewClientContext(context.Background())
+	resp, err := client.Say(callCtx, &elizav1.SayRequest{
 		Sentence: "Hello upstream fallback stub",
-	}))
+	})
 	require.NoError(t, err)
 
-	assert.Equal(t, "stub", resp.Header().Get("x-fauxrpc-source"))
-	assert.Equal(t, "my-special-stub-id", resp.Header().Get("x-fauxrpc-mock-ids"))
-	assert.Equal(t, "Fallback stub sentence", resp.Msg.Sentence)
+	assert.Equal(t, "stub", callInfo.ResponseHeader().Get("x-fauxrpc-source"))
+	assert.Equal(t, "my-special-stub-id", callInfo.ResponseHeader().Get("x-fauxrpc-mock-ids"))
+	assert.Equal(t, "Fallback stub sentence", resp.Sentence)
 }
 
 func TestProxyIntegrationUnimplementedAndImplemented(t *testing.T) {
 	sayCalled := false
-	path, handler := elizav1connect.NewElizaServiceHandler(&mockElizaImpl{
-		sayFunc: func(ctx context.Context, req *connect.Request[elizav1.SayRequest]) (*connect.Response[elizav1.SayResponse], error) {
+	upstream := setupMockUpstream(t, &mockElizaImpl{
+		sayFunc: func(ctx context.Context, req *elizav1.SayRequest) (*elizav1.SayResponse, error) {
 			sayCalled = true
-			return connect.NewResponse(&elizav1.SayResponse{
+			return &elizav1.SayResponse{
 				Sentence: "Real response from implemented upstream endpoint",
-			}), nil
+			}, nil
 		},
 	})
-	upstream := setupMockUpstream(t, path, handler)
 	defer upstream.Close()
 
 	_, fauxrpc, client := setupFauxRPCProxyServer(t, upstream.URL, "")
@@ -207,40 +198,45 @@ func TestProxyIntegrationUnimplementedAndImplemented(t *testing.T) {
 
 	// A. Implemented endpoint
 	{
-		resp, err := client.Say(context.Background(), connect.NewRequest(&elizav1.SayRequest{
+		callCtx, callInfo := connect.NewClientContext(context.Background())
+		resp, err := client.Say(callCtx, &elizav1.SayRequest{
 			Sentence: "Hello upstream",
-		}))
+		})
 		require.NoError(t, err)
 		assert.True(t, sayCalled)
-		assert.Equal(t, "proxy", resp.Header().Get("x-fauxrpc-source"))
-		assert.Equal(t, "Real response from implemented upstream endpoint", resp.Msg.Sentence)
+		assert.Equal(t, "proxy", callInfo.ResponseHeader().Get("x-fauxrpc-source"))
+		assert.Equal(t, "Real response from implemented upstream endpoint", resp.Sentence)
 	}
 
 	// B. Unimplemented endpoint (Introduce) - fallback
 	{
-		stream, err := client.Introduce(context.Background(), connect.NewRequest(&elizav1.IntroduceRequest{
+		callCtx, callInfo := connect.NewClientContext(context.Background())
+		stream, err := client.Introduce(callCtx, &elizav1.IntroduceRequest{
 			Name: "Hello fallback",
-		}))
+		})
 		require.NoError(t, err)
 
-		assert.Equal(t, "fake", stream.ResponseHeader().Get("x-fauxrpc-source"))
-		assert.True(t, stream.Receive())
-		assert.NotEmpty(t, stream.Msg().Sentence)
+		msg, err := stream.Receive()
+		require.NoError(t, err)
+		assert.Equal(t, "fake", callInfo.ResponseHeader().Get("x-fauxrpc-source"))
+		assert.NotEmpty(t, msg.Sentence)
 	}
 
 	// C. Unimplemented bidi streaming endpoint (Converse) - fallback
 	{
-		stream := client.Converse(context.Background())
-		err := stream.Send(&elizav1.ConverseRequest{
+		callCtx, callInfo := connect.NewClientContext(context.Background())
+		stream, err := client.Converse(callCtx)
+		require.NoError(t, err)
+		err = stream.Send(&elizav1.ConverseRequest{
 			Sentence: "Hello bidi fallback",
 		})
 		require.NoError(t, err)
-		err = stream.CloseRequest()
+		err = stream.CloseSend()
 		require.NoError(t, err)
 
 		resp, err := stream.Receive()
 		require.NoError(t, err)
-		assert.Equal(t, "fake", stream.ResponseHeader().Get("x-fauxrpc-source"))
+		assert.Equal(t, "fake", callInfo.ResponseHeader().Get("x-fauxrpc-source"))
 		assert.NotEmpty(t, resp.Sentence)
 	}
 }

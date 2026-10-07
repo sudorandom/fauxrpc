@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"strings"
 
-	"connectrpc.com/connect"
 	"github.com/brianvoe/gofakeit/v7"
 	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
 	stubsv1connect "github.com/sudorandom/fauxrpc/private/gen/stubs/v1/stubsv1connect"
@@ -33,17 +32,17 @@ func NewHandler(registry registry.ServiceRegistry, stubdb StubDatabase) *handler
 }
 
 // AddStubs implements stubsv1connect.StubsServiceHandler.
-func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.AddStubsRequest]) (*connect.Response[stubsv1.AddStubsResponse], error) {
-	slog.Debug("stubs.v1.StubsService.AddStubs()", "files", len(req.Msg.GetStubs()))
+func (h *handler) AddStubs(ctx context.Context, req *stubsv1.AddStubsRequest) (*stubsv1.AddStubsResponse, error) {
+	slog.Debug("stubs.v1.StubsService.AddStubs()", "files", len(req.GetStubs()))
 	defer slog.Debug("stubs.v1.StubsService.AddStubs() complete")
 
-	entries := make([]StubEntry, len(req.Msg.GetStubs()))
-	stubs := make([]*stubsv1.Stub, len(req.Msg.GetStubs()))
+	entries := make([]StubEntry, len(req.GetStubs()))
+	stubs := make([]*stubsv1.Stub, len(req.GetStubs()))
 	// A stub may name an extension of the message it stubs, which protojson
 	// only accepts when it can look the extension up.
 	jsonOpts := protojson.UnmarshalOptions{Resolver: h.registry.Resolver()}
 	var compiler *protocel.Compiler
-	for i, stub := range req.Msg.GetStubs() {
+	for i, stub := range req.GetStubs() {
 		if !stub.HasRef() {
 			stub.SetRef(&stubsv1.StubRef{})
 		}
@@ -180,15 +179,15 @@ func (h *handler) AddStubs(ctx context.Context, req *connect.Request[stubsv1.Add
 		h.stubdb.AddStub(entry)
 	}
 
-	return connect.NewResponse(stubsv1.AddStubsResponse_builder{Stubs: stubs}.Build()), nil
+	return stubsv1.AddStubsResponse_builder{Stubs: stubs}.Build(), nil
 }
 
 // ListStubs implements stubsv1connect.StubsServiceHandler.
-func (h *handler) ListStubs(ctx context.Context, req *connect.Request[stubsv1.ListStubsRequest]) (*connect.Response[stubsv1.ListStubsResponse], error) {
+func (h *handler) ListStubs(ctx context.Context, req *stubsv1.ListStubsRequest) (*stubsv1.ListStubsResponse, error) {
 	slog.Debug("stubs.v1.StubsService.ListStubs()")
 	defer slog.Debug("stubs.v1.StubsService.ListStubs() complete")
 
-	ref := req.Msg.GetStubRef()
+	ref := req.GetStubRef()
 	targetName, err := normalizeTargetName(ref.GetTarget())
 	if err != nil {
 		return nil, err
@@ -208,25 +207,25 @@ func (h *handler) ListStubs(ctx context.Context, req *connect.Request[stubsv1.Li
 	if err != nil {
 		return nil, err
 	}
-	return connect.NewResponse(stubsv1.ListStubsResponse_builder{Stubs: pbstubs}.Build()), nil
+	return stubsv1.ListStubsResponse_builder{Stubs: pbstubs}.Build(), nil
 
 }
 
 // RemoveAllStubs implements stubsv1connect.StubsServiceHandler.
-func (h *handler) RemoveAllStubs(context.Context, *connect.Request[stubsv1.RemoveAllStubsRequest]) (*connect.Response[stubsv1.RemoveAllStubsResponse], error) {
+func (h *handler) RemoveAllStubs(context.Context, *stubsv1.RemoveAllStubsRequest) (*stubsv1.RemoveAllStubsResponse, error) {
 	slog.Debug("stubs.v1.StubsService.RemoveAllStubs()")
 	defer slog.Debug("stubs.v1.StubsService.RemoveAllStubs() complete")
 
 	h.stubdb.RemoveAllStubs()
-	return connect.NewResponse(&stubsv1.RemoveAllStubsResponse{}), nil
+	return &stubsv1.RemoveAllStubsResponse{}, nil
 }
 
 // RemoveStubs implements stubsv1connect.StubsServiceHandler.
-func (h *handler) RemoveStubs(ctx context.Context, msg *connect.Request[stubsv1.RemoveStubsRequest]) (*connect.Response[stubsv1.RemoveStubsResponse], error) {
+func (h *handler) RemoveStubs(ctx context.Context, msg *stubsv1.RemoveStubsRequest) (*stubsv1.RemoveStubsResponse, error) {
 	slog.Debug("stubs.v1.StubsService.RemoveStubs()")
 	defer slog.Debug("stubs.v1.StubsService.RemoveStubs() complete")
 
-	for _, ref := range msg.Msg.GetStubRefs() {
+	for _, ref := range msg.GetStubRefs() {
 		targetName, err := normalizeTargetName(ref.GetTarget())
 		if err != nil {
 			return nil, err
@@ -236,7 +235,7 @@ func (h *handler) RemoveStubs(ctx context.Context, msg *connect.Request[stubsv1.
 			ID:   ref.GetId(),
 		})
 	}
-	return connect.NewResponse(&stubsv1.RemoveStubsResponse{}), nil
+	return &stubsv1.RemoveStubsResponse{}, nil
 }
 
 func StubsToProto(stubs []*StubEntry) ([]*stubsv1.Stub, error) {

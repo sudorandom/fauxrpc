@@ -6,7 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
 	registryv1 "github.com/sudorandom/fauxrpc/private/gen/registry/v1"
 	"github.com/sudorandom/fauxrpc/private/gen/registry/v1/registryv1connect"
 	"github.com/sudorandom/fauxrpc/private/registry"
@@ -46,11 +47,11 @@ func (c *RegistryAddCmd) Run(globals *Globals) error {
 
 	ctx, cancelFn := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancelFn()
-	if _, err := client.AddDescriptors(ctx, connect.NewRequest(registryv1.AddDescriptorsRequest_builder{
+	if _, err := client.AddDescriptors(ctx, registryv1.AddDescriptorsRequest_builder{
 		Descriptors: &descriptorpb.FileDescriptorSet{
 			File: filespb,
 		},
-	}.Build())); err != nil {
+	}.Build()); err != nil {
 		return err
 	}
 
@@ -63,7 +64,7 @@ type RegistryRemoveAllCmd struct {
 
 func (c *RegistryRemoveAllCmd) Run(globals *Globals) error {
 	client := newRegistryClient(c.Addr)
-	_, err := client.Reset(context.Background(), connect.NewRequest(&registryv1.ResetRequest{}))
+	_, err := client.Reset(context.Background(), &registryv1.ResetRequest{})
 	if err != nil {
 		return err
 	}
@@ -77,5 +78,5 @@ func newRegistryClient(addr string) registryv1connect.RegistryServiceClient {
 	transport.Protocols.SetUnencryptedHTTP2(true)
 	client := &http.Client{Transport: transport}
 
-	return registryv1connect.NewRegistryServiceClient(client, addr)
+	return registryv1connect.NewRegistryServiceClient(connect.NewClient(connecthttp.NewTransport(client, addr, connecthttp.WithReadMaxBytes(0))))
 }

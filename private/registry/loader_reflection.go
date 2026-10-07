@@ -6,10 +6,9 @@ import (
 	"log/slog"
 	"net/http"
 
-	"buf.build/gen/go/grpc/grpc/connectrpc/go/grpc/reflection/v1/reflectionv1connect"
-	reflectionv1 "buf.build/gen/go/grpc/grpc/protocolbuffers/go/grpc/reflection/v1"
-	"connectrpc.com/connect"
-	"google.golang.org/protobuf/proto"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
+	"connectrpc.com/grpcreflect/v2"
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/types/descriptorpb"
 )
@@ -18,40 +17,24 @@ import (
 // services are imported from the file descriptors advertised there.
 func AddServicesFromReflection(registry LoaderTarget, httpClient *http.Client, addr string) error {
 	slog.Debug("AddServicesFromReflection", slog.String("addr", addr))
-	reflectClient := reflectionv1connect.NewServerReflectionClient(httpClient, addr, connect.WithGRPC())
-	reflectReq := reflectClient.ServerReflectionInfo(context.Background())
-	if err := reflectReq.Send(&reflectionv1.ServerReflectionRequest{
-		MessageRequest: &reflectionv1.ServerReflectionRequest_ListServices{
-			ListServices: "",
-		},
-	}); err != nil {
-		return err
-	}
-	resp, err := reflectReq.Receive()
+	client := grpcreflect.NewClient(connect.NewClient(
+		connecthttp.NewTransport(httpClient, addr, connecthttp.WithGRPC()),
+	))
+	stream := client.NewStream(context.Background())
+	defer stream.Close()
+
+	services, err := stream.ListServices()
 	if err != nil {
 		return err
 	}
 
 	var allFdps []*descriptorpb.FileDescriptorProto
-	for _, svc := range resp.GetListServicesResponse().GetService() {
-		if err := reflectReq.Send(&reflectionv1.ServerReflectionRequest{
-			MessageRequest: &reflectionv1.ServerReflectionRequest_FileContainingSymbol{
-				FileContainingSymbol: svc.Name,
-			},
-		}); err != nil {
-			return err
-		}
-		resp, err := reflectReq.Receive()
+	for _, svc := range services {
+		fdps, err := stream.FileContainingSymbol(svc)
 		if err != nil {
 			return err
 		}
-		for _, descBytes := range resp.GetFileDescriptorResponse().GetFileDescriptorProto() {
-			fdp := new(descriptorpb.FileDescriptorProto)
-			if err := proto.Unmarshal(descBytes, fdp); err != nil {
-				return fmt.Errorf("unmarshal: %w", err)
-			}
-			allFdps = append(allFdps, fdp)
-		}
+		allFdps = append(allFdps, fdps...)
 	}
 
 	// Deduplicate file descriptors. It's possible that we get the same file

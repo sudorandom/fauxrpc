@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"io"
 
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
@@ -16,6 +18,23 @@ type dynamicProtoCodec struct {
 
 func (c *dynamicProtoCodec) Name() string {
 	return "proto"
+}
+
+func (c *dynamicProtoCodec) MarshalWrite(ctx context.Context, dst io.Writer, msg any) error {
+	data, err := c.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	_, err = dst.Write(data)
+	return err
+}
+
+func (c *dynamicProtoCodec) UnmarshalRead(ctx context.Context, src io.Reader, msg any) error {
+	data, err := io.ReadAll(src)
+	if err != nil {
+		return err
+	}
+	return c.Unmarshal(data, msg)
 }
 
 func (c *dynamicProtoCodec) Marshal(msg any) ([]byte, error) {
@@ -78,6 +97,23 @@ type dynamicJSONCodec struct {
 
 func (c *dynamicJSONCodec) Name() string {
 	return "json"
+}
+
+func (c *dynamicJSONCodec) MarshalWrite(ctx context.Context, dst io.Writer, msg any) error {
+	data, err := c.Marshal(msg)
+	if err != nil {
+		return err
+	}
+	_, err = dst.Write(data)
+	return err
+}
+
+func (c *dynamicJSONCodec) UnmarshalRead(ctx context.Context, src io.Reader, msg any) error {
+	data, err := io.ReadAll(src)
+	if err != nil {
+		return err
+	}
+	return c.Unmarshal(data, msg)
 }
 
 func (c *dynamicJSONCodec) Marshal(msg any) ([]byte, error) {

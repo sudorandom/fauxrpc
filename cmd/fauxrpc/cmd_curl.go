@@ -10,7 +10,9 @@ import (
 	"net/http"
 	"strings"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
+	"connectrpc.com/connect/v2/connectproto"
 	"github.com/brianvoe/gofakeit/v7"
 	"github.com/quic-go/quic-go/http3"
 	"github.com/sudorandom/fauxrpc"
@@ -154,39 +156,32 @@ func (c *CurlCmd) callRPC(
 	fauxFaker := fauxrpc.NewFauxFaker()
 	multiFaker := fauxrpc.NewMultiFaker([]fauxrpc.ProtoFaker{stubFaker, fauxFaker})
 
-	// Create a new client for each method with a custom codec
-	// that can handle dynamic responses.
-	options := []connect.ClientOption{}
-
+	var codec connect.Codec
 	switch c.Encoding {
 	case "proto":
-		options = append(options, connect.WithCodec(&dynamicProtoCodec{
-			methodDesc: methodDesc,
-		}))
+		codec = &dynamicProtoCodec{methodDesc: methodDesc}
 	case "json":
-		options = append(options, connect.WithCodec(&dynamicJSONCodec{
-			methodDesc: methodDesc,
-		}))
+		codec = &dynamicJSONCodec{methodDesc: methodDesc}
 	default:
 		return fmt.Errorf("unknown encoding: %s", c.Encoding)
 	}
 
+	transportOpts := []connecthttp.Option{
+		connecthttp.WithCodecs(codec),
+	}
 	switch c.Protocol {
 	case "grpc":
-		options = append(options, connect.WithGRPC())
+		transportOpts = append(transportOpts, connecthttp.WithGRPC())
 	case "grpcweb":
-		options = append(options, connect.WithGRPCWeb())
+		transportOpts = append(transportOpts, connecthttp.WithGRPCWeb())
 	case "connect":
-		// this is the default
+		// default
 	default:
 		return fmt.Errorf("unknown protocol: %s", c.Protocol)
 	}
 
-	client := connect.NewClient[dynamicpb.Message, dynamicpb.Message](
-		httpClient,
-		c.Addr+"/"+fullMethodName,
-		options...,
-	)
+	transport := connecthttp.NewTransport(httpClient, c.Addr, transportOpts...)
+	client := connect.NewClient(transport)
 
 	isClientStream := methodDesc.IsStreamingClient()
 	isServerStream := methodDesc.IsStreamingServer()
@@ -262,7 +257,7 @@ func (c *CurlCmd) callRPC(
 		if errors.As(err, &connectErr) {
 			fmt.Printf("<- [%s] (error) %s: %s\n", fullMethodName, connectErr.Code(), connectErr.Message())
 			for _, detail := range connectErr.Details() {
-				msg, err := detail.Value()
+				msg, err := connectproto.UnmarshalErrorDetail(detail)
 				if err != nil {
 					slog.Error("failed to get error detail value", "error", err)
 					continue
@@ -283,23 +278,33 @@ func (c *CurlCmd) callRPC(
 		}
 	}
 
+	streamType := connect.StreamTypeUnary
+	if isClientStream && isServerStream {
+		streamType = connect.StreamTypeBidi
+	} else if isClientStream {
+		streamType = connect.StreamTypeClient
+	} else if isServerStream {
+		streamType = connect.StreamTypeServer
+	}
+	spec := connect.Spec{
+		Procedure:  "/" + fullMethodName,
+		StreamType: streamType,
+	}
+
 	if !isClientStream && !isServerStream {
 		if err := multiFaker.SetDataOnMessage(reqMsg, genOpts); err != nil {
 			return err
 		}
 		printRequest(reqMsg)
 
-		resp, err := client.CallUnary(ctx, connect.NewRequest(reqMsg))
+		resp := dynamicpb.NewMessage(methodDesc.Output())
+		err := client.CallUnary(ctx, spec, reqMsg, resp)
 		if err != nil {
 			printError(err)
 			return nil
 		}
-		if resp.Msg == nil {
-			m := dynamicpb.NewMessage(methodDesc.Output()).New().Interface().(*dynamicpb.Message)
-			resp.Msg = m
-		}
-		slog.Debug("RPC call successful", "method", fullMethodName, "msg", resp.Msg)
-		printResponse(resp.Msg)
+		slog.Debug("RPC call successful", "method", fullMethodName, "msg", resp)
+		printResponse(resp)
 		return nil
 	}
 
@@ -328,39 +333,47 @@ func (c *CurlCmd) callRPC(
 
 	var streamSender func(proto.Message) error
 	var streamReceiver func() error
-	var bidiStream *connect.BidiStreamForClient[dynamicpb.Message, dynamicpb.Message]
-	var clientStream *connect.ClientStreamForClient[dynamicpb.Message, dynamicpb.Message]
-	var serverStream *connect.ServerStreamForClient[dynamicpb.Message]
+	var activeStream connect.ClientStream
 
 	if isClientStream && isServerStream {
-		bidiStream = client.CallBidiStream(ctx)
+		var err error
+		activeStream, err = client.CallClientStream(ctx, spec)
+		if err != nil {
+			printError(err)
+			return nil
+		}
+		defer activeStream.Close()
 		streamSender = func(msg proto.Message) error {
 			printRequest(msg)
-			dm := msg.(*dynamicpb.Message)
-			return bidiStream.Send(dm)
+			return activeStream.Send(msg)
 		}
 		streamReceiver = func() error {
 			for {
-				msg, err := bidiStream.Receive()
-				if err != nil {
+				msg := dynamicpb.NewMessage(methodDesc.Output())
+				if err := activeStream.Receive(msg); err != nil {
 					return err
 				}
 				printResponse(msg)
 			}
 		}
 	} else if isClientStream {
-		clientStream = client.CallClientStream(ctx)
+		var err error
+		activeStream, err = client.CallClientStream(ctx, spec)
+		if err != nil {
+			printError(err)
+			return nil
+		}
+		defer activeStream.Close()
 		streamSender = func(msg proto.Message) error {
 			printRequest(msg)
-			dm := msg.(*dynamicpb.Message)
-			return clientStream.Send(dm)
+			return activeStream.Send(msg)
 		}
 		streamReceiver = func() error {
-			resp, err := clientStream.CloseAndReceive()
-			if err != nil {
+			msg := dynamicpb.NewMessage(methodDesc.Output())
+			if err := activeStream.Receive(msg); err != nil {
 				return err
 			}
-			printResponse(resp.Msg)
+			printResponse(msg)
 			return nil
 		}
 	} else if isServerStream {
@@ -370,17 +383,19 @@ func (c *CurlCmd) callRPC(
 		}
 		printRequest(reqMsg)
 		var err error
-		serverStream, err = client.CallServerStream(ctx, connect.NewRequest(reqMsg))
+		activeStream, err = client.CallServerStream(ctx, spec, reqMsg)
 		if err != nil {
 			printError(err)
 			return nil
 		}
+		defer activeStream.Close()
 		streamReceiver = func() error {
 			for {
-				if !serverStream.Receive() {
-					return serverStream.Err()
+				msg := dynamicpb.NewMessage(methodDesc.Output())
+				if err := activeStream.Receive(msg); err != nil {
+					return err
 				}
-				printResponse(serverStream.Msg())
+				printResponse(msg)
 			}
 		}
 	}
@@ -393,13 +408,12 @@ func (c *CurlCmd) callRPC(
 			return nil
 		}
 		// Close send direction
-		if bidiStream != nil {
-			if err := bidiStream.CloseRequest(); err != nil {
+		if activeStream != nil {
+			if err := activeStream.CloseSend(); err != nil {
 				printError(err)
 				return nil
 			}
 		}
-		// clientStream.CloseAndReceive() is called in receiver
 	}
 
 	// Receive responses

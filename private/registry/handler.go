@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	"connectrpc.com/connect"
 	registryv1 "github.com/sudorandom/fauxrpc/private/gen/registry/v1"
 	"github.com/sudorandom/fauxrpc/private/gen/registry/v1/registryv1connect"
 	"google.golang.org/protobuf/reflect/protodesc"
@@ -22,11 +21,11 @@ func NewHandler(registry ServiceRegistry) *handler {
 }
 
 // AddDescriptors implements registryv1connect.RegistryServiceHandler.
-func (h *handler) AddDescriptors(ctx context.Context, req *connect.Request[registryv1.AddDescriptorsRequest]) (*connect.Response[registryv1.AddDescriptorsResponse], error) {
-	slog.Debug("registry.v1.RegistryService.AddDescriptors()", "files", len(req.Msg.GetDescriptors().GetFile()))
+func (h *handler) AddDescriptors(ctx context.Context, req *registryv1.AddDescriptorsRequest) (*registryv1.AddDescriptorsResponse, error) {
+	slog.Debug("registry.v1.RegistryService.AddDescriptors()", "files", len(req.GetDescriptors().GetFile()))
 	defer slog.Debug("registry.v1.RegistryService.AddDescriptors() complete")
 
-	files, err := protodesc.NewFiles(req.Msg.GetDescriptors())
+	files, err := protodesc.NewFiles(req.GetDescriptors())
 	if err != nil {
 		return nil, err
 	}
@@ -43,16 +42,16 @@ func (h *handler) AddDescriptors(ctx context.Context, req *connect.Request[regis
 	if err := h.registry.Rebuild(); err != nil {
 		return nil, err
 	}
-	return connect.NewResponse(&registryv1.AddDescriptorsResponse{}), nil
+	return &registryv1.AddDescriptorsResponse{}, nil
 }
 
 // Reset implements registryv1connect.RegistryServiceHandler.
-func (h *handler) Reset(context.Context, *connect.Request[registryv1.ResetRequest]) (*connect.Response[registryv1.ResetResponse], error) {
+func (h *handler) Reset(context.Context, *registryv1.ResetRequest) (*registryv1.ResetResponse, error) {
 	slog.Debug("registry.v1.RegistryService.Reset()")
 	defer slog.Debug("registry.v1.RegistryService.Reset() complete")
 
 	if err := h.registry.Reset(); err != nil {
 		return nil, err
 	}
-	return connect.NewResponse(&registryv1.ResetResponse{}), nil
+	return &registryv1.ResetResponse{}, nil
 }

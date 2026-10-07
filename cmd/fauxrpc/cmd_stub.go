@@ -10,7 +10,8 @@ import (
 	"net/http"
 	"slices"
 
-	"connectrpc.com/connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
 	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
 	"github.com/sudorandom/fauxrpc/private/gen/stubs/v1/stubsv1connect"
 	"google.golang.org/protobuf/proto"
@@ -60,11 +61,11 @@ func (c *StubAddCmd) Run(globals *Globals) error {
 	} else {
 		return errors.New("one of: --error-code or --json is required")
 	}
-	resp, err := client.AddStubs(context.Background(), connect.NewRequest(stubsv1.AddStubsRequest_builder{Stubs: []*stubsv1.Stub{stub}}.Build()))
+	resp, err := client.AddStubs(context.Background(), stubsv1.AddStubsRequest_builder{Stubs: []*stubsv1.Stub{stub}}.Build())
 	if err != nil {
 		return err
 	}
-	outputStubs(resp.Msg.GetStubs())
+	outputStubs(resp.GetStubs())
 	return nil
 }
 
@@ -74,12 +75,12 @@ type StubListCmd struct {
 
 func (c *StubListCmd) Run(globals *Globals) error {
 	client := newStubClient(c.Addr)
-	resp, err := client.ListStubs(context.Background(), connect.NewRequest(&stubsv1.ListStubsRequest{}))
+	resp, err := client.ListStubs(context.Background(), &stubsv1.ListStubsRequest{})
 	if err != nil {
 		return err
 	}
 	groupedStubs := map[string][]string{}
-	for _, stub := range resp.Msg.GetStubs() {
+	for _, stub := range resp.GetStubs() {
 		ref := stub.GetRef()
 		name := ref.GetTarget()
 		groupedStubs[name] = append(groupedStubs[name], ref.GetId())
@@ -104,16 +105,16 @@ type StubGetCmd struct {
 
 func (c *StubGetCmd) Run(globals *Globals) error {
 	client := newStubClient(c.Addr)
-	resp, err := client.ListStubs(context.Background(), connect.NewRequest(stubsv1.ListStubsRequest_builder{
+	resp, err := client.ListStubs(context.Background(), stubsv1.ListStubsRequest_builder{
 		StubRef: stubsv1.StubRef_builder{
 			Id:     proto.String(c.ID),
 			Target: proto.String(c.Target),
 		}.Build(),
-	}.Build()))
+	}.Build())
 	if err != nil {
 		return err
 	}
-	outputStubs(resp.Msg.GetStubs())
+	outputStubs(resp.GetStubs())
 	return nil
 }
 
@@ -125,14 +126,14 @@ type StubRemoveCmd struct {
 
 func (c *StubRemoveCmd) Run(globals *Globals) error {
 	client := newStubClient(c.Addr)
-	_, err := client.RemoveStubs(context.Background(), connect.NewRequest(stubsv1.RemoveStubsRequest_builder{
+	_, err := client.RemoveStubs(context.Background(), stubsv1.RemoveStubsRequest_builder{
 		StubRefs: []*stubsv1.StubRef{
 			stubsv1.StubRef_builder{
 				Id:     proto.String(c.ID),
 				Target: proto.String(c.Target),
 			}.Build(),
 		},
-	}.Build()))
+	}.Build())
 	if err != nil {
 		return err
 	}
@@ -145,7 +146,7 @@ type StubRemoveAllCmd struct {
 
 func (c *StubRemoveAllCmd) Run(globals *Globals) error {
 	client := newStubClient(c.Addr)
-	_, err := client.RemoveAllStubs(context.Background(), connect.NewRequest(&stubsv1.RemoveAllStubsRequest{}))
+	_, err := client.RemoveAllStubs(context.Background(), &stubsv1.RemoveAllStubsRequest{})
 	if err != nil {
 		return err
 	}
@@ -202,5 +203,5 @@ func newStubClient(addr string) stubsv1connect.StubsServiceClient {
 	transport.Protocols.SetUnencryptedHTTP2(true)
 	client := &http.Client{Transport: transport}
 
-	return stubsv1connect.NewStubsServiceClient(client, addr)
+	return stubsv1connect.NewStubsServiceClient(connect.NewClient(connecthttp.NewTransport(client, addr, connecthttp.WithReadMaxBytes(0))))
 }

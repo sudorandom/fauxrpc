@@ -5,21 +5,16 @@ go 1.26.3
 retract v0.15.25
 
 require (
-	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.11-20260709200747-435963d16310.1
-	buf.build/gen/go/bufbuild/registry/connectrpc/go v1.20.0-20260713175918-10d915f5b43b.1
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.12-20260825204119-511051f7f437.2
 	buf.build/gen/go/bufbuild/registry/protocolbuffers/go v1.36.11-20260713175918-10d915f5b43b.1
-	buf.build/gen/go/connectrpc/eliza/connectrpc/go v1.20.0-20230913231627-233fca715f49.1
 	buf.build/gen/go/connectrpc/eliza/protocolbuffers/go v1.36.11-20230913231627-233fca715f49.1
-	buf.build/gen/go/grpc/grpc/connectrpc/go v1.20.0-20260331211127-1730f7242d0f.1
-	buf.build/gen/go/grpc/grpc/protocolbuffers/go v1.36.11-20260331211127-1730f7242d0f.1
 	buf.build/go/hyperpb v0.1.3
-	buf.build/go/protovalidate v1.2.0
+	buf.build/go/protovalidate v1.4.0
 	buf.build/go/protoyaml v0.7.0
-	connectrpc.com/connect v1.20.0
-	connectrpc.com/connect/v2 v2.0.0-alpha.1
+	connectrpc.com/connect/v2 v2.0.0
 	connectrpc.com/cors v0.1.0
-	connectrpc.com/grpcreflect v1.3.0
-	connectrpc.com/validate v0.6.0
+	connectrpc.com/grpcreflect/v2 v2.0.0-rc.1
+	connectrpc.com/validate v0.8.0-rc.1
 	connectrpc.com/vanguard v0.4.1-0.20260915175352-41e8ca8108e9
 	github.com/MadAppGang/httplog v1.3.0
 	github.com/a-h/templ v0.3.1020
@@ -33,27 +28,27 @@ require (
 	github.com/jhump/protoreflect v1.17.0
 	github.com/quic-go/quic-go v0.59.1
 	github.com/rs/cors v1.11.1
-	github.com/stretchr/testify v1.11.1
+	github.com/stretchr/testify v1.12.1
 	github.com/sudorandom/protodocs v0.1.5
 	github.com/tailscale/hujson v0.0.0-20250226034555-ec1d1c113d33
 	github.com/tidwall/gjson v1.19.0
-	go.yaml.in/yaml/v3 v3.0.4
+	go.yaml.in/yaml/v3 v3.0.5
 	golang.org/x/sync v0.23.0
-	google.golang.org/genproto/googleapis/api v0.0.0-20260706201446-f0a921348800
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260727163830-6c54dddc4772
+	google.golang.org/genproto/googleapis/api v0.0.0-20260819154853-08b0e4226688
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260819154853-08b0e4226688
 	google.golang.org/grpc v1.83.2
-	google.golang.org/protobuf v1.36.11
+	google.golang.org/protobuf v1.36.12
 )
 
 require (
-	cel.dev/expr v0.25.2 // indirect
+	cel.dev/cel-go v0.32.0 // indirect
+	cel.dev/expr v0.25.3 // indirect
 	github.com/TylerBrock/colorjson v0.0.0-20200706003622-8a50f05110d2 // indirect
 	github.com/a-h/parse v0.0.0-20250122154542-74294addb73e // indirect
 	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cli/browser v1.3.0 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fatih/color v1.16.0 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-openapi/jsonpointer v0.22.5 // indirect
@@ -66,24 +61,22 @@ require (
 	github.com/natefinch/atomic v1.0.1 // indirect
 	github.com/oasdiff/yaml v0.1.1 // indirect
 	github.com/oasdiff/yaml3 v0.0.14 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/timandy/routine v1.1.6 // indirect
 	golang.org/x/crypto v0.57.0 // indirect
-	golang.org/x/exp v0.0.0-20260709172345-9ea1abe57597 // indirect
+	golang.org/x/exp v0.0.0-20260820142414-ca536658362e // indirect
 	golang.org/x/mod v0.41.0 // indirect
 	golang.org/x/net v0.59.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
 	golang.org/x/tools v0.49.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 tool (
-	connectrpc.com/connect/cmd/protoc-gen-connect-go
+	connectrpc.com/connect/v2/cmd/protoc-gen-connect-go
 	github.com/a-h/templ/cmd/templ
 	google.golang.org/protobuf/cmd/protoc-gen-go
 )
