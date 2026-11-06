@@ -21,7 +21,7 @@ func AddServicesFromReflection(registry LoaderTarget, httpClient *http.Client, a
 		connecthttp.NewTransport(httpClient, addr, connecthttp.WithGRPC()),
 	))
 	stream := client.NewStream(context.Background())
-	defer stream.Close()
+	defer func() { _ = stream.Close() }()
 
 	services, err := stream.ListServices()
 	if err != nil {

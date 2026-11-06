@@ -342,7 +342,7 @@ func (c *CurlCmd) callRPC(
 			printError(err)
 			return nil
 		}
-		defer activeStream.Close()
+		defer func() { _ = activeStream.Close() }()
 		streamSender = func(msg proto.Message) error {
 			printRequest(msg)
 			return activeStream.Send(msg)
@@ -363,7 +363,7 @@ func (c *CurlCmd) callRPC(
 			printError(err)
 			return nil
 		}
-		defer activeStream.Close()
+		defer func() { _ = activeStream.Close() }()
 		streamSender = func(msg proto.Message) error {
 			printRequest(msg)
 			return activeStream.Send(msg)
@@ -388,7 +388,7 @@ func (c *CurlCmd) callRPC(
 			printError(err)
 			return nil
 		}
-		defer activeStream.Close()
+		defer func() { _ = activeStream.Close() }()
 		streamReceiver = func() error {
 			for {
 				msg := dynamicpb.NewMessage(methodDesc.Output())
