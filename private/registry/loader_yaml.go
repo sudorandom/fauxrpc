@@ -19,6 +19,9 @@ func AddServicesFromDescriptorsFileYAML(registry LoaderTarget, filepath string) 
 
 	dss := new(descriptorpb.FileDescriptorSet)
 	unmarshaller := protoyaml.UnmarshalOptions{DiscardUnknown: true}
+	if r, ok := registry.(interface{ Resolver() *Resolver }); ok {
+		unmarshaller.Resolver = r.Resolver()
+	}
 	if err := unmarshaller.Unmarshal(descBytes, dss); err != nil {
 		return fmt.Errorf("unmarshal: %w", err)
 	}

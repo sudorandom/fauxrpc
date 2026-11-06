@@ -94,6 +94,7 @@ func setDataOnMessage(pm protoreflect.ProtoMessage, opts GenOptions) error {
 			msg.Set(field, *v)
 		}
 	}
+	setHTTPPathDataOnMessage(msg, opts)
 	setExtensionsOnMessage(msg, opts)
 	return nil
 }

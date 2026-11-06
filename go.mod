@@ -15,7 +15,7 @@ require (
 	connectrpc.com/cors v0.1.0
 	connectrpc.com/grpcreflect/v2 v2.0.0-rc.1
 	connectrpc.com/validate v0.8.0-rc.1
-	connectrpc.com/vanguard v0.4.1-0.20260915175352-41e8ca8108e9
+	connectrpc.com/vanguard v0.5.1-0.20261106165027-ef091f4d2e6d
 	github.com/MadAppGang/httplog v1.3.0
 	github.com/a-h/templ v0.3.1020
 	github.com/alecthomas/kong v1.16.0

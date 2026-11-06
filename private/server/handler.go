@@ -92,7 +92,7 @@ func specForMethod(md protoreflect.MethodDescriptor) connect.Spec {
 		Procedure:        fmt.Sprintf("/%s/%s", md.Parent().FullName(), md.Name()),
 		StreamType:       streamType,
 		IdempotencyLevel: idempotency,
-		Schema:           md,
+		Schema:           wrapMethodWithNormalizedHTTP(md),
 	}
 }
 

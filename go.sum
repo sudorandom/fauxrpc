@@ -24,8 +24,8 @@ connectrpc.com/grpcreflect/v2 v2.0.0-rc.1 h1:HcDgYKd75mWbN1/bKf4b7UHt78PUaUUhGX6
 connectrpc.com/grpcreflect/v2 v2.0.0-rc.1/go.mod h1:qVNOSunNuPtE/iuQQCEbuTaPMnjvrgDcjl5Q+d/dEpA=
 connectrpc.com/validate v0.8.0-rc.1 h1:Z/yF+fQPplDpHtvePjNkdAWqd63b5hW5mTakgGQDQh8=
 connectrpc.com/validate v0.8.0-rc.1/go.mod h1:ZL6R40w8KK2/4C6558IfS+DdY+1h0iNzBPwTnC4ppgY=
-connectrpc.com/vanguard v0.4.1-0.20260915175352-41e8ca8108e9 h1:TxbPvrZmsQRL9+j+9tw0YO/GT7cOq+Py3Bfcan17kOI=
-connectrpc.com/vanguard v0.4.1-0.20260915175352-41e8ca8108e9/go.mod h1:5WoqLnyvYyOCwrAnUkRJEdz2WIyL+XDVWGv0HaLbrLo=
+connectrpc.com/vanguard v0.5.1-0.20261106165027-ef091f4d2e6d h1:PHvCiVt835VylRTx0VtEgt7QipCte8mOko+7ln9am9E=
+connectrpc.com/vanguard v0.5.1-0.20261106165027-ef091f4d2e6d/go.mod h1:qE6LKOhejkWTH+/rzbrbO5aRovpHx5hCcHJTxxpj7bQ=
 github.com/MadAppGang/httplog v1.3.0 h1:1XU54TO8kiqTeO+7oZLKAM3RP/cJ7SadzslRcKspVHo=
 github.com/MadAppGang/httplog v1.3.0/go.mod h1:gpYEdkjh/Cda6YxtDy4AB7KY+fR7mb3SqBZw74A5hJ4=
 github.com/TylerBrock/colorjson v0.0.0-20200706003622-8a50f05110d2 h1:ZBbLwSJqkHBuFDA6DUhhse0IGJ7T5bemHyNILUjvOq4=

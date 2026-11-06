@@ -114,6 +114,9 @@ func stringByHeuristics(fd protoreflect.FieldDescriptor, opts GenOptions) (strin
 }
 
 func stringSimple(fd protoreflect.FieldDescriptor, opts GenOptions) string {
+	if s, ok := stringByHTTPPath(fd, opts); ok {
+		return s
+	}
 	if s, ok := stringByHeuristics(fd, opts); ok {
 		return s
 	}

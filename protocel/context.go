@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/sudorandom/fauxrpc"
 	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -39,6 +40,9 @@ type celCtxKeyType string
 const celCtxKey celCtxKeyType = "celCtx"
 
 func WithCELContext(ctx context.Context, celCtx *CELContext) context.Context {
+	if celCtx != nil && celCtx.MethodDescriptor != nil {
+		ctx = fauxrpc.WithMethodDescriptor(ctx, celCtx.MethodDescriptor)
+	}
 	ctx = context.WithValue(ctx, celCtxKey, celCtx)
 	return ctx
 }

@@ -1,6 +1,8 @@
 package registry
 
 import (
+	"google.golang.org/genproto/googleapis/api/annotations"
+	"google.golang.org/genproto/googleapis/api/httpbody"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/descriptorpb"
 
@@ -31,6 +33,9 @@ func AddServicesFromGlobal(registry LoaderTarget) error {
 		structpb.File_google_protobuf_struct_proto,
 		timestamppb.File_google_protobuf_timestamp_proto,
 		wrapperspb.File_google_protobuf_wrappers_proto,
+		annotations.File_google_api_http_proto,
+		annotations.File_google_api_annotations_proto,
+		httpbody.File_google_api_httpbody_proto,
 	} {
 		if err := registry.RegisterFile(fd); err != nil {
 			return err

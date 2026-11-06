@@ -19,7 +19,6 @@ import (
 	connectcors "connectrpc.com/cors"
 	"connectrpc.com/grpcreflect/v2"
 	"connectrpc.com/validate"
-	"connectrpc.com/vanguard"
 	"github.com/MadAppGang/httplog"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-chi/chi/v5"
@@ -339,15 +338,17 @@ func (s *server) rebuildHandlers() error {
 	}
 
 	resolver := s.Resolver()
-	rpcMux := http.NewServeMux()
-	connecthttp.Mount(rpcMux, rpcServer,
+	connectMux := http.NewServeMux()
+	connecthttp.Mount(connectMux, rpcServer,
 		connecthttp.WithCodecs(newBinaryCodec(resolver), newJSONCodec(resolver)),
 		connecthttp.WithHTTPGet(),
 	)
-	if err := vanguard.Mount(rpcMux, rpcServer, vanguard.WithTypeResolver(resolver)); err != nil {
+	meta := collectHTTPTranscoderMeta(s)
+	restHandler, err := mountVanguardHandler(rpcServer, resolver)
+	if err != nil {
 		return fmt.Errorf("failed to mount REST routes: %w", err)
 	}
-	s.handlerTranscoder.SetHandler(rpcMux)
+	s.handlerTranscoder.SetHandler(newTranscoderDispatcher(connectMux, restHandler, serviceNames, meta))
 
 	if s.opts.RenderDocPage {
 		descBuilder := strings.Builder{}
@@ -449,6 +450,7 @@ func (s *server) Handler() (http.Handler, error) {
 	}
 
 	mux.Mount("/", s.handlerTranscoder)
+	mux.MethodNotAllowed(s.handlerTranscoder.ServeHTTP)
 	if s.opts.WithDashboard {
 		mux.Handle("/", http.RedirectHandler("/fauxrpc", http.StatusFound))
 		mux.Handle("/fauxrpc/assets/", http.StripPrefix("/fauxrpc/assets/", http.FileServer(http.Dir("private/frontend/assets"))))
