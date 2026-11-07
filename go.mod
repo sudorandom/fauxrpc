@@ -22,7 +22,7 @@ require (
 	github.com/brianvoe/gofakeit/v7 v7.15.0
 	github.com/bufbuild/protocompile v0.14.1
 	github.com/getkin/kin-openapi v0.149.0
-	github.com/go-chi/chi/v5 v5.3.1
+	github.com/go-chi/chi/v5 v5.5.0
 	github.com/google/cel-go v0.30.0
 	github.com/google/uuid v1.6.0
 	github.com/jhump/protoreflect v1.17.0
