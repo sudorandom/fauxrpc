@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="55%" stop-color="#090d16"/>
+      <stop offset="100%" stop-color="#060911"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="34" cy="24" r="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="f-top" x1="16" y1="13" x2="49" y2="27" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#bae6fd"/>
+      <stop offset="45%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+    <linearGradient id="f-mid" x1="25" y1="29" x2="45" y2="39" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <linearGradient id="f-stem" x1="16" y1="26" x2="26" y2="52" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#4f46e5"/>
+    </linearGradient>
+    <linearGradient id="f-echo" x1="20" y1="16" x2="52" y2="54" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#6366f1" stop-opacity="0.45"/>
+      <stop offset="100%" stop-color="#0ea5e9" stop-opacity="0.18"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Square badge container -->
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#bg)" stroke="#1e293b" stroke-width="2"/>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#glow)"/>
+  <rect x="4" y="4" width="56" height="56" rx="12" stroke="#38bdf8" stroke-opacity="0.22" stroke-width="1"/>
+
+  <!-- "Faux" offset echo of the F itself -->
+  <g transform="translate(3.5, 3.5)">
+    <path d="M17 14H48L43.5 23H26.5V27.5L17 32V14Z" fill="url(#f-echo)"/>
+    <path d="M29.5 29.5H44.5L40.5 38H29.5V29.5Z" fill="url(#f-echo)"/>
+    <path d="M17 35.5L26.5 31V48L17 51.5V35.5Z" fill="url(#f-echo)"/>
+  </g>
+
+  <!-- 1. Top crown & upper spine of the F -->
+  <path
+    d="M17 15.5C17 14.6716 17.6716 14 18.5 14H48.5L43.5 23.5H26.5V28L17 32.5V15.5Z"
+    fill="url(#f-top)"
+  />
+
+  <!-- 2. Faceted middle crossbar of the F -->
+  <path
+    d="M29.5 29.5H45L40.5 38.5H26.5L29.5 29.5Z"
+    fill="url(#f-mid)"
+  />
+
+  <!-- 3. Lower vertical pillar of the F -->
+  <path
+    d="M17 36L26.5 31.5V48.5L17 52V36Z"
+    fill="url(#f-stem)"
+  />
+</svg>

@@ -5,6 +5,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
+	"sort"
+	"strings"
+	"time"
 
 	"github.com/sudorandom/fauxrpc/private/log"
 	"github.com/sudorandom/fauxrpc/private/registry"
@@ -14,6 +18,92 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 	"google.golang.org/protobuf/types/dynamicpb"
 )
+
+type HeaderPair struct {
+	Key   string
+	Value string
+}
+
+var nonAlphaNumRegex = regexp.MustCompile(`[^a-z0-9]+`)
+
+func stubFilename(entry *log.LogEntry) string {
+	_, svc := splitService(entry.Service)
+	raw := strings.ToLower(svc + "-" + entry.Method)
+	slug := strings.Trim(nonAlphaNumRegex.ReplaceAllString(raw, "-"), "-")
+	if slug == "" {
+		slug = "fauxrpc"
+	}
+	shortID := entry.ID
+	if len(shortID) > 8 {
+		shortID = shortID[:8]
+	}
+	if shortID != "" {
+		return fmt.Sprintf("%s-%s.stub.yaml", slug, strings.ToLower(shortID))
+	}
+	return fmt.Sprintf("%s.stub.yaml", slug)
+}
+
+func splitService(fullService string) (pkg string, svc string) {
+	idx := strings.LastIndex(fullService, ".")
+	if idx == -1 {
+		return "", fullService
+	}
+	return fullService[:idx], fullService[idx+1:]
+}
+
+func formatCompactDuration(d time.Duration) string {
+	if d <= 0 {
+		return "0µs"
+	}
+	if d < time.Microsecond {
+		return fmt.Sprintf("%dns", d.Nanoseconds())
+	}
+	if d < time.Millisecond {
+		return fmt.Sprintf("%dµs", d.Microseconds())
+	}
+	if d < time.Second {
+		ms := float64(d.Microseconds()) / 1000.0
+		if ms < 10 {
+			return fmt.Sprintf("%.2fms", ms)
+		}
+		return fmt.Sprintf("%.1fms", ms)
+	}
+	return fmt.Sprintf("%.2fs", d.Seconds())
+}
+
+func parseHeaderPairs(raw json.RawMessage) []HeaderPair {
+	if len(raw) == 0 || string(raw) == "null" {
+		return nil
+	}
+	var headers map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &headers); err != nil || len(headers) == 0 {
+		return nil
+	}
+	keys := make([]string, 0, len(headers))
+	for k := range headers {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	var pairs []HeaderPair
+	for _, k := range keys {
+		vRaw := headers[k]
+		var values []string
+		if err := json.Unmarshal(vRaw, &values); err == nil {
+			for _, v := range values {
+				pairs = append(pairs, HeaderPair{Key: k, Value: v})
+			}
+			continue
+		}
+		var value string
+		if err := json.Unmarshal(vRaw, &value); err == nil {
+			pairs = append(pairs, HeaderPair{Key: k, Value: value})
+			continue
+		}
+		pairs = append(pairs, HeaderPair{Key: k, Value: string(vRaw)})
+	}
+	return pairs
+}
 
 func generateStubYAML(entry *log.LogEntry, reg registry.ServiceRegistry) string {
 	target := entry.Service + "/" + entry.Method

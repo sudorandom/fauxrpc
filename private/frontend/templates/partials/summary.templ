@@ -7,62 +7,109 @@ import (
 	"github.com/sudorandom/fauxrpc/private/metrics"
 )
 
-templ SummaryPage(stats *metrics.Stats) {
-    <div hx-ext="sse" sse-connect="/fauxrpc/sse/summary" sse-swap="Summary">
-        @Summary(stats)
-    </div>
+func formatUptime(d time.Duration) string {
+	d = d.Round(time.Second)
+	if d < time.Minute {
+		return fmt.Sprintf("%ds", int(d.Seconds()))
+	}
+	if d < time.Hour {
+		m := int(d.Minutes())
+		s := int(d.Seconds()) % 60
+		return fmt.Sprintf("%dm %02ds", m, s)
+	}
+	h := int(d.Hours())
+	m := int(d.Minutes()) % 60
+	return fmt.Sprintf("%dh %02dm", h, m)
 }
 
 templ Summary(stats *metrics.Stats) {
-	<div id="summary" class="stats-grid">
-		@summaryContent(stats)
+	<div id="summary-stats" class="text-xs tabular-nums">
+		<!-- Popover Header: Server Status & Reset Action -->
+		<div class="px-4 py-3 bg-slate-950 border-b border-slate-800 flex items-center justify-between gap-2">
+			<div class="flex items-center gap-2.5 min-w-0">
+				<span class="relative flex h-2 w-2 shrink-0">
+					<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+					<span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-400"></span>
+				</span>
+				<div class="min-w-0">
+					<div class="font-semibold text-slate-100 leading-none">Server Online</div>
+					<div class="font-mono text-[11px] text-slate-400 mt-1 truncate">{ stats.HTTPHost }</div>
+				</div>
+			</div>
+			<button
+				type="button"
+				hx-post="/fauxrpc/stats/reset"
+				hx-target="#summary-stats"
+				hx-swap="outerHTML"
+				class="px-2 py-1 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 text-[11px] font-medium text-slate-300 hover:text-slate-100 transition-colors flex items-center gap-1 shrink-0"
+				title="Reset request and error counters"
+			>
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="w-3 h-3">
+					<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+					<path d="M3 3v5h5"></path>
+				</svg>
+				<span>Reset</span>
+			</button>
+		</div>
+
+		<!-- Primary Traffic Strip (Full-bleed 3-column grid, no nested cards) -->
+		<div class="grid grid-cols-3 divide-x divide-slate-800 border-b border-slate-800 bg-slate-900/70">
+			<div class="px-3.5 py-3">
+				<div class="text-[11px] text-slate-400 font-medium">Rate</div>
+				<div class="font-mono text-base font-semibold text-sky-400 mt-0.5">
+					{ fmt.Sprintf("%d", stats.RequestsPerSecond) }<span class="text-xs font-normal text-slate-400 ml-0.5">/s</span>
+				</div>
+			</div>
+			<div class="px-3.5 py-3">
+				<div class="text-[11px] text-slate-400 font-medium">Requests</div>
+				<div class="font-mono text-base font-semibold text-slate-100 mt-0.5">
+					{ fmt.Sprintf("%d", stats.TotalRequests) }
+				</div>
+			</div>
+			<div class="px-3.5 py-3">
+				<div class="text-[11px] text-slate-400 font-medium">Errors</div>
+				<div class="font-mono text-base font-semibold mt-0.5">
+					if stats.Errors > 0 {
+						<span class="text-rose-400">{ fmt.Sprintf("%d", stats.Errors) }</span>
+						<span class="text-[11px] font-normal text-rose-400/80 ml-1">({ stats.ErrorRate }%)</span>
+					} else {
+						<span class="text-emerald-400">0</span>
+					}
+				</div>
+			</div>
+		</div>
+
+		<!-- Runtime & Schema Ledger -->
+		<div class="divide-y divide-slate-800/60 bg-slate-900/30 px-4">
+			<div class="py-2.5 flex items-center justify-between gap-3">
+				<span class="text-slate-400">Schema Registry</span>
+				<span class="font-mono text-slate-200">{ fmt.Sprintf("%d services · %d methods", stats.UniqueServices, stats.UniqueMethods) }</span>
+			</div>
+			<div class="py-2.5 flex items-center justify-between gap-3">
+				<span class="text-slate-400">Uptime</span>
+				<span class="font-mono text-slate-200">{ formatUptime(stats.Uptime()) }</span>
+			</div>
+			if stats.FauxRpcVersion != "" || stats.GoVersion != "" {
+				<div class="py-2.5 flex items-center justify-between gap-3">
+					<span class="text-slate-400">Runtime</span>
+					<span class="font-mono text-slate-300">
+						if stats.FauxRpcVersion != "" {
+							{ stats.FauxRpcVersion }
+						}
+						if stats.GoVersion != "" {
+							<span class="text-slate-400 ml-1">({ stats.GoVersion })</span>
+						}
+					</span>
+				</div>
+			}
+		</div>
 	</div>
 }
 
-
-templ summaryContent(stats *metrics.Stats) {
-	<div>
-        <div class="flex justify-between items-center flex-shrink-0 mb-2">
-            <h1 class="text-3xl font-bold text-white">Summary</h1>
-			<p class="text-gray-400">Service is available at <code class="bg-gray-900/70 text-blue-400 px-2 py-1 rounded-md">{ stats.HTTPHost }</code></p>
-		</div>
-
-		<hr />
-
-		<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
-			<!-- Stat Cards -->
-			<div class="bg-gray-800/50 border border-gray-700/80 rounded-lg p-5 shadow-md flex flex-col">
-				<div class="flex items-center justify-between mb-2"><h3 class="text-sm font-medium text-gray-400">Total Requests</h3><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 text-gray-400"><path d="M3 3v18h18"></path><path d="M9 17V9"></path><path d="M15 17V5"></path><path d="M12 17V13"></path></svg></div>
-				<div><p class="text-3xl font-bold text-white">{ fmt.Sprintf("%d", stats.TotalRequests) }</p></div>
-			</div>
-			<div class="bg-gray-800/50 border border-gray-700/80 rounded-lg p-5 shadow-md flex flex-col">
-				<div class="flex items-center justify-between mb-2"><h3 class="text-sm font-medium text-gray-400">Requests / Sec</h3><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 text-gray-400"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></div>
-				<div><p class="text-3xl font-bold text-white">{ fmt.Sprintf("%d", stats.RequestsPerSecond) }</p></div>
-			</div>
-			<div class="bg-gray-800/50 border border-gray-700/80 rounded-lg p-5 shadow-md flex flex-col">
-				<div class="flex items-center justify-between mb-2"><h3 class="text-sm font-medium text-gray-400">Errors</h3><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 text-yellow-400"><path d="m21.73 18-8-14a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><line x1="12" x2="12" y1="9" y2="13"></line><line x1="12" x2="12.01" y1="17" y2="17"></line></svg></div>
-				<div><p class="text-3xl font-bold text-white">{ fmt.Sprintf("%d", stats.Errors) }</p><p class="text-sm text-gray-500">{ stats.ErrorRate } error rate</p></div>
-			</div>
-			<div class="bg-gray-800/50 border border-gray-700/80 rounded-lg p-5 shadow-md flex flex-col">
-				<div class="flex items-center justify-between mb-2"><h3 class="text-sm font-medium text-gray-400">Services</h3><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 text-gray-400"><line x1="6" x2="6" y1="3" y2="15"></line><circle cx="18" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M18 9a9 9 0 0 1-9 9"></path></svg></div>
-				<div><p class="text-3xl font-bold text-white">{ fmt.Sprintf("%d", stats.UniqueServices) }</p></div>
-			</div>
-			<div class="bg-gray-800/50 border border-gray-700/80 rounded-lg p-5 shadow-md flex flex-col">
-				<div class="flex items-center justify-between mb-2"><h3 class="text-sm font-medium text-gray-400">Methods</h3><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 text-gray-400"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></div>
-				<div><p class="text-3xl font-bold text-white">{ fmt.Sprintf("%d", stats.UniqueMethods) }</p></div>
-			</div>
-			<div class="bg-gray-800/50 border border-gray-700/80 rounded-lg p-5 shadow-md flex flex-col">
-				<div class="flex items-center justify-between mb-2"><h3 class="text-sm font-medium text-gray-400">Uptime</h3><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 text-gray-400"><rect width="20" height="8" x="2" y="2" rx="2" ry="2"></rect><rect width="20" height="8" x="2" y="14" rx="2" ry="2"></rect><line x1="6" x2="6.01" y1="6" y2="6"></line><line x1="6" x2="6.01" y1="18" y2="18"></line></svg></div>
-				<div><p class="text-3xl font-bold text-white">{ stats.Uptime().Round(time.Second).String() }</p></div>
-			</div>
-			<div class="bg-gray-800/50 border border-gray-700/80 rounded-lg p-5 shadow-md flex flex-col">
-				<div class="flex items-center justify-between mb-2"><h3 class="text-sm font-medium text-gray-400">Go Version</h3><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 text-gray-400"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></div>
-				<div><p class="text-3xl font-bold text-white">{ stats.GoVersion }</p></div>
-			</div>
-			<div class="bg-gray-800/50 border border-gray-700/80 rounded-lg p-5 shadow-md flex flex-col">
-				<div class="flex items-center justify-between mb-2"><h3 class="text-sm font-medium text-gray-400">FauxRPC Version</h3><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 text-gray-400"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg></div>
-				<div><p class="text-3xl font-bold text-white">{ stats.FauxRpcVersion }</p></div>
-			</div>
+templ SummaryPage(stats *metrics.Stats) {
+	<div class="p-6 max-w-4xl mx-auto">
+		<div class="rounded-lg border border-slate-800 bg-slate-900 overflow-hidden">
+			@Summary(stats)
 		</div>
 	</div>
 }

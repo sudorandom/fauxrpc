@@ -4,80 +4,856 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log/slog"
+	"regexp"
+	"strings"
 
 	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
+	pkgstubs "github.com/sudorandom/fauxrpc/private/stubs"
+	"go.yaml.in/yaml/v3"
 )
 
-// StubForOutput is a helper struct to match the output format of cmd_stub.go
-// This is used for marshalling the content field to JSON
-type StubForOutput struct {
-	Content any `json:"content,omitempty"`
+type StubGroup struct {
+	Target string
+	Stubs  []*stubsv1.Stub
 }
 
-// formatJSON indents a JSON string.
-func formatJSON(jsonStr string) string {
-	var prettyJSON bytes.Buffer
-	if err := json.Indent(&prettyJSON, []byte(jsonStr), "", "  "); err != nil {
-		slog.Error("error indenting JSON", slog.Any("error", err))
-		return jsonStr // Return original if formatting fails
+var stubSlugRegex = regexp.MustCompile(`[^a-z0-9]+`)
+
+func formatJSON(raw string) string {
+	var indented bytes.Buffer
+	if err := json.Indent(&indented, []byte(raw), "", "  "); err != nil {
+		return raw
 	}
-	return prettyJSON.String()
+	return indented.String()
+}
+
+func stubModeBadge(stub *stubsv1.Stub) (string, string) {
+	if stub.HasError() && stub.GetError().GetCode() != 0 {
+		return "Error", "bg-rose-950/80 text-rose-300 border border-rose-800/80"
+	}
+	if stub.HasStream() {
+		return "Stream", "bg-violet-950/80 text-violet-300 border border-violet-800/80"
+	}
+	if stub.GetCelContent() != "" {
+		return "CEL", "bg-amber-950/80 text-amber-300 border border-amber-800/80"
+	}
+	return "JSON", "bg-emerald-950/80 text-emerald-300 border border-emerald-800/80"
+}
+
+func stubDownloadFilename(stub *stubsv1.Stub) string {
+	raw := strings.ToLower(stub.GetRef().GetTarget() + "-" + stub.GetRef().GetId())
+	slug := strings.Trim(stubSlugRegex.ReplaceAllString(raw, "-"), "-")
+	if slug == "" {
+		slug = "fauxrpc-stub"
+	}
+	return slug + ".stub.yaml"
+}
+
+func stubToYAML(stub *stubsv1.Stub) string {
+	entry := pkgstubs.StubFileEntry{
+		ID:         stub.GetRef().GetId(),
+		Target:     stub.GetRef().GetTarget(),
+		ActiveIf:   stub.GetActiveIf(),
+		CelContent: stub.GetCelContent(),
+		Priority:   stub.GetPriority(),
+	}
+	if stub.HasError() && stub.GetError().GetCode() != 0 {
+		entry.ErrorCode = int(stub.GetError().GetCode())
+		entry.ErrorMessage = stub.GetError().GetMessage()
+	}
+	if stub.GetJson() != "" {
+		var content any
+		if err := json.Unmarshal([]byte(stub.GetJson()), &content); err == nil {
+			entry.Content = content
+		} else {
+			entry.Content = stub.GetJson()
+		}
+	}
+	if stub.HasStream() {
+		s := stub.GetStream()
+		streamEntry := &pkgstubs.StubFileStreamEntry{
+			Repeated: s.GetRepeated(),
+		}
+		if s.GetDoneAfter() != nil && s.GetDoneAfter().AsDuration() > 0 {
+			streamEntry.DoneAfter = s.GetDoneAfter().AsDuration().String()
+		}
+		for _, item := range s.GetItems() {
+			si := pkgstubs.StubFileStreamItemEntry{
+				CelContent: item.GetCelContent(),
+			}
+			if item.GetDelay() != nil && item.GetDelay().AsDuration() > 0 {
+				si.Delay = item.GetDelay().AsDuration().String()
+			}
+			if item.GetJson() != "" {
+				var content any
+				if err := json.Unmarshal([]byte(item.GetJson()), &content); err == nil {
+					si.Content = content
+				} else {
+					si.Content = item.GetJson()
+				}
+			}
+			if item.HasError() && item.GetError().GetCode() != 0 {
+				si.Error = &pkgstubs.StubFileErrorEntry{
+					Code:    int(item.GetError().GetCode()),
+					Message: item.GetError().GetMessage(),
+				}
+			}
+			streamEntry.Items = append(streamEntry.Items, si)
+		}
+		entry.Stream = streamEntry
+	}
+
+	b, err := yaml.Marshal(pkgstubs.StubFile{Stubs: []pkgstubs.StubFileEntry{entry}})
+	if err != nil {
+		return fmt.Sprintf("# Error generating YAML: %v", err)
+	}
+	return string(b)
+}
+
+func currentErrorCode(stub *stubsv1.Stub) int {
+	if stub.HasError() {
+		return int(stub.GetError().GetCode())
+	}
+	return 0
 }
 
 templ Single(stub *stubsv1.Stub) {
-    <div>
-        <h1 class="text-3xl font-bold text-white mb-6">Stub Details</h1>
-        <div id="stub-details-content" class="bg-gray-900 py-6 rounded-lg shadow-lg">
-            <a hx-get="/fauxrpc/stubs" hx-target="#main-content" hx-push-url="true" class="text-blue-400 hover:text-blue-200 transition-colors duration-200 cursor-pointer mb-4 block">← Back to Stub List</a>
-            <table class="min-w-full bg-gray-800 rounded-lg overflow-hidden">
-                <tbody>
-                    <tr>
-                        <td class="px-4 py-2 font-semibold text-gray-300">ID:</td>
-                        <td class="px-4 py-2 text-gray-200">{ stub.GetRef().GetId() }</td>
-                    </tr>
-                    <tr>
-                        <td class="px-4 py-2 font-semibold text-gray-300">Target:</td>
-                        <td class="px-4 py-2 text-gray-200">{ stub.GetRef().GetTarget() }</td>
-                    </tr>
-                    <tr>
-                        <td class="px-4 py-2 font-semibold text-gray-300">Priority:</td>
-                        <td class="px-4 py-2 text-gray-200">{ fmt.Sprintf("%d", stub.GetPriority()) }</td>
-                    </tr>
-                    if stub.GetActiveIf() != "" {
-                        <tr>
-                            <td class="px-4 py-2 font-semibold text-gray-300">ActiveIf:</td>
-                            <td class="px-4 py-2 text-gray-200"><pre class="p-2 bg-gray-700 rounded-md overflow-auto text-gray-200 text-sm"><code>{ stub.GetActiveIf() }</code></pre></td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+	{{ modeLabel, modeClass := stubModeBadge(stub) }}
+	{{ errCode := currentErrorCode(stub) }}
+	<div class="flex flex-col h-full bg-slate-900/40" id="stub-single-root" data-stub-target={ stub.GetRef().GetTarget() } data-stub-id={ stub.GetRef().GetId() }>
+		<!-- Stub Inspector Header -->
+		<div class="p-4 border-b border-slate-800 bg-slate-900/80 space-y-3">
+			<div class="flex items-center justify-between gap-2 flex-wrap">
+				<div class="flex items-center gap-2 flex-wrap">
+					<span class={ "px-2 py-0.5 text-xs font-mono font-semibold rounded", modeClass }>
+						{ modeLabel }
+					</span>
+					<span class="px-2 py-0.5 text-xs font-mono text-slate-300 rounded bg-slate-800 border border-slate-700 tabular-nums">
+						Priority: { fmt.Sprintf("%d", stub.GetPriority()) }
+					</span>
+					<span class="font-mono text-xs text-sky-300 font-semibold">{ stub.GetRef().GetId() }</span>
+				</div>
+				<div class="flex items-center gap-1.5">
+					<button
+						type="button"
+						id="stub-edit-open-btn"
+						onclick="enterStubEditMode('form')"
+						class="px-2.5 py-1 rounded bg-sky-950/90 hover:bg-sky-900 border border-sky-800/80 text-sky-300 text-xs font-medium transition-colors flex items-center gap-1"
+						title="Edit this stub (Shortcut: e)"
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" class="w-3.5 h-3.5">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"></path>
+						</svg>
+						<span>Edit Stub</span>
+					</button>
+					<button
+						type="button"
+						hx-delete={ fmt.Sprintf("/fauxrpc/stubs/%s/%s", stub.GetRef().GetTarget(), stub.GetRef().GetId()) }
+						hx-target="#main-content"
+						class="px-2.5 py-1 rounded bg-rose-950/80 hover:bg-rose-900 border border-rose-800/80 text-rose-300 text-xs font-medium transition-colors flex items-center gap-1"
+						title="Remove this stub from the server"
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" class="w-3.5 h-3.5">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"></path>
+						</svg>
+						<span>Delete Stub</span>
+					</button>
+				</div>
+			</div>
 
-            if stub.HasCelContent() {
-                <h2 class="text-xl font-bold text-white mt-6 mb-2">CEL Content:</h2>
-                <pre class="p-4 bg-gray-800 rounded-lg overflow-auto text-gray-200 text-sm"><code>{ stub.GetCelContent() }</code></pre>
-            }
+			<div class="bg-slate-950/80 border border-slate-800 rounded px-3 py-2 flex items-center justify-between gap-2">
+				<div class="font-mono text-xs text-slate-200 break-all select-all" id={ fmt.Sprintf("stub-target-%s", stub.GetRef().GetId()) }>
+					{ stub.GetRef().GetTarget() }
+				</div>
+				<button
+					type="button"
+					onclick={ templ.ComponentScript{Call: fmt.Sprintf("copyToClipboard('stub-target-%s', this)", stub.GetRef().GetId())} }
+					class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] shrink-0 transition-colors"
+				>
+					Copy Target
+				</button>
+			</div>
 
-            if stub.WhichContent() == stubsv1.Stub_Json_case {
-                if stub.HasContent() {
-                    <h2 class="text-xl font-bold text-white mt-6 mb-2">Content:</h2>
-                    <pre class="p-4 bg-gray-800 rounded-lg overflow-auto text-gray-200 text-sm"><code>{ formatJSON(stub.GetJson()) }</code></pre>
-                }
-            } else if stub.WhichContent() == stubsv1.Stub_Error_case {
-                <h2 class="text-xl font-bold text-white mt-6 mb-2">Error Details:</h2>
-                <table class="min-w-full bg-gray-800 rounded-lg overflow-hidden mb-4">
-                    <tbody>
-                        <tr>
-                            <td class="px-4 py-2 font-semibold text-gray-300">Error Code:</td>
-                            <td class="px-4 py-2 text-gray-200">{ fmt.Sprintf("%d", stub.GetError().GetCode()) }</td>
-                        </tr>
-                        <tr>
-                            <td class="px-4 py-2 font-semibold text-gray-300">Error Message:</td>
-                            <td class="px-4 py-2 text-gray-200">{ stub.GetError().GetMessage() }</td>
-                        </tr>
-                    </tbody>
-                </table>
-            }
-        </div>
-    </div>
+			<div id="stub-save-banner" class="hidden px-3 py-2 rounded text-xs border border-emerald-800/80 bg-emerald-950/60 text-emerald-300"></div>
+		</div>
+
+		<!-- Stub Details Body (Inspect Mode) -->
+		<div id="stub-view-panel" class="flex-1 overflow-y-auto p-4 space-y-5">
+			<!-- Active If CEL Condition -->
+			<div class="rounded-lg border border-slate-800 bg-slate-950/60 overflow-hidden">
+				<div class="px-3 py-2 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
+					<span class="text-xs font-semibold text-slate-200">Active If (CEL Match Rule)</span>
+				</div>
+				if stub.GetActiveIf() != "" {
+					<pre class="p-3 text-xs font-mono text-sky-300 overflow-x-auto"><code class="language-cel">{ stub.GetActiveIf() }</code></pre>
+				} else {
+					<div class="p-3 text-xs text-slate-400">Always active for this target (no <code class="font-mono text-slate-300">active_if</code> condition).</div>
+				}
+			</div>
+
+			<!-- Stub Response Content -->
+			if stub.HasError() && stub.GetError().GetCode() != 0 {
+				<div class="rounded-lg border border-rose-900/60 bg-rose-950/20 overflow-hidden">
+					<div class="px-3 py-2 bg-rose-950/50 border-b border-rose-900/60 flex items-center justify-between">
+						<span class="text-xs font-semibold text-rose-300">Error Response (Code { fmt.Sprintf("%d", stub.GetError().GetCode()) })</span>
+					</div>
+					<div class="p-3 text-xs font-mono text-rose-200">
+						{ stub.GetError().GetMessage() }
+					</div>
+				</div>
+			}
+
+			if stub.GetJson() != "" {
+				<div class="rounded-lg border border-slate-800 bg-slate-950/60 overflow-hidden">
+					<div class="px-3 py-2 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
+						<span class="text-xs font-semibold text-slate-200">Static JSON Payload</span>
+						<button
+							type="button"
+							onclick={ templ.ComponentScript{Call: fmt.Sprintf("copyToClipboard('stub-json-%s', this)", stub.GetRef().GetId())} }
+							class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] transition-colors"
+						>
+							Copy JSON
+						</button>
+					</div>
+					<pre id={ fmt.Sprintf("stub-json-%s", stub.GetRef().GetId()) } class="p-3 text-xs font-mono text-slate-200 overflow-x-auto max-h-72 overflow-y-auto"><code class="language-json">{ formatJSON(stub.GetJson()) }</code></pre>
+				</div>
+			}
+
+			if stub.GetCelContent() != "" {
+				<div class="rounded-lg border border-slate-800 bg-slate-950/60 overflow-hidden">
+					<div class="px-3 py-2 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
+						<span class="text-xs font-semibold text-slate-200">Dynamic CEL Content</span>
+					</div>
+					<pre class="p-3 text-xs font-mono text-amber-300 overflow-x-auto"><code class="language-cel">{ stub.GetCelContent() }</code></pre>
+				</div>
+			}
+
+			if stub.HasStream() {
+				<div class="rounded-lg border border-slate-800 bg-slate-950/60 overflow-hidden">
+					<div class="px-3 py-2 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
+						<span class="text-xs font-semibold text-slate-200">Stream Configuration ({ fmt.Sprintf("%d items", len(stub.GetStream().GetItems())) })</span>
+						<span class="text-[11px] font-mono text-slate-400">
+							Repeated: { fmt.Sprintf("%t", stub.GetStream().GetRepeated()) }
+						</span>
+					</div>
+					<div class="divide-y divide-slate-800/80">
+						for i, item := range stub.GetStream().GetItems() {
+							<div class="p-3 space-y-1.5">
+								<div class="flex items-center justify-between text-[11px] font-mono text-slate-400">
+									<span>Frame #{ fmt.Sprintf("%d", i+1) }</span>
+									if item.GetDelay() != nil && item.GetDelay().AsDuration() > 0 {
+										<span>Delay: { item.GetDelay().AsDuration().String() }</span>
+									}
+								</div>
+								if item.GetJson() != "" {
+									<pre class="text-xs font-mono text-slate-200 overflow-x-auto"><code class="language-json">{ formatJSON(item.GetJson()) }</code></pre>
+								}
+								if item.GetCelContent() != "" {
+									<pre class="text-xs font-mono text-amber-300 overflow-x-auto"><code class="language-cel">{ item.GetCelContent() }</code></pre>
+								}
+								if item.HasError() && item.GetError().GetCode() != 0 {
+									<div class="text-xs font-mono text-rose-300">Error [{ fmt.Sprintf("%d", item.GetError().GetCode()) }]: { item.GetError().GetMessage() }</div>
+								}
+							</div>
+						}
+					</div>
+				</div>
+			}
+
+			<!-- Equivalent YAML Stub Export -->
+			<div class="rounded-lg border border-slate-800 bg-slate-950/70 overflow-hidden">
+				<div class="px-3 py-2 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between gap-2 flex-wrap">
+					<span class="text-xs font-semibold text-slate-200">YAML Stub Export</span>
+					<div class="flex items-center gap-1.5">
+						<button
+							type="button"
+							onclick="enterStubEditMode('yaml')"
+							class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sky-300 text-xs font-medium transition-colors flex items-center gap-1"
+						>
+							<span>Edit YAML</span>
+						</button>
+						<button
+							type="button"
+							onclick={ templ.ComponentScript{Call: fmt.Sprintf("copyToClipboard('stub-yaml-%s', this)", stub.GetRef().GetId())} }
+							class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium transition-colors flex items-center gap-1"
+						>
+							<span>Copy</span>
+						</button>
+						<button
+							type="button"
+							onclick={ templ.ComponentScript{Call: fmt.Sprintf("downloadStubYAML('stub-yaml-%s', '%s', this)", stub.GetRef().GetId(), stubDownloadFilename(stub))} }
+							class="px-2.5 py-1 rounded bg-sky-950/90 hover:bg-sky-900 border border-sky-800 text-sky-300 text-xs font-medium transition-colors flex items-center gap-1"
+						>
+							<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" class="w-3.5 h-3.5">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"></path>
+							</svg>
+							<span>Download</span>
+						</button>
+					</div>
+				</div>
+				<pre id={ fmt.Sprintf("stub-yaml-%s", stub.GetRef().GetId()) } class="p-3 text-xs font-mono text-slate-200 overflow-x-auto max-h-80 overflow-y-auto"><code class="language-yaml">{ stubToYAML(stub) }</code></pre>
+			</div>
+		</div>
+
+		<!-- Stub Editor Body (Edit Mode) -->
+		<div id="stub-edit-panel" data-active-edit-tab="form" class="hidden flex-1 overflow-y-auto p-4 space-y-4">
+			<!-- Editor Sub-Header: Mode Switcher + Save / Cancel -->
+			<div class="flex items-center justify-between gap-2 flex-wrap pb-3 border-b border-slate-800">
+				<div class="inline-flex rounded bg-slate-950 p-0.5 border border-slate-800 text-xs" role="group" aria-label="Editor format">
+					<button
+						type="button"
+						id="stub-edit-tab-form"
+						onclick="switchStubEditTab('form')"
+						class="px-2.5 py-1 rounded text-[11px] font-medium bg-slate-800 text-slate-100 transition-colors"
+					>
+						Structured Form
+					</button>
+					<button
+						type="button"
+						id="stub-edit-tab-yaml"
+						onclick="switchStubEditTab('yaml')"
+						class="px-2.5 py-1 rounded text-[11px] font-medium text-slate-400 hover:text-slate-200 transition-colors"
+					>
+						YAML Definition
+					</button>
+				</div>
+
+				<div class="flex items-center gap-1.5">
+					<button
+						type="button"
+						onclick="cancelStubEditMode()"
+						class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-medium transition-colors"
+					>
+						Cancel
+					</button>
+					<button
+						type="button"
+						id="stub-save-btn"
+						onclick={ templ.ComponentScript{Call: fmt.Sprintf("saveStubChanges('%s', '%s', this)", stub.GetRef().GetTarget(), stub.GetRef().GetId())} }
+						class="px-3 py-1 rounded bg-emerald-950/90 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 text-xs font-medium transition-colors flex items-center gap-1.5"
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"></path>
+						</svg>
+						<span>Save Changes</span>
+					</button>
+				</div>
+			</div>
+
+			<!-- Inline Error / Validation Feedback -->
+			<div id="stub-edit-feedback" class="hidden px-3 py-2 rounded text-xs border border-rose-800/80 bg-rose-950/60 text-rose-300 font-mono whitespace-pre-wrap"></div>
+
+			<!-- Tab 1: Structured Form Editor -->
+			<div id="stub-edit-panel-form" class="space-y-4">
+				if stub.HasStream() {
+					<div class="px-3 py-2 rounded border border-amber-800/70 bg-amber-950/40 text-amber-300 text-xs">
+						This stub defines a multi-frame stream response. Use the <button type="button" onclick="switchStubEditTab('yaml')" class="underline font-semibold hover:text-amber-200">YAML Definition</button> tab to edit stream frames and delays.
+					</div>
+				}
+
+				<div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+					<div class="sm:col-span-6 space-y-1">
+						<div class="flex items-center justify-between gap-2">
+							<label for="stub-edit-target" class="block text-[11px] font-medium text-slate-300">Target (Method or Message)</label>
+							<span id="stub-target-status" class="hidden text-[10px] font-mono px-1.5 py-0.5 rounded"></span>
+						</div>
+						<input
+							type="text"
+							id="stub-edit-target"
+							value={ stub.GetRef().GetTarget() }
+							oninput="scheduleStubValidation()"
+							class="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-100 focus:outline-none focus:border-sky-500"
+						/>
+						<div id="stub-target-validation" class="hidden text-[11px] font-mono text-rose-400 whitespace-pre-wrap"></div>
+					</div>
+					<div class="sm:col-span-4 space-y-1">
+						<label for="stub-edit-id" class="block text-[11px] font-medium text-slate-300">Stub ID</label>
+						<input
+							type="text"
+							id="stub-edit-id"
+							value={ stub.GetRef().GetId() }
+							class="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-100 focus:outline-none focus:border-sky-500"
+						/>
+					</div>
+					<div class="sm:col-span-2 space-y-1">
+						<label for="stub-edit-priority" class="block text-[11px] font-medium text-slate-300">Priority</label>
+						<input
+							type="number"
+							id="stub-edit-priority"
+							min="0"
+							max="100"
+							value={ fmt.Sprintf("%d", stub.GetPriority()) }
+							class="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-100 tabular-nums focus:outline-none focus:border-sky-500"
+						/>
+					</div>
+				</div>
+
+				<div class="space-y-1">
+					<div class="flex items-center justify-between gap-2">
+						<label for="stub-edit-active-if" class="block text-[11px] font-medium text-slate-300">Active If (CEL Match Rule)</label>
+						<span id="stub-active-if-status" class="hidden text-[10px] font-mono px-1.5 py-0.5 rounded"></span>
+					</div>
+					<input
+						type="text"
+						id="stub-edit-active-if"
+						value={ stub.GetActiveIf() }
+						oninput="scheduleStubValidation()"
+						placeholder="e.g. req.id == '123' (leave empty to match all calls)"
+						class="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-sky-300 placeholder-slate-500 focus:outline-none focus:border-sky-500"
+					/>
+					<div id="stub-active-if-validation" class="hidden text-[11px] font-mono text-rose-400 whitespace-pre-wrap"></div>
+				</div>
+
+				<div class="space-y-1">
+					<div class="flex items-center justify-between gap-2">
+						<label for="stub-edit-json" class="block text-[11px] font-medium text-slate-300">Static JSON Payload</label>
+						<span id="stub-json-status" class="hidden text-[10px] font-mono px-1.5 py-0.5 rounded"></span>
+					</div>
+					<textarea
+						id="stub-edit-json"
+						rows="9"
+						spellcheck="false"
+						placeholder="{}"
+						oninput="scheduleStubValidation()"
+						class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500"
+					>
+						if stub.GetJson() != "" {
+							{ formatJSON(stub.GetJson()) }
+						}
+					</textarea>
+					<div id="stub-json-validation" class="hidden text-[11px] font-mono text-rose-400 whitespace-pre-wrap"></div>
+				</div>
+
+				<div class="space-y-1">
+					<div class="flex items-center justify-between gap-2">
+						<label for="stub-edit-cel" class="block text-[11px] font-medium text-slate-300">Dynamic CEL Content (Optional)</label>
+						<span id="stub-cel-status" class="hidden text-[10px] font-mono px-1.5 py-0.5 rounded"></span>
+					</div>
+					<textarea
+						id="stub-edit-cel"
+						rows="3"
+						spellcheck="false"
+						placeholder="e.g. {'id': req.id, 'name': fake_name()}"
+						oninput="scheduleStubValidation()"
+						class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-amber-300 placeholder-slate-500 focus:outline-none focus:border-sky-500"
+					>{ stub.GetCelContent() }</textarea>
+					<div id="stub-cel-validation" class="hidden text-[11px] font-mono text-rose-400 whitespace-pre-wrap"></div>
+				</div>
+
+				<div class="rounded-lg border border-slate-800 bg-slate-950/60 p-3 space-y-3">
+					<div class="text-[11px] font-semibold text-slate-300">Error Response Override (Optional)</div>
+					<div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+						<div class="sm:col-span-5 space-y-1">
+							<label for="stub-edit-error-code" class="block text-[11px] text-slate-400">gRPC Status Code</label>
+							<select
+								id="stub-edit-error-code"
+								class="w-full px-2 py-1.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-200 focus:outline-none focus:border-sky-500"
+							>
+								<option value="0" selected?={ errCode == 0 }>0 - None (OK)</option>
+								<option value="1" selected?={ errCode == 1 }>1 - Canceled</option>
+								<option value="2" selected?={ errCode == 2 }>2 - Unknown</option>
+								<option value="3" selected?={ errCode == 3 }>3 - InvalidArgument</option>
+								<option value="4" selected?={ errCode == 4 }>4 - DeadlineExceeded</option>
+								<option value="5" selected?={ errCode == 5 }>5 - NotFound</option>
+								<option value="6" selected?={ errCode == 6 }>6 - AlreadyExists</option>
+								<option value="7" selected?={ errCode == 7 }>7 - PermissionDenied</option>
+								<option value="8" selected?={ errCode == 8 }>8 - ResourceExhausted</option>
+								<option value="9" selected?={ errCode == 9 }>9 - FailedPrecondition</option>
+								<option value="10" selected?={ errCode == 10 }>10 - Aborted</option>
+								<option value="11" selected?={ errCode == 11 }>11 - OutOfRange</option>
+								<option value="12" selected?={ errCode == 12 }>12 - Unimplemented</option>
+								<option value="13" selected?={ errCode == 13 }>13 - Internal</option>
+								<option value="14" selected?={ errCode == 14 }>14 - Unavailable</option>
+								<option value="15" selected?={ errCode == 15 }>15 - DataLoss</option>
+								<option value="16" selected?={ errCode == 16 }>16 - Unauthenticated</option>
+							</select>
+						</div>
+						<div class="sm:col-span-7 space-y-1">
+							<label for="stub-edit-error-message" class="block text-[11px] text-slate-400">Error Message</label>
+							<input
+								type="text"
+								id="stub-edit-error-message"
+								value={ stub.GetError().GetMessage() }
+								placeholder="Optional error message"
+								class="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500"
+							/>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Tab 2: Raw YAML Editor -->
+			<div id="stub-edit-panel-yaml" class="hidden space-y-2">
+				<div class="flex items-center justify-between gap-2">
+					<label for="stub-edit-yaml" class="block text-[11px] font-medium text-slate-300">Stub YAML Definition</label>
+					<span id="stub-yaml-status" class="hidden text-[10px] font-mono px-1.5 py-0.5 rounded"></span>
+				</div>
+				<textarea
+					id="stub-edit-yaml"
+					rows="18"
+					spellcheck="false"
+					oninput="scheduleStubValidation()"
+					class="w-full p-3 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-100 focus:outline-none focus:border-sky-500 leading-relaxed"
+				>{ stubToYAML(stub) }</textarea>
+				<div id="stub-yaml-validation" class="hidden px-2.5 py-1.5 rounded border border-rose-800/80 bg-rose-950/50 text-[11px] font-mono text-rose-300 whitespace-pre-wrap"></div>
+				@StubYAMLReference()
+			</div>
+		</div>
+	</div>
+}
+
+templ NewStub() {
+	<div class="flex flex-col h-full bg-slate-900/40" id="stub-new-root">
+		<!-- New Stub Header -->
+		<div class="p-4 border-b border-slate-800 bg-slate-900/80 space-y-2">
+			<div class="flex items-center justify-between gap-2 flex-wrap">
+				<div class="flex items-center gap-2">
+					<span class="px-2 py-0.5 text-xs font-mono font-semibold rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800/80">
+						New Stub
+					</span>
+					<h2 class="text-xs font-semibold text-slate-100">Create &amp; Register Stub</h2>
+				</div>
+			</div>
+			<p class="text-[11px] text-slate-400 leading-relaxed">
+				Define a response override for any RPC method or Protobuf message using the structured form or raw YAML.
+			</p>
+			<div id="stub-save-banner" class="hidden px-3 py-2 rounded text-xs border border-emerald-800/80 bg-emerald-950/60 text-emerald-300"></div>
+		</div>
+
+		<!-- Stub Editor Body (Create Mode) -->
+		<div id="stub-edit-panel" data-active-edit-tab="form" class="flex-1 overflow-y-auto p-4 space-y-4">
+			<!-- Editor Sub-Header: Mode Switcher + Create / Cancel -->
+			<div class="flex items-center justify-between gap-2 flex-wrap pb-3 border-b border-slate-800">
+				<div class="inline-flex rounded bg-slate-950 p-0.5 border border-slate-800 text-xs" role="group" aria-label="Editor format">
+					<button
+						type="button"
+						id="stub-edit-tab-form"
+						onclick="switchStubEditTab('form')"
+						class="px-2.5 py-1 rounded text-[11px] font-medium bg-slate-800 text-slate-100 transition-colors"
+					>
+						Structured Form
+					</button>
+					<button
+						type="button"
+						id="stub-edit-tab-yaml"
+						onclick="switchStubEditTab('yaml')"
+						class="px-2.5 py-1 rounded text-[11px] font-medium text-slate-400 hover:text-slate-200 transition-colors"
+					>
+						YAML Definition
+					</button>
+				</div>
+
+				<div class="flex items-center gap-1.5">
+					<button
+						type="button"
+						onclick="cancelStubEditMode()"
+						class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-medium transition-colors"
+					>
+						Cancel
+					</button>
+					<button
+						type="button"
+						id="stub-save-btn"
+						onclick="saveStubChanges('', '', this)"
+						class="px-3 py-1 rounded bg-emerald-950/90 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 text-xs font-medium transition-colors flex items-center gap-1.5"
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"></path>
+						</svg>
+						<span>Register Stub</span>
+					</button>
+				</div>
+			</div>
+
+			<!-- Inline Error / Validation Feedback -->
+			<div id="stub-edit-feedback" class="hidden px-3 py-2 rounded text-xs border border-rose-800/80 bg-rose-950/60 text-rose-300 font-mono whitespace-pre-wrap"></div>
+
+			<!-- Tab 1: Structured Form Editor -->
+			<div id="stub-edit-panel-form" class="space-y-4">
+				<div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+					<div class="sm:col-span-6 space-y-1">
+						<div class="flex items-center justify-between gap-2">
+							<label for="stub-edit-target" class="block text-[11px] font-medium text-slate-300">Target (Method or Message)</label>
+							<span id="stub-target-status" class="hidden text-[10px] font-mono px-1.5 py-0.5 rounded"></span>
+						</div>
+						<input
+							type="text"
+							id="stub-edit-target"
+							oninput="scheduleStubValidation()"
+							placeholder="e.g. connectrpc.eliza.v1.ElizaService/Say"
+							class="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500"
+						/>
+						<div id="stub-target-validation" class="hidden text-[11px] font-mono text-rose-400 whitespace-pre-wrap"></div>
+					</div>
+					<div class="sm:col-span-4 space-y-1">
+						<label for="stub-edit-id" class="block text-[11px] font-medium text-slate-300">Stub ID (Optional)</label>
+						<input
+							type="text"
+							id="stub-edit-id"
+							placeholder="Auto-generated if empty"
+							class="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500"
+						/>
+					</div>
+					<div class="sm:col-span-2 space-y-1">
+						<label for="stub-edit-priority" class="block text-[11px] font-medium text-slate-300">Priority</label>
+						<input
+							type="number"
+							id="stub-edit-priority"
+							min="0"
+							max="100"
+							value="10"
+							class="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-100 tabular-nums focus:outline-none focus:border-sky-500"
+						/>
+					</div>
+				</div>
+
+				<div class="space-y-1">
+					<div class="flex items-center justify-between gap-2">
+						<label for="stub-edit-active-if" class="block text-[11px] font-medium text-slate-300">Active If (CEL Match Rule)</label>
+						<span id="stub-active-if-status" class="hidden text-[10px] font-mono px-1.5 py-0.5 rounded"></span>
+					</div>
+					<input
+						type="text"
+						id="stub-edit-active-if"
+						oninput="scheduleStubValidation()"
+						placeholder="e.g. req.sentence == 'hello' (leave empty to match all calls)"
+						class="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-sky-300 placeholder-slate-500 focus:outline-none focus:border-sky-500"
+					/>
+					<div id="stub-active-if-validation" class="hidden text-[11px] font-mono text-rose-400 whitespace-pre-wrap"></div>
+				</div>
+
+				<div class="space-y-1">
+					<div class="flex items-center justify-between gap-2">
+						<label for="stub-edit-json" class="block text-[11px] font-medium text-slate-300">Static JSON Payload</label>
+						<span id="stub-json-status" class="hidden text-[10px] font-mono px-1.5 py-0.5 rounded"></span>
+					</div>
+					<textarea
+						id="stub-edit-json"
+						rows="8"
+						spellcheck="false"
+						placeholder="{}"
+						oninput="scheduleStubValidation()"
+						class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500"
+					>{ "{\n  \n}" }</textarea>
+					<div id="stub-json-validation" class="hidden text-[11px] font-mono text-rose-400 whitespace-pre-wrap"></div>
+				</div>
+
+				<div class="space-y-1">
+					<div class="flex items-center justify-between gap-2">
+						<label for="stub-edit-cel" class="block text-[11px] font-medium text-slate-300">Dynamic CEL Content (Optional)</label>
+						<span id="stub-cel-status" class="hidden text-[10px] font-mono px-1.5 py-0.5 rounded"></span>
+					</div>
+					<textarea
+						id="stub-edit-cel"
+						rows="3"
+						spellcheck="false"
+						placeholder="e.g. {'sentence': 'Echo: ' + req.sentence}"
+						oninput="scheduleStubValidation()"
+						class="w-full p-2.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-amber-300 placeholder-slate-500 focus:outline-none focus:border-sky-500"
+					></textarea>
+					<div id="stub-cel-validation" class="hidden text-[11px] font-mono text-rose-400 whitespace-pre-wrap"></div>
+				</div>
+
+				<div class="rounded-lg border border-slate-800 bg-slate-950/60 p-3 space-y-3">
+					<div class="text-[11px] font-semibold text-slate-300">Error Response Override (Optional)</div>
+					<div class="grid grid-cols-1 sm:grid-cols-12 gap-3">
+						<div class="sm:col-span-5 space-y-1">
+							<label for="stub-edit-error-code" class="block text-[11px] text-slate-400">gRPC Status Code</label>
+							<select
+								id="stub-edit-error-code"
+								class="w-full px-2 py-1.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-200 focus:outline-none focus:border-sky-500"
+							>
+								<option value="0" selected>0 - None (OK)</option>
+								<option value="1">1 - Canceled</option>
+								<option value="2">2 - Unknown</option>
+								<option value="3">3 - InvalidArgument</option>
+								<option value="4">4 - DeadlineExceeded</option>
+								<option value="5">5 - NotFound</option>
+								<option value="6">6 - AlreadyExists</option>
+								<option value="7">7 - PermissionDenied</option>
+								<option value="8">8 - ResourceExhausted</option>
+								<option value="9">9 - FailedPrecondition</option>
+								<option value="10">10 - Aborted</option>
+								<option value="11">11 - OutOfRange</option>
+								<option value="12">12 - Unimplemented</option>
+								<option value="13">13 - Internal</option>
+								<option value="14">14 - Unavailable</option>
+								<option value="15">15 - DataLoss</option>
+								<option value="16">16 - Unauthenticated</option>
+							</select>
+						</div>
+						<div class="sm:col-span-7 space-y-1">
+							<label for="stub-edit-error-message" class="block text-[11px] text-slate-400">Error Message</label>
+							<input
+								type="text"
+								id="stub-edit-error-message"
+								placeholder="Optional error message"
+								class="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500"
+							/>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Tab 2: Raw YAML Editor -->
+			<div id="stub-edit-panel-yaml" class="hidden space-y-2">
+				<div class="flex items-center justify-between gap-2">
+					<label for="stub-edit-yaml" class="block text-[11px] font-medium text-slate-300">Stub YAML Definition</label>
+					<span id="stub-yaml-status" class="hidden text-[10px] font-mono px-1.5 py-0.5 rounded"></span>
+				</div>
+				<textarea
+					id="stub-edit-yaml"
+					rows="16"
+					spellcheck="false"
+					oninput="scheduleStubValidation()"
+					class="w-full p-3 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-100 focus:outline-none focus:border-sky-500 leading-relaxed"
+				>{ "stubs:\n  - target: \"\"\n    priority: 10\n    content: {}\n" }</textarea>
+				<div id="stub-yaml-validation" class="hidden px-2.5 py-1.5 rounded border border-rose-800/80 bg-rose-950/50 text-[11px] font-mono text-rose-300 whitespace-pre-wrap"></div>
+				@StubYAMLReference()
+			</div>
+		</div>
+	</div>
+}
+
+templ StubYAMLReference() {
+	<details class="group rounded-lg border border-slate-800/80 bg-slate-950/60 overflow-hidden">
+		<summary class="px-3 py-2 text-[11px] text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 cursor-pointer select-none flex items-center justify-between gap-2 transition-colors list-none [&::-webkit-details-marker]:hidden">
+			<span>
+				Edit <code class="font-mono text-slate-300">target</code>, <code class="font-mono text-slate-300">id</code>, <code class="font-mono text-slate-300">priority</code>, <code class="font-mono text-slate-300">active_if</code>, <code class="font-mono text-slate-300">content</code>, <code class="font-mono text-slate-300">cel_content</code>, <code class="font-mono text-slate-300">error_code</code>, or <code class="font-mono text-slate-300">stream</code> directly in YAML.
+			</span>
+			<span class="inline-flex items-center gap-1 shrink-0 font-medium text-sky-400 group-hover:text-sky-300">
+				<span>Reference &amp; Examples</span>
+				<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 transition-transform duration-150 group-open:rotate-180">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"></path>
+				</svg>
+			</span>
+		</summary>
+		<div class="border-t border-slate-800/80 p-3 space-y-4 text-xs bg-slate-950/90">
+			<!-- Field Reference Table -->
+			<div>
+				<div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2">YAML Field Reference</div>
+				<div class="divide-y divide-slate-800/70 border border-slate-800 rounded overflow-hidden">
+					<div class="p-2.5 grid grid-cols-1 sm:grid-cols-12 gap-1.5 bg-slate-900/30">
+						<div class="sm:col-span-4 font-mono text-[11px] text-sky-300 font-semibold">
+							target <span class="text-[10px] font-sans font-normal text-rose-400">required</span>
+						</div>
+						<div class="sm:col-span-8 text-[11px] text-slate-300 leading-relaxed">
+							Fully qualified RPC method or Protobuf message type. Accepts slash or dot notation, such as <code class="font-mono text-slate-200">connectrpc.eliza.v1.ElizaService/Say</code> or <code class="font-mono text-slate-200">connectrpc.eliza.v1.SayResponse</code>.
+						</div>
+					</div>
+					<div class="p-2.5 grid grid-cols-1 sm:grid-cols-12 gap-1.5">
+						<div class="sm:col-span-4 font-mono text-[11px] text-sky-300 font-semibold">
+							id <span class="text-[10px] font-sans font-normal text-slate-500">string</span>
+						</div>
+						<div class="sm:col-span-8 text-[11px] text-slate-300 leading-relaxed">
+							Unique identifier for this stub within the target. Auto-generated when omitted.
+						</div>
+					</div>
+					<div class="p-2.5 grid grid-cols-1 sm:grid-cols-12 gap-1.5 bg-slate-900/30">
+						<div class="sm:col-span-4 font-mono text-[11px] text-sky-300 font-semibold">
+							priority <span class="text-[10px] font-sans font-normal text-slate-500">0..100</span>
+						</div>
+						<div class="sm:col-span-8 text-[11px] text-slate-300 leading-relaxed">
+							Evaluation order when multiple stubs match the same target. Higher numbers run first (default <code class="font-mono text-slate-200">0</code>).
+						</div>
+					</div>
+					<div class="p-2.5 grid grid-cols-1 sm:grid-cols-12 gap-1.5">
+						<div class="sm:col-span-4 font-mono text-[11px] text-sky-300 font-semibold">
+							active_if <span class="text-[10px] font-sans font-normal text-slate-500">CEL bool</span>
+						</div>
+						<div class="sm:col-span-8 text-[11px] text-slate-300 leading-relaxed">
+							Boolean CEL condition evaluated against the incoming request (<code class="font-mono text-slate-200">req</code>). Example: <code class="font-mono text-sky-300">req.sentence.contains("hello")</code>.
+						</div>
+					</div>
+					<div class="p-2.5 grid grid-cols-1 sm:grid-cols-12 gap-1.5 bg-slate-900/30">
+						<div class="sm:col-span-4 font-mono text-[11px] text-emerald-300 font-semibold">
+							content <span class="text-[10px] font-sans font-normal text-slate-500">object</span>
+						</div>
+						<div class="sm:col-span-8 text-[11px] text-slate-300 leading-relaxed">
+							Static response fields unmarshaled via ProtoJSON into the target output message.
+						</div>
+					</div>
+					<div class="p-2.5 grid grid-cols-1 sm:grid-cols-12 gap-1.5">
+						<div class="sm:col-span-4 font-mono text-[11px] text-amber-300 font-semibold">
+							cel_content <span class="text-[10px] font-sans font-normal text-slate-500">CEL expr</span>
+						</div>
+						<div class="sm:col-span-8 text-[11px] text-slate-300 leading-relaxed">
+							Dynamic CEL expression returning response fields. Can reference <code class="font-mono text-slate-200">req</code> and faker helpers such as <code class="font-mono text-amber-300">fake_name()</code>, <code class="font-mono text-amber-300">fake_uuid()</code>, or <code class="font-mono text-amber-300">fake_quote()</code>.
+						</div>
+					</div>
+					<div class="p-2.5 grid grid-cols-1 sm:grid-cols-12 gap-1.5 bg-slate-900/30">
+						<div class="sm:col-span-4 font-mono text-[11px] text-rose-300 font-semibold">
+							error_code / error_message
+						</div>
+						<div class="sm:col-span-8 text-[11px] text-slate-300 leading-relaxed">
+							Returns a gRPC/Connect status error (<code class="font-mono text-slate-200">1</code> Canceled, <code class="font-mono text-slate-200">3</code> InvalidArgument, <code class="font-mono text-slate-200">5</code> NotFound, <code class="font-mono text-slate-200">7</code> PermissionDenied, <code class="font-mono text-slate-200">13</code> Internal, <code class="font-mono text-slate-200">14</code> Unavailable, <code class="font-mono text-slate-200">16</code> Unauthenticated).
+						</div>
+					</div>
+					<div class="p-2.5 grid grid-cols-1 sm:grid-cols-12 gap-1.5">
+						<div class="sm:col-span-4 font-mono text-[11px] text-violet-300 font-semibold">
+							stream <span class="text-[10px] font-sans font-normal text-slate-500">object</span>
+						</div>
+						<div class="sm:col-span-8 text-[11px] text-slate-300 leading-relaxed">
+							Multi-frame streaming configuration with <code class="font-mono text-slate-200">repeated</code> (bool), <code class="font-mono text-slate-200">done_after</code> (duration like <code class="font-mono text-slate-200">30s</code>), and <code class="font-mono text-slate-200">items</code> (<code class="font-mono text-slate-200">content</code>, <code class="font-mono text-slate-200">cel_content</code>, <code class="font-mono text-slate-200">delay</code>, or <code class="font-mono text-slate-200">error</code>).
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Complete YAML Examples -->
+			<div class="space-y-2.5">
+				<div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Complete YAML Examples</div>
+
+				<div class="rounded border border-slate-800 bg-slate-900/50 overflow-hidden">
+					<div class="px-2.5 py-1.5 bg-slate-900 border-b border-slate-800 text-[11px] font-medium text-slate-300">
+						1. Static Payload &amp; Dynamic CEL Response
+					</div>
+					<pre class="p-2.5 text-[11px] font-mono text-slate-200 overflow-x-auto leading-relaxed"><code class="language-yaml">{ `stubs:
+  - id: say-greeting
+    target: connectrpc.eliza.v1.ElizaService/Say
+    priority: 20
+    active_if: req.sentence == "hello"
+    content:
+      sentence: "Hello! How are you feeling today?"
+    cel_content: "{'sentence': 'Echo: ' + req.sentence + ' (' + fake_uuid() + ')'}"` }</code></pre>
+				</div>
+
+				<div class="rounded border border-slate-800 bg-slate-900/50 overflow-hidden">
+					<div class="px-2.5 py-1.5 bg-slate-900 border-b border-slate-800 text-[11px] font-medium text-slate-300">
+						2. Conditional Error Response
+					</div>
+					<pre class="p-2.5 text-[11px] font-mono text-slate-200 overflow-x-auto leading-relaxed"><code class="language-yaml">{ `stubs:
+  - id: say-rate-limit
+    target: connectrpc.eliza.v1.ElizaService/Say
+    priority: 50
+    active_if: req.sentence == "fail"
+    error_code: 8
+    error_message: "rate limit exceeded"` }</code></pre>
+				</div>
+
+				<div class="rounded border border-slate-800 bg-slate-900/50 overflow-hidden">
+					<div class="px-2.5 py-1.5 bg-slate-900 border-b border-slate-800 text-[11px] font-medium text-slate-300">
+						3. Server Streaming Sequence with Delays &amp; Terminal Error
+					</div>
+					<pre class="p-2.5 text-[11px] font-mono text-slate-200 overflow-x-auto leading-relaxed"><code class="language-yaml">{ `stubs:
+  - id: introduce-stream
+    target: connectrpc.eliza.v1.ElizaService/Introduce
+    priority: 10
+    active_if: req.name != ""
+    stream:
+      repeated: false
+      done_after: 30s
+      items:
+        - content:
+            sentence: "Hello, I am Eliza."
+          delay: 150ms
+        - cel_content: "{'sentence': 'Nice to meet you, ' + req.name}"
+          delay: 400ms
+        - error:
+            code: 13
+            message: "stream interrupted"` }</code></pre>
+				</div>
+			</div>
+		</div>
+	</details>
 }

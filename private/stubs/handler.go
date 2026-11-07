@@ -246,6 +246,7 @@ func StubsToProto(stubs []*StubEntry) ([]*stubsv1.Stub, error) {
 			Id:     proto.String(stub.Key.ID),
 			Target: proto.String(string(stub.Key.Name)),
 		}.Build())
+		pbStub.SetPriority(int32(stub.Priority))
 		if stub.ActiveIf != nil {
 			pbStub.SetActiveIf(stub.ActiveIf.GetString())
 		}

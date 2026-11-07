@@ -12,25 +12,117 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log/slog"
+	"regexp"
+	"strings"
 
 	stubsv1 "github.com/sudorandom/fauxrpc/private/gen/stubs/v1"
+	pkgstubs "github.com/sudorandom/fauxrpc/private/stubs"
+	"go.yaml.in/yaml/v3"
 )
 
-// StubForOutput is a helper struct to match the output format of cmd_stub.go
-// This is used for marshalling the content field to JSON
-type StubForOutput struct {
-	Content any `json:"content,omitempty"`
+type StubGroup struct {
+	Target string
+	Stubs  []*stubsv1.Stub
 }
 
-// formatJSON indents a JSON string.
-func formatJSON(jsonStr string) string {
-	var prettyJSON bytes.Buffer
-	if err := json.Indent(&prettyJSON, []byte(jsonStr), "", "  "); err != nil {
-		slog.Error("error indenting JSON", slog.Any("error", err))
-		return jsonStr // Return original if formatting fails
+var stubSlugRegex = regexp.MustCompile(`[^a-z0-9]+`)
+
+func formatJSON(raw string) string {
+	var indented bytes.Buffer
+	if err := json.Indent(&indented, []byte(raw), "", "  "); err != nil {
+		return raw
 	}
-	return prettyJSON.String()
+	return indented.String()
+}
+
+func stubModeBadge(stub *stubsv1.Stub) (string, string) {
+	if stub.HasError() && stub.GetError().GetCode() != 0 {
+		return "Error", "bg-rose-950/80 text-rose-300 border border-rose-800/80"
+	}
+	if stub.HasStream() {
+		return "Stream", "bg-violet-950/80 text-violet-300 border border-violet-800/80"
+	}
+	if stub.GetCelContent() != "" {
+		return "CEL", "bg-amber-950/80 text-amber-300 border border-amber-800/80"
+	}
+	return "JSON", "bg-emerald-950/80 text-emerald-300 border border-emerald-800/80"
+}
+
+func stubDownloadFilename(stub *stubsv1.Stub) string {
+	raw := strings.ToLower(stub.GetRef().GetTarget() + "-" + stub.GetRef().GetId())
+	slug := strings.Trim(stubSlugRegex.ReplaceAllString(raw, "-"), "-")
+	if slug == "" {
+		slug = "fauxrpc-stub"
+	}
+	return slug + ".stub.yaml"
+}
+
+func stubToYAML(stub *stubsv1.Stub) string {
+	entry := pkgstubs.StubFileEntry{
+		ID:         stub.GetRef().GetId(),
+		Target:     stub.GetRef().GetTarget(),
+		ActiveIf:   stub.GetActiveIf(),
+		CelContent: stub.GetCelContent(),
+		Priority:   stub.GetPriority(),
+	}
+	if stub.HasError() && stub.GetError().GetCode() != 0 {
+		entry.ErrorCode = int(stub.GetError().GetCode())
+		entry.ErrorMessage = stub.GetError().GetMessage()
+	}
+	if stub.GetJson() != "" {
+		var content any
+		if err := json.Unmarshal([]byte(stub.GetJson()), &content); err == nil {
+			entry.Content = content
+		} else {
+			entry.Content = stub.GetJson()
+		}
+	}
+	if stub.HasStream() {
+		s := stub.GetStream()
+		streamEntry := &pkgstubs.StubFileStreamEntry{
+			Repeated: s.GetRepeated(),
+		}
+		if s.GetDoneAfter() != nil && s.GetDoneAfter().AsDuration() > 0 {
+			streamEntry.DoneAfter = s.GetDoneAfter().AsDuration().String()
+		}
+		for _, item := range s.GetItems() {
+			si := pkgstubs.StubFileStreamItemEntry{
+				CelContent: item.GetCelContent(),
+			}
+			if item.GetDelay() != nil && item.GetDelay().AsDuration() > 0 {
+				si.Delay = item.GetDelay().AsDuration().String()
+			}
+			if item.GetJson() != "" {
+				var content any
+				if err := json.Unmarshal([]byte(item.GetJson()), &content); err == nil {
+					si.Content = content
+				} else {
+					si.Content = item.GetJson()
+				}
+			}
+			if item.HasError() && item.GetError().GetCode() != 0 {
+				si.Error = &pkgstubs.StubFileErrorEntry{
+					Code:    int(item.GetError().GetCode()),
+					Message: item.GetError().GetMessage(),
+				}
+			}
+			streamEntry.Items = append(streamEntry.Items, si)
+		}
+		entry.Stream = streamEntry
+	}
+
+	b, err := yaml.Marshal(pkgstubs.StubFile{Stubs: []pkgstubs.StubFileEntry{entry}})
+	if err != nil {
+		return fmt.Sprintf("# Error generating YAML: %v", err)
+	}
+	return string(b)
+}
+
+func currentErrorCode(stub *stubsv1.Stub) int {
+	if stub.HasError() {
+		return int(stub.GetError().GetCode())
+	}
+	return 0
 }
 
 func Single(stub *stubsv1.Stub) templ.Component {
@@ -54,144 +146,967 @@ func Single(stub *stubsv1.Stub) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div><h1 class=\"text-3xl font-bold text-white mb-6\">Stub Details</h1><div id=\"stub-details-content\" class=\"bg-gray-900 py-6 rounded-lg shadow-lg\"><a hx-get=\"/fauxrpc/stubs\" hx-target=\"#main-content\" hx-push-url=\"true\" class=\"text-blue-400 hover:text-blue-200 transition-colors duration-200 cursor-pointer mb-4 block\">← Back to Stub List</a><table class=\"min-w-full bg-gray-800 rounded-lg overflow-hidden\"><tbody><tr><td class=\"px-4 py-2 font-semibold text-gray-300\">ID:</td><td class=\"px-4 py-2 text-gray-200\">")
+		modeLabel, modeClass := stubModeBadge(stub)
+		errCode := currentErrorCode(stub)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"flex flex-col h-full bg-slate-900/40\" id=\"stub-single-root\" data-stub-target=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var2 string
-		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(stub.GetRef().GetId())
+		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.ResolveAttributeValue(stub.GetRef().GetTarget())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 37, Col: 83}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 123, Col: 117}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var2)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</td></tr><tr><td class=\"px-4 py-2 font-semibold text-gray-300\">Target:</td><td class=\"px-4 py-2 text-gray-200\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\" data-stub-id=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var3 string
-		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(stub.GetRef().GetTarget())
+		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.ResolveAttributeValue(stub.GetRef().GetId())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 41, Col: 87}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 123, Col: 156}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</td></tr><tr><td class=\"px-4 py-2 font-semibold text-gray-300\">Priority:</td><td class=\"px-4 py-2 text-gray-200\">")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var3)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var4 string
-		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", stub.GetPriority()))
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 45, Col: 99}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "\"><!-- Stub Inspector Header --><div class=\"p-4 border-b border-slate-800 bg-slate-900/80 space-y-3\"><div class=\"flex items-center justify-between gap-2 flex-wrap\"><div class=\"flex items-center gap-2 flex-wrap\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</td></tr>")
+		var templ_7745c5c3_Var4 = []any{"px-2 py-0.5 text-xs font-mono font-semibold rounded", modeClass}
+		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var4...)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<span class=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var5 string
+		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.ResolveAttributeValue(templ.CSSClasses(templ_7745c5c3_Var4).String())
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 1, Col: 0}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var5)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var6 string
+		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(modeLabel)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 129, Col: 17}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</span> <span class=\"px-2 py-0.5 text-xs font-mono text-slate-300 rounded bg-slate-800 border border-slate-700 tabular-nums\">Priority: ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var7 string
+		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", stub.GetPriority()))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 132, Col: 55}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</span> <span class=\"font-mono text-xs text-sky-300 font-semibold\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var8 string
+		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(stub.GetRef().GetId())
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 134, Col: 87}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</span></div><div class=\"flex items-center gap-1.5\"><button type=\"button\" id=\"stub-edit-open-btn\" onclick=\"enterStubEditMode('form')\" class=\"px-2.5 py-1 rounded bg-sky-950/90 hover:bg-sky-900 border border-sky-800/80 text-sky-300 text-xs font-medium transition-colors flex items-center gap-1\" title=\"Edit this stub (Shortcut: e)\"><svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.75\" stroke=\"currentColor\" class=\"w-3.5 h-3.5\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10\"></path></svg> <span>Edit Stub</span></button> <button type=\"button\" hx-delete=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var9 string
+		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("/fauxrpc/stubs/%s/%s", stub.GetRef().GetTarget(), stub.GetRef().GetId()))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 151, Col: 103}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var9)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\" hx-target=\"#main-content\" class=\"px-2.5 py-1 rounded bg-rose-950/80 hover:bg-rose-900 border border-rose-800/80 text-rose-300 text-xs font-medium transition-colors flex items-center gap-1\" title=\"Remove this stub from the server\"><svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.75\" stroke=\"currentColor\" class=\"w-3.5 h-3.5\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0\"></path></svg> <span>Delete Stub</span></button></div></div><div class=\"bg-slate-950/80 border border-slate-800 rounded px-3 py-2 flex items-center justify-between gap-2\"><div class=\"font-mono text-xs text-slate-200 break-all select-all\" id=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var10 string
+		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("stub-target-%s", stub.GetRef().GetId()))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 165, Col: 128}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var10)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var11 string
+		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(stub.GetRef().GetTarget())
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 166, Col: 32}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templ.RenderScriptItems(ctx, templ_7745c5c3_Buffer, templ.ComponentScript{Call: fmt.Sprintf("copyToClipboard('stub-target-%s', this)", stub.GetRef().GetId())})
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<button type=\"button\" onclick=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var12 templ.ComponentScript = templ.ComponentScript{Call: fmt.Sprintf("copyToClipboard('stub-target-%s', this)", stub.GetRef().GetId())}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var12.Call)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "\" class=\"px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] shrink-0 transition-colors\">Copy Target</button></div><div id=\"stub-save-banner\" class=\"hidden px-3 py-2 rounded text-xs border border-emerald-800/80 bg-emerald-950/60 text-emerald-300\"></div></div><!-- Stub Details Body (Inspect Mode) --><div id=\"stub-view-panel\" class=\"flex-1 overflow-y-auto p-4 space-y-5\"><!-- Active If CEL Condition --><div class=\"rounded-lg border border-slate-800 bg-slate-950/60 overflow-hidden\"><div class=\"px-3 py-2 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between\"><span class=\"text-xs font-semibold text-slate-200\">Active If (CEL Match Rule)</span></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if stub.GetActiveIf() != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<tr><td class=\"px-4 py-2 font-semibold text-gray-300\">ActiveIf:</td><td class=\"px-4 py-2 text-gray-200\"><pre class=\"p-2 bg-gray-700 rounded-md overflow-auto text-gray-200 text-sm\"><code>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<pre class=\"p-3 text-xs font-mono text-sky-300 overflow-x-auto\"><code class=\"language-cel\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var5 string
-			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(stub.GetActiveIf())
+			var templ_7745c5c3_Var13 string
+			templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(stub.GetActiveIf())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 50, Col: 166}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 188, Col: 116}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</code></pre></td></tr>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</code></pre>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		} else {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<div class=\"p-3 text-xs text-slate-400\">Always active for this target (no <code class=\"font-mono text-slate-300\">active_if</code> condition).</div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</tbody></table>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, "</div><!-- Stub Response Content -->")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		if stub.HasCelContent() {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<h2 class=\"text-xl font-bold text-white mt-6 mb-2\">CEL Content:</h2><pre class=\"p-4 bg-gray-800 rounded-lg overflow-auto text-gray-200 text-sm\"><code>")
+		if stub.HasError() && stub.GetError().GetCode() != 0 {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "<div class=\"rounded-lg border border-rose-900/60 bg-rose-950/20 overflow-hidden\"><div class=\"px-3 py-2 bg-rose-950/50 border-b border-rose-900/60 flex items-center justify-between\"><span class=\"text-xs font-semibold text-rose-300\">Error Response (Code ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var6 string
-			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(stub.GetCelContent())
+			var templ_7745c5c3_Var14 string
+			templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", stub.GetError().GetCode()))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 58, Col: 120}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 198, Col: 123}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</code></pre>")
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-		}
-		if stub.WhichContent() == stubsv1.Stub_Json_case {
-			if stub.HasContent() {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<h2 class=\"text-xl font-bold text-white mt-6 mb-2\">Content:</h2><pre class=\"p-4 bg-gray-800 rounded-lg overflow-auto text-gray-200 text-sm\"><code>")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				var templ_7745c5c3_Var7 string
-				templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(formatJSON(stub.GetJson()))
-				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 64, Col: 130}
-				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</code></pre>")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-			}
-		} else if stub.WhichContent() == stubsv1.Stub_Error_case {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "<h2 class=\"text-xl font-bold text-white mt-6 mb-2\">Error Details:</h2><table class=\"min-w-full bg-gray-800 rounded-lg overflow-hidden mb-4\"><tbody><tr><td class=\"px-4 py-2 font-semibold text-gray-300\">Error Code:</td><td class=\"px-4 py-2 text-gray-200\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, ")</span></div><div class=\"p-3 text-xs font-mono text-rose-200\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var8 string
-			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", stub.GetError().GetCode()))
+			var templ_7745c5c3_Var15 string
+			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(stub.GetError().GetMessage())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 72, Col: 110}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 201, Col: 36}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</td></tr><tr><td class=\"px-4 py-2 font-semibold text-gray-300\">Error Message:</td><td class=\"px-4 py-2 text-gray-200\">")
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var9 string
-			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(stub.GetError().GetMessage())
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 76, Col: 94}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</td></tr></tbody></table>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "</div></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "</div></div>")
+		if stub.GetJson() != "" {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<div class=\"rounded-lg border border-slate-800 bg-slate-950/60 overflow-hidden\"><div class=\"px-3 py-2 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between\"><span class=\"text-xs font-semibold text-slate-200\">Static JSON Payload</span> ")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templ.RenderScriptItems(ctx, templ_7745c5c3_Buffer, templ.ComponentScript{Call: fmt.Sprintf("copyToClipboard('stub-json-%s', this)", stub.GetRef().GetId())})
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "<button type=\"button\" onclick=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var16 templ.ComponentScript = templ.ComponentScript{Call: fmt.Sprintf("copyToClipboard('stub-json-%s', this)", stub.GetRef().GetId())}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var16.Call)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "\" class=\"px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] transition-colors\">Copy JSON</button></div><pre id=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var17 string
+			templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("stub-json-%s", stub.GetRef().GetId()))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 218, Col: 65}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var17)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "\" class=\"p-3 text-xs font-mono text-slate-200 overflow-x-auto max-h-72 overflow-y-auto\"><code class=\"language-json\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var18 string
+			templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(formatJSON(stub.GetJson()))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 218, Col: 210}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, "</code></pre></div>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		if stub.GetCelContent() != "" {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "<div class=\"rounded-lg border border-slate-800 bg-slate-950/60 overflow-hidden\"><div class=\"px-3 py-2 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between\"><span class=\"text-xs font-semibold text-slate-200\">Dynamic CEL Content</span></div><pre class=\"p-3 text-xs font-mono text-amber-300 overflow-x-auto\"><code class=\"language-cel\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var19 string
+			templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(stub.GetCelContent())
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 227, Col: 120}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "</code></pre></div>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		if stub.HasStream() {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 28, "<div class=\"rounded-lg border border-slate-800 bg-slate-950/60 overflow-hidden\"><div class=\"px-3 py-2 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between\"><span class=\"text-xs font-semibold text-slate-200\">Stream Configuration (")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var20 string
+			templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d items", len(stub.GetStream().GetItems())))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 234, Col: 138}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 29, ")</span> <span class=\"text-[11px] font-mono text-slate-400\">Repeated: ")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var21 string
+			templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%t", stub.GetStream().GetRepeated()))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 236, Col: 68}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 30, "</span></div><div class=\"divide-y divide-slate-800/80\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			for i, item := range stub.GetStream().GetItems() {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "<div class=\"p-3 space-y-1.5\"><div class=\"flex items-center justify-between text-[11px] font-mono text-slate-400\"><span>Frame #")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var22 string
+				templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", i+1))
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 243, Col: 46}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "</span> ")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				if item.GetDelay() != nil && item.GetDelay().AsDuration() > 0 {
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "<span>Delay: ")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					var templ_7745c5c3_Var23 string
+					templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(item.GetDelay().AsDuration().String())
+					if templ_7745c5c3_Err != nil {
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 245, Col: 62}
+					}
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "</span>")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "</div>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				if item.GetJson() != "" {
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 36, "<pre class=\"text-xs font-mono text-slate-200 overflow-x-auto\"><code class=\"language-json\">")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					var templ_7745c5c3_Var24 string
+					templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(formatJSON(item.GetJson()))
+					if templ_7745c5c3_Err != nil {
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 249, Col: 127}
+					}
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 37, "</code></pre>")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+				}
+				if item.GetCelContent() != "" {
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 38, "<pre class=\"text-xs font-mono text-amber-300 overflow-x-auto\"><code class=\"language-cel\">")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					var templ_7745c5c3_Var25 string
+					templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(item.GetCelContent())
+					if templ_7745c5c3_Err != nil {
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 252, Col: 120}
+					}
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 39, "</code></pre>")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+				}
+				if item.HasError() && item.GetError().GetCode() != 0 {
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 40, "<div class=\"text-xs font-mono text-rose-300\">Error [")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					var templ_7745c5c3_Var26 string
+					templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%d", item.GetError().GetCode()))
+					if templ_7745c5c3_Err != nil {
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 255, Col: 107}
+					}
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 41, "]: ")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					var templ_7745c5c3_Var27 string
+					templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(item.GetError().GetMessage())
+					if templ_7745c5c3_Err != nil {
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 255, Col: 142}
+					}
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 42, "</div>")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 43, "</div>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 44, "</div></div>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 45, "<!-- Equivalent YAML Stub Export --><div class=\"rounded-lg border border-slate-800 bg-slate-950/70 overflow-hidden\"><div class=\"px-3 py-2 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between gap-2 flex-wrap\"><span class=\"text-xs font-semibold text-slate-200\">YAML Stub Export</span><div class=\"flex items-center gap-1.5\"><button type=\"button\" onclick=\"enterStubEditMode('yaml')\" class=\"px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sky-300 text-xs font-medium transition-colors flex items-center gap-1\"><span>Edit YAML</span></button> ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templ.RenderScriptItems(ctx, templ_7745c5c3_Buffer, templ.ComponentScript{Call: fmt.Sprintf("copyToClipboard('stub-yaml-%s', this)", stub.GetRef().GetId())})
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 46, "<button type=\"button\" onclick=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var28 templ.ComponentScript = templ.ComponentScript{Call: fmt.Sprintf("copyToClipboard('stub-yaml-%s', this)", stub.GetRef().GetId())}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var28.Call)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 47, "\" class=\"px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium transition-colors flex items-center gap-1\"><span>Copy</span></button> ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templ.RenderScriptItems(ctx, templ_7745c5c3_Buffer, templ.ComponentScript{Call: fmt.Sprintf("downloadStubYAML('stub-yaml-%s', '%s', this)", stub.GetRef().GetId(), stubDownloadFilename(stub))})
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 48, "<button type=\"button\" onclick=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var29 templ.ComponentScript = templ.ComponentScript{Call: fmt.Sprintf("downloadStubYAML('stub-yaml-%s', '%s', this)", stub.GetRef().GetId(), stubDownloadFilename(stub))}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var29.Call)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 49, "\" class=\"px-2.5 py-1 rounded bg-sky-950/90 hover:bg-sky-900 border border-sky-800 text-sky-300 text-xs font-medium transition-colors flex items-center gap-1\"><svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.75\" stroke=\"currentColor\" class=\"w-3.5 h-3.5\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3\"></path></svg> <span>Download</span></button></div></div><pre id=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var30 string
+		templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("stub-yaml-%s", stub.GetRef().GetId()))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 294, Col: 64}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var30)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 50, "\" class=\"p-3 text-xs font-mono text-slate-200 overflow-x-auto max-h-80 overflow-y-auto\"><code class=\"language-yaml\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var31 string
+		templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(stubToYAML(stub))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 294, Col: 199}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 51, "</code></pre></div></div><!-- Stub Editor Body (Edit Mode) --><div id=\"stub-edit-panel\" data-active-edit-tab=\"form\" class=\"hidden flex-1 overflow-y-auto p-4 space-y-4\"><!-- Editor Sub-Header: Mode Switcher + Save / Cancel --><div class=\"flex items-center justify-between gap-2 flex-wrap pb-3 border-b border-slate-800\"><div class=\"inline-flex rounded bg-slate-950 p-0.5 border border-slate-800 text-xs\" role=\"group\" aria-label=\"Editor format\"><button type=\"button\" id=\"stub-edit-tab-form\" onclick=\"switchStubEditTab('form')\" class=\"px-2.5 py-1 rounded text-[11px] font-medium bg-slate-800 text-slate-100 transition-colors\">Structured Form</button> <button type=\"button\" id=\"stub-edit-tab-yaml\" onclick=\"switchStubEditTab('yaml')\" class=\"px-2.5 py-1 rounded text-[11px] font-medium text-slate-400 hover:text-slate-200 transition-colors\">YAML Definition</button></div><div class=\"flex items-center gap-1.5\"><button type=\"button\" onclick=\"cancelStubEditMode()\" class=\"px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-medium transition-colors\">Cancel</button> ")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templ.RenderScriptItems(ctx, templ_7745c5c3_Buffer, templ.ComponentScript{Call: fmt.Sprintf("saveStubChanges('%s', '%s', this)", stub.GetRef().GetTarget(), stub.GetRef().GetId())})
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 52, "<button type=\"button\" id=\"stub-save-btn\" onclick=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var32 templ.ComponentScript = templ.ComponentScript{Call: fmt.Sprintf("saveStubChanges('%s', '%s', this)", stub.GetRef().GetTarget(), stub.GetRef().GetId())}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var32.Call)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 53, "\" class=\"px-3 py-1 rounded bg-emerald-950/90 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 text-xs font-medium transition-colors flex items-center gap-1.5\"><svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"2\" stroke=\"currentColor\" class=\"w-3.5 h-3.5\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M4.5 12.75l6 6 9-13.5\"></path></svg> <span>Save Changes</span></button></div></div><!-- Inline Error / Validation Feedback --><div id=\"stub-edit-feedback\" class=\"hidden px-3 py-2 rounded text-xs border border-rose-800/80 bg-rose-950/60 text-rose-300 font-mono whitespace-pre-wrap\"></div><!-- Tab 1: Structured Form Editor --><div id=\"stub-edit-panel-form\" class=\"space-y-4\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if stub.HasStream() {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 54, "<div class=\"px-3 py-2 rounded border border-amber-800/70 bg-amber-950/40 text-amber-300 text-xs\">This stub defines a multi-frame stream response. Use the <button type=\"button\" onclick=\"switchStubEditTab('yaml')\" class=\"underline font-semibold hover:text-amber-200\">YAML Definition</button> tab to edit stream frames and delays.</div>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 55, "<div class=\"grid grid-cols-1 sm:grid-cols-12 gap-3\"><div class=\"sm:col-span-6 space-y-1\"><div class=\"flex items-center justify-between gap-2\"><label for=\"stub-edit-target\" class=\"block text-[11px] font-medium text-slate-300\">Target (Method or Message)</label> <span id=\"stub-target-status\" class=\"hidden text-[10px] font-mono px-1.5 py-0.5 rounded\"></span></div><input type=\"text\" id=\"stub-edit-target\" value=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var33 string
+		templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.ResolveAttributeValue(stub.GetRef().GetTarget())
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 363, Col: 40}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var33)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 56, "\" oninput=\"scheduleStubValidation()\" class=\"w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-100 focus:outline-none focus:border-sky-500\"><div id=\"stub-target-validation\" class=\"hidden text-[11px] font-mono text-rose-400 whitespace-pre-wrap\"></div></div><div class=\"sm:col-span-4 space-y-1\"><label for=\"stub-edit-id\" class=\"block text-[11px] font-medium text-slate-300\">Stub ID</label> <input type=\"text\" id=\"stub-edit-id\" value=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var34 string
+		templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.ResolveAttributeValue(stub.GetRef().GetId())
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 374, Col: 36}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var34)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 57, "\" class=\"w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-100 focus:outline-none focus:border-sky-500\"></div><div class=\"sm:col-span-2 space-y-1\"><label for=\"stub-edit-priority\" class=\"block text-[11px] font-medium text-slate-300\">Priority</label> <input type=\"number\" id=\"stub-edit-priority\" min=\"0\" max=\"100\" value=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var35 string
+		templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.ResolveAttributeValue(fmt.Sprintf("%d", stub.GetPriority()))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 385, Col: 52}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var35)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 58, "\" class=\"w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-100 tabular-nums focus:outline-none focus:border-sky-500\"></div></div><div class=\"space-y-1\"><div class=\"flex items-center justify-between gap-2\"><label for=\"stub-edit-active-if\" class=\"block text-[11px] font-medium text-slate-300\">Active If (CEL Match Rule)</label> <span id=\"stub-active-if-status\" class=\"hidden text-[10px] font-mono px-1.5 py-0.5 rounded\"></span></div><input type=\"text\" id=\"stub-edit-active-if\" value=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var36 string
+		templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.ResolveAttributeValue(stub.GetActiveIf())
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 399, Col: 32}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var36)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 59, "\" oninput=\"scheduleStubValidation()\" placeholder=\"e.g. req.id == '123' (leave empty to match all calls)\" class=\"w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-sky-300 placeholder-slate-500 focus:outline-none focus:border-sky-500\"><div id=\"stub-active-if-validation\" class=\"hidden text-[11px] font-mono text-rose-400 whitespace-pre-wrap\"></div></div><div class=\"space-y-1\"><div class=\"flex items-center justify-between gap-2\"><label for=\"stub-edit-json\" class=\"block text-[11px] font-medium text-slate-300\">Static JSON Payload</label> <span id=\"stub-json-status\" class=\"hidden text-[10px] font-mono px-1.5 py-0.5 rounded\"></span></div><textarea id=\"stub-edit-json\" rows=\"9\" spellcheck=\"false\" placeholder=\"{}\" oninput=\"scheduleStubValidation()\" class=\"w-full p-2.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if stub.GetJson() != "" {
+			var templ_7745c5c3_Var37 string
+			templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(formatJSON(stub.GetJson()))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 421, Col: 35}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 60, "</textarea><div id=\"stub-json-validation\" class=\"hidden text-[11px] font-mono text-rose-400 whitespace-pre-wrap\"></div></div><div class=\"space-y-1\"><div class=\"flex items-center justify-between gap-2\"><label for=\"stub-edit-cel\" class=\"block text-[11px] font-medium text-slate-300\">Dynamic CEL Content (Optional)</label> <span id=\"stub-cel-status\" class=\"hidden text-[10px] font-mono px-1.5 py-0.5 rounded\"></span></div><textarea id=\"stub-edit-cel\" rows=\"3\" spellcheck=\"false\" placeholder=\"e.g. {'id': req.id, 'name': fake_name()}\" oninput=\"scheduleStubValidation()\" class=\"w-full p-2.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-amber-300 placeholder-slate-500 focus:outline-none focus:border-sky-500\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var38 string
+		templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(stub.GetCelContent())
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 439, Col: 28}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 61, "</textarea><div id=\"stub-cel-validation\" class=\"hidden text-[11px] font-mono text-rose-400 whitespace-pre-wrap\"></div></div><div class=\"rounded-lg border border-slate-800 bg-slate-950/60 p-3 space-y-3\"><div class=\"text-[11px] font-semibold text-slate-300\">Error Response Override (Optional)</div><div class=\"grid grid-cols-1 sm:grid-cols-12 gap-3\"><div class=\"sm:col-span-5 space-y-1\"><label for=\"stub-edit-error-code\" class=\"block text-[11px] text-slate-400\">gRPC Status Code</label> <select id=\"stub-edit-error-code\" class=\"w-full px-2 py-1.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-200 focus:outline-none focus:border-sky-500\"><option value=\"0\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if errCode == 0 {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 62, " selected")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 63, ">0 - None (OK)</option> <option value=\"1\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if errCode == 1 {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 64, " selected")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 65, ">1 - Canceled</option> <option value=\"2\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if errCode == 2 {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 66, " selected")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 67, ">2 - Unknown</option> <option value=\"3\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if errCode == 3 {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 68, " selected")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 69, ">3 - InvalidArgument</option> <option value=\"4\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if errCode == 4 {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 70, " selected")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 71, ">4 - DeadlineExceeded</option> <option value=\"5\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if errCode == 5 {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 72, " selected")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 73, ">5 - NotFound</option> <option value=\"6\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if errCode == 6 {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 74, " selected")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 75, ">6 - AlreadyExists</option> <option value=\"7\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if errCode == 7 {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 76, " selected")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 77, ">7 - PermissionDenied</option> <option value=\"8\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if errCode == 8 {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 78, " selected")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 79, ">8 - ResourceExhausted</option> <option value=\"9\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if errCode == 9 {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 80, " selected")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 81, ">9 - FailedPrecondition</option> <option value=\"10\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if errCode == 10 {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 82, " selected")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 83, ">10 - Aborted</option> <option value=\"11\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if errCode == 11 {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 84, " selected")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 85, ">11 - OutOfRange</option> <option value=\"12\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if errCode == 12 {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 86, " selected")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 87, ">12 - Unimplemented</option> <option value=\"13\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if errCode == 13 {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 88, " selected")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 89, ">13 - Internal</option> <option value=\"14\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if errCode == 14 {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 90, " selected")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 91, ">14 - Unavailable</option> <option value=\"15\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if errCode == 15 {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 92, " selected")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 93, ">15 - DataLoss</option> <option value=\"16\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if errCode == 16 {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 94, " selected")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 95, ">16 - Unauthenticated</option></select></div><div class=\"sm:col-span-7 space-y-1\"><label for=\"stub-edit-error-message\" class=\"block text-[11px] text-slate-400\">Error Message</label> <input type=\"text\" id=\"stub-edit-error-message\" value=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var39 string
+		templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.ResolveAttributeValue(stub.GetError().GetMessage())
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 476, Col: 44}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var39)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 96, "\" placeholder=\"Optional error message\" class=\"w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500\"></div></div></div></div><!-- Tab 2: Raw YAML Editor --><div id=\"stub-edit-panel-yaml\" class=\"hidden space-y-2\"><div class=\"flex items-center justify-between gap-2\"><label for=\"stub-edit-yaml\" class=\"block text-[11px] font-medium text-slate-300\">Stub YAML Definition</label> <span id=\"stub-yaml-status\" class=\"hidden text-[10px] font-mono px-1.5 py-0.5 rounded\"></span></div><textarea id=\"stub-edit-yaml\" rows=\"18\" spellcheck=\"false\" oninput=\"scheduleStubValidation()\" class=\"w-full p-3 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-100 focus:outline-none focus:border-sky-500 leading-relaxed\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var40 string
+		templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(stubToYAML(stub))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 497, Col: 23}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 97, "</textarea><div id=\"stub-yaml-validation\" class=\"hidden px-2.5 py-1.5 rounded border border-rose-800/80 bg-rose-950/50 text-[11px] font-mono text-rose-300 whitespace-pre-wrap\"></div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = StubYAMLReference().Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 98, "</div></div></div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+func NewStub() templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var41 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var41 == nil {
+			templ_7745c5c3_Var41 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 99, "<div class=\"flex flex-col h-full bg-slate-900/40\" id=\"stub-new-root\"><!-- New Stub Header --><div class=\"p-4 border-b border-slate-800 bg-slate-900/80 space-y-2\"><div class=\"flex items-center justify-between gap-2 flex-wrap\"><div class=\"flex items-center gap-2\"><span class=\"px-2 py-0.5 text-xs font-mono font-semibold rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800/80\">New Stub</span><h2 class=\"text-xs font-semibold text-slate-100\">Create &amp; Register Stub</h2></div></div><p class=\"text-[11px] text-slate-400 leading-relaxed\">Define a response override for any RPC method or Protobuf message using the structured form or raw YAML.</p><div id=\"stub-save-banner\" class=\"hidden px-3 py-2 rounded text-xs border border-emerald-800/80 bg-emerald-950/60 text-emerald-300\"></div></div><!-- Stub Editor Body (Create Mode) --><div id=\"stub-edit-panel\" data-active-edit-tab=\"form\" class=\"flex-1 overflow-y-auto p-4 space-y-4\"><!-- Editor Sub-Header: Mode Switcher + Create / Cancel --><div class=\"flex items-center justify-between gap-2 flex-wrap pb-3 border-b border-slate-800\"><div class=\"inline-flex rounded bg-slate-950 p-0.5 border border-slate-800 text-xs\" role=\"group\" aria-label=\"Editor format\"><button type=\"button\" id=\"stub-edit-tab-form\" onclick=\"switchStubEditTab('form')\" class=\"px-2.5 py-1 rounded text-[11px] font-medium bg-slate-800 text-slate-100 transition-colors\">Structured Form</button> <button type=\"button\" id=\"stub-edit-tab-yaml\" onclick=\"switchStubEditTab('yaml')\" class=\"px-2.5 py-1 rounded text-[11px] font-medium text-slate-400 hover:text-slate-200 transition-colors\">YAML Definition</button></div><div class=\"flex items-center gap-1.5\"><button type=\"button\" onclick=\"cancelStubEditMode()\" class=\"px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-medium transition-colors\">Cancel</button> <button type=\"button\" id=\"stub-save-btn\" onclick=\"saveStubChanges('', '', this)\" class=\"px-3 py-1 rounded bg-emerald-950/90 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 text-xs font-medium transition-colors flex items-center gap-1.5\"><svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"2\" stroke=\"currentColor\" class=\"w-3.5 h-3.5\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M12 4.5v15m7.5-7.5h-15\"></path></svg> <span>Register Stub</span></button></div></div><!-- Inline Error / Validation Feedback --><div id=\"stub-edit-feedback\" class=\"hidden px-3 py-2 rounded text-xs border border-rose-800/80 bg-rose-950/60 text-rose-300 font-mono whitespace-pre-wrap\"></div><!-- Tab 1: Structured Form Editor --><div id=\"stub-edit-panel-form\" class=\"space-y-4\"><div class=\"grid grid-cols-1 sm:grid-cols-12 gap-3\"><div class=\"sm:col-span-6 space-y-1\"><div class=\"flex items-center justify-between gap-2\"><label for=\"stub-edit-target\" class=\"block text-[11px] font-medium text-slate-300\">Target (Method or Message)</label> <span id=\"stub-target-status\" class=\"hidden text-[10px] font-mono px-1.5 py-0.5 rounded\"></span></div><input type=\"text\" id=\"stub-edit-target\" oninput=\"scheduleStubValidation()\" placeholder=\"e.g. connectrpc.eliza.v1.ElizaService/Say\" class=\"w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500\"><div id=\"stub-target-validation\" class=\"hidden text-[11px] font-mono text-rose-400 whitespace-pre-wrap\"></div></div><div class=\"sm:col-span-4 space-y-1\"><label for=\"stub-edit-id\" class=\"block text-[11px] font-medium text-slate-300\">Stub ID (Optional)</label> <input type=\"text\" id=\"stub-edit-id\" placeholder=\"Auto-generated if empty\" class=\"w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500\"></div><div class=\"sm:col-span-2 space-y-1\"><label for=\"stub-edit-priority\" class=\"block text-[11px] font-medium text-slate-300\">Priority</label> <input type=\"number\" id=\"stub-edit-priority\" min=\"0\" max=\"100\" value=\"10\" class=\"w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-100 tabular-nums focus:outline-none focus:border-sky-500\"></div></div><div class=\"space-y-1\"><div class=\"flex items-center justify-between gap-2\"><label for=\"stub-edit-active-if\" class=\"block text-[11px] font-medium text-slate-300\">Active If (CEL Match Rule)</label> <span id=\"stub-active-if-status\" class=\"hidden text-[10px] font-mono px-1.5 py-0.5 rounded\"></span></div><input type=\"text\" id=\"stub-edit-active-if\" oninput=\"scheduleStubValidation()\" placeholder=\"e.g. req.sentence == 'hello' (leave empty to match all calls)\" class=\"w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-sky-300 placeholder-slate-500 focus:outline-none focus:border-sky-500\"><div id=\"stub-active-if-validation\" class=\"hidden text-[11px] font-mono text-rose-400 whitespace-pre-wrap\"></div></div><div class=\"space-y-1\"><div class=\"flex items-center justify-between gap-2\"><label for=\"stub-edit-json\" class=\"block text-[11px] font-medium text-slate-300\">Static JSON Payload</label> <span id=\"stub-json-status\" class=\"hidden text-[10px] font-mono px-1.5 py-0.5 rounded\"></span></div><textarea id=\"stub-edit-json\" rows=\"8\" spellcheck=\"false\" placeholder=\"{}\" oninput=\"scheduleStubValidation()\" class=\"w-full p-2.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var42 string
+		templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinStringErrs("{\n  \n}")
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 637, Col: 18}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var42))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 100, "</textarea><div id=\"stub-json-validation\" class=\"hidden text-[11px] font-mono text-rose-400 whitespace-pre-wrap\"></div></div><div class=\"space-y-1\"><div class=\"flex items-center justify-between gap-2\"><label for=\"stub-edit-cel\" class=\"block text-[11px] font-medium text-slate-300\">Dynamic CEL Content (Optional)</label> <span id=\"stub-cel-status\" class=\"hidden text-[10px] font-mono px-1.5 py-0.5 rounded\"></span></div><textarea id=\"stub-edit-cel\" rows=\"3\" spellcheck=\"false\" placeholder=\"e.g. {'sentence': 'Echo: ' + req.sentence}\" oninput=\"scheduleStubValidation()\" class=\"w-full p-2.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-amber-300 placeholder-slate-500 focus:outline-none focus:border-sky-500\"></textarea><div id=\"stub-cel-validation\" class=\"hidden text-[11px] font-mono text-rose-400 whitespace-pre-wrap\"></div></div><div class=\"rounded-lg border border-slate-800 bg-slate-950/60 p-3 space-y-3\"><div class=\"text-[11px] font-semibold text-slate-300\">Error Response Override (Optional)</div><div class=\"grid grid-cols-1 sm:grid-cols-12 gap-3\"><div class=\"sm:col-span-5 space-y-1\"><label for=\"stub-edit-error-code\" class=\"block text-[11px] text-slate-400\">gRPC Status Code</label> <select id=\"stub-edit-error-code\" class=\"w-full px-2 py-1.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-200 focus:outline-none focus:border-sky-500\"><option value=\"0\" selected>0 - None (OK)</option> <option value=\"1\">1 - Canceled</option> <option value=\"2\">2 - Unknown</option> <option value=\"3\">3 - InvalidArgument</option> <option value=\"4\">4 - DeadlineExceeded</option> <option value=\"5\">5 - NotFound</option> <option value=\"6\">6 - AlreadyExists</option> <option value=\"7\">7 - PermissionDenied</option> <option value=\"8\">8 - ResourceExhausted</option> <option value=\"9\">9 - FailedPrecondition</option> <option value=\"10\">10 - Aborted</option> <option value=\"11\">11 - OutOfRange</option> <option value=\"12\">12 - Unimplemented</option> <option value=\"13\">13 - Internal</option> <option value=\"14\">14 - Unavailable</option> <option value=\"15\">15 - DataLoss</option> <option value=\"16\">16 - Unauthenticated</option></select></div><div class=\"sm:col-span-7 space-y-1\"><label for=\"stub-edit-error-message\" class=\"block text-[11px] text-slate-400\">Error Message</label> <input type=\"text\" id=\"stub-edit-error-message\" placeholder=\"Optional error message\" class=\"w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500\"></div></div></div></div><!-- Tab 2: Raw YAML Editor --><div id=\"stub-edit-panel-yaml\" class=\"hidden space-y-2\"><div class=\"flex items-center justify-between gap-2\"><label for=\"stub-edit-yaml\" class=\"block text-[11px] font-medium text-slate-300\">Stub YAML Definition</label> <span id=\"stub-yaml-status\" class=\"hidden text-[10px] font-mono px-1.5 py-0.5 rounded\"></span></div><textarea id=\"stub-edit-yaml\" rows=\"16\" spellcheck=\"false\" oninput=\"scheduleStubValidation()\" class=\"w-full p-3 bg-slate-950 border border-slate-800 rounded text-xs font-mono text-slate-100 focus:outline-none focus:border-sky-500 leading-relaxed\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var43 string
+		templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.JoinStringErrs("stubs:\n  - target: \"\"\n    priority: 10\n    content: {}\n")
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 710, Col: 70}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var43))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 101, "</textarea><div id=\"stub-yaml-validation\" class=\"hidden px-2.5 py-1.5 rounded border border-rose-800/80 bg-rose-950/50 text-[11px] font-mono text-rose-300 whitespace-pre-wrap\"></div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = StubYAMLReference().Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 102, "</div></div></div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+func StubYAMLReference() templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var44 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var44 == nil {
+			templ_7745c5c3_Var44 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 103, "<details class=\"group rounded-lg border border-slate-800/80 bg-slate-950/60 overflow-hidden\"><summary class=\"px-3 py-2 text-[11px] text-slate-400 hover:text-slate-200 hover:bg-slate-900/60 cursor-pointer select-none flex items-center justify-between gap-2 transition-colors list-none [&::-webkit-details-marker]:hidden\"><span>Edit <code class=\"font-mono text-slate-300\">target</code>, <code class=\"font-mono text-slate-300\">id</code>, <code class=\"font-mono text-slate-300\">priority</code>, <code class=\"font-mono text-slate-300\">active_if</code>, <code class=\"font-mono text-slate-300\">content</code>, <code class=\"font-mono text-slate-300\">cel_content</code>, <code class=\"font-mono text-slate-300\">error_code</code>, or <code class=\"font-mono text-slate-300\">stream</code> directly in YAML.</span> <span class=\"inline-flex items-center gap-1 shrink-0 font-medium text-sky-400 group-hover:text-sky-300\"><span>Reference &amp; Examples</span> <svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"2\" stroke=\"currentColor\" class=\"w-3.5 h-3.5 transition-transform duration-150 group-open:rotate-180\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M19.5 8.25l-7.5 7.5-7.5-7.5\"></path></svg></span></summary><div class=\"border-t border-slate-800/80 p-3 space-y-4 text-xs bg-slate-950/90\"><!-- Field Reference Table --><div><div class=\"text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2\">YAML Field Reference</div><div class=\"divide-y divide-slate-800/70 border border-slate-800 rounded overflow-hidden\"><div class=\"p-2.5 grid grid-cols-1 sm:grid-cols-12 gap-1.5 bg-slate-900/30\"><div class=\"sm:col-span-4 font-mono text-[11px] text-sky-300 font-semibold\">target <span class=\"text-[10px] font-sans font-normal text-rose-400\">required</span></div><div class=\"sm:col-span-8 text-[11px] text-slate-300 leading-relaxed\">Fully qualified RPC method or Protobuf message type. Accepts slash or dot notation, such as <code class=\"font-mono text-slate-200\">connectrpc.eliza.v1.ElizaService/Say</code> or <code class=\"font-mono text-slate-200\">connectrpc.eliza.v1.SayResponse</code>.</div></div><div class=\"p-2.5 grid grid-cols-1 sm:grid-cols-12 gap-1.5\"><div class=\"sm:col-span-4 font-mono text-[11px] text-sky-300 font-semibold\">id <span class=\"text-[10px] font-sans font-normal text-slate-500\">string</span></div><div class=\"sm:col-span-8 text-[11px] text-slate-300 leading-relaxed\">Unique identifier for this stub within the target. Auto-generated when omitted.</div></div><div class=\"p-2.5 grid grid-cols-1 sm:grid-cols-12 gap-1.5 bg-slate-900/30\"><div class=\"sm:col-span-4 font-mono text-[11px] text-sky-300 font-semibold\">priority <span class=\"text-[10px] font-sans font-normal text-slate-500\">0..100</span></div><div class=\"sm:col-span-8 text-[11px] text-slate-300 leading-relaxed\">Evaluation order when multiple stubs match the same target. Higher numbers run first (default <code class=\"font-mono text-slate-200\">0</code>).</div></div><div class=\"p-2.5 grid grid-cols-1 sm:grid-cols-12 gap-1.5\"><div class=\"sm:col-span-4 font-mono text-[11px] text-sky-300 font-semibold\">active_if <span class=\"text-[10px] font-sans font-normal text-slate-500\">CEL bool</span></div><div class=\"sm:col-span-8 text-[11px] text-slate-300 leading-relaxed\">Boolean CEL condition evaluated against the incoming request (<code class=\"font-mono text-slate-200\">req</code>). Example: <code class=\"font-mono text-sky-300\">req.sentence.contains(\"hello\")</code>.</div></div><div class=\"p-2.5 grid grid-cols-1 sm:grid-cols-12 gap-1.5 bg-slate-900/30\"><div class=\"sm:col-span-4 font-mono text-[11px] text-emerald-300 font-semibold\">content <span class=\"text-[10px] font-sans font-normal text-slate-500\">object</span></div><div class=\"sm:col-span-8 text-[11px] text-slate-300 leading-relaxed\">Static response fields unmarshaled via ProtoJSON into the target output message.</div></div><div class=\"p-2.5 grid grid-cols-1 sm:grid-cols-12 gap-1.5\"><div class=\"sm:col-span-4 font-mono text-[11px] text-amber-300 font-semibold\">cel_content <span class=\"text-[10px] font-sans font-normal text-slate-500\">CEL expr</span></div><div class=\"sm:col-span-8 text-[11px] text-slate-300 leading-relaxed\">Dynamic CEL expression returning response fields. Can reference <code class=\"font-mono text-slate-200\">req</code> and faker helpers such as <code class=\"font-mono text-amber-300\">fake_name()</code>, <code class=\"font-mono text-amber-300\">fake_uuid()</code>, or <code class=\"font-mono text-amber-300\">fake_quote()</code>.</div></div><div class=\"p-2.5 grid grid-cols-1 sm:grid-cols-12 gap-1.5 bg-slate-900/30\"><div class=\"sm:col-span-4 font-mono text-[11px] text-rose-300 font-semibold\">error_code / error_message</div><div class=\"sm:col-span-8 text-[11px] text-slate-300 leading-relaxed\">Returns a gRPC/Connect status error (<code class=\"font-mono text-slate-200\">1</code> Canceled, <code class=\"font-mono text-slate-200\">3</code> InvalidArgument, <code class=\"font-mono text-slate-200\">5</code> NotFound, <code class=\"font-mono text-slate-200\">7</code> PermissionDenied, <code class=\"font-mono text-slate-200\">13</code> Internal, <code class=\"font-mono text-slate-200\">14</code> Unavailable, <code class=\"font-mono text-slate-200\">16</code> Unauthenticated).</div></div><div class=\"p-2.5 grid grid-cols-1 sm:grid-cols-12 gap-1.5\"><div class=\"sm:col-span-4 font-mono text-[11px] text-violet-300 font-semibold\">stream <span class=\"text-[10px] font-sans font-normal text-slate-500\">object</span></div><div class=\"sm:col-span-8 text-[11px] text-slate-300 leading-relaxed\">Multi-frame streaming configuration with <code class=\"font-mono text-slate-200\">repeated</code> (bool), <code class=\"font-mono text-slate-200\">done_after</code> (duration like <code class=\"font-mono text-slate-200\">30s</code>), and <code class=\"font-mono text-slate-200\">items</code> (<code class=\"font-mono text-slate-200\">content</code>, <code class=\"font-mono text-slate-200\">cel_content</code>, <code class=\"font-mono text-slate-200\">delay</code>, or <code class=\"font-mono text-slate-200\">error</code>).</div></div></div></div><!-- Complete YAML Examples --><div class=\"space-y-2.5\"><div class=\"text-[11px] font-semibold uppercase tracking-wider text-slate-400\">Complete YAML Examples</div><div class=\"rounded border border-slate-800 bg-slate-900/50 overflow-hidden\"><div class=\"px-2.5 py-1.5 bg-slate-900 border-b border-slate-800 text-[11px] font-medium text-slate-300\">1. Static Payload &amp; Dynamic CEL Response</div><pre class=\"p-2.5 text-[11px] font-mono text-slate-200 overflow-x-auto leading-relaxed\"><code class=\"language-yaml\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var45 string
+		templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.JoinStringErrs(`stubs:
+  - id: say-greeting
+    target: connectrpc.eliza.v1.ElizaService/Say
+    priority: 20
+    active_if: req.sentence == "hello"
+    content:
+      sentence: "Hello! How are you feeling today?"
+    cel_content: "{'sentence': 'Echo: ' + req.sentence + ' (' + fake_uuid() + ')'}"`)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 818, Col: 84}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var45))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 104, "</code></pre></div><div class=\"rounded border border-slate-800 bg-slate-900/50 overflow-hidden\"><div class=\"px-2.5 py-1.5 bg-slate-900 border-b border-slate-800 text-[11px] font-medium text-slate-300\">2. Conditional Error Response</div><pre class=\"p-2.5 text-[11px] font-mono text-slate-200 overflow-x-auto leading-relaxed\"><code class=\"language-yaml\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var46 string
+		templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.JoinStringErrs(`stubs:
+  - id: say-rate-limit
+    target: connectrpc.eliza.v1.ElizaService/Say
+    priority: 50
+    active_if: req.sentence == "fail"
+    error_code: 8
+    error_message: "rate limit exceeded"`)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 831, Col: 41}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var46))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 105, "</code></pre></div><div class=\"rounded border border-slate-800 bg-slate-900/50 overflow-hidden\"><div class=\"px-2.5 py-1.5 bg-slate-900 border-b border-slate-800 text-[11px] font-medium text-slate-300\">3. Server Streaming Sequence with Delays &amp; Terminal Error</div><pre class=\"p-2.5 text-[11px] font-mono text-slate-200 overflow-x-auto leading-relaxed\"><code class=\"language-yaml\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var47 string
+		templ_7745c5c3_Var47, templ_7745c5c3_Err = templ.JoinStringErrs(`stubs:
+  - id: introduce-stream
+    target: connectrpc.eliza.v1.ElizaService/Introduce
+    priority: 10
+    active_if: req.name != ""
+    stream:
+      repeated: false
+      done_after: 30s
+      items:
+        - content:
+            sentence: "Hello, I am Eliza."
+          delay: 150ms
+        - cel_content: "{'sentence': 'Nice to meet you, ' + req.name}"
+          delay: 400ms
+        - error:
+            code: 13
+            message: "stream interrupted"`)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `templates/stubs/single.templ`, Line: 854, Col: 42}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var47))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 106, "</code></pre></div></div></div></details>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

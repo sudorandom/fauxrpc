@@ -1,169 +1,1600 @@
 package templates
 
-import "github.com/sudorandom/fauxrpc/private/metrics"
+import (
+	"fmt"
 
-type Provider interface {
-	GetStats() *metrics.Stats
+	"github.com/sudorandom/fauxrpc/private/frontend/templates/partials"
+	"github.com/sudorandom/fauxrpc/private/metrics"
+	"github.com/sudorandom/fauxrpc/private/stubs"
+)
+
+type ServerInfo interface {
 	HasProtobufServices() bool
 	HasOpenAPIRoutes() bool
+	GetStats() *metrics.Stats
+	GetStubDB() stubs.StubDatabase
 }
 
-templ Index(content templ.Component, p Provider) {
+templ Index(content templ.Component, info ServerInfo) {
+	{{ stats := info.GetStats() }}
 	<!DOCTYPE html>
-	<html lang="en">
+	<html lang="en" class="dark">
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 			<title>FauxRPC Dashboard</title>
-			<link rel="icon" type="image/x-icon" href="/fauxrpc/assets/favicon.ico"/>
-
-			<link href="/fauxrpc/assets/tailwind.css" rel="stylesheet"/>
-			<script src="/fauxrpc/assets/htmx.min.js" crossorigin="anonymous"></script>
-			<script src="/fauxrpc/assets/htmx-ext-sse.min.js" crossorigin="anonymous"></script>
-			<script src="/fauxrpc/assets/hyperscript.min.js" crossorigin="anonymous"></script>
-			
-			<link href="/fauxrpc/assets/inter.css" rel="stylesheet"/>
-			<!-- Highlight.js for Protobuf syntax highlighting -->
+			<link rel="icon" type="image/svg+xml" href="/fauxrpc/assets/icon.svg"/>
+			<link rel="alternate icon" href="/fauxrpc/assets/favicon.ico" sizes="any"/>
+			<script src="/fauxrpc/assets/htmx.min.js"></script>
+			<script src="/fauxrpc/assets/htmx-ext-sse.min.js"></script>
+			<script src="/fauxrpc/assets/hyperscript.min.js"></script>
+			<link rel="stylesheet" href="/fauxrpc/assets/inter.css"/>
 			<link rel="stylesheet" href="/fauxrpc/assets/highlight-github-dark.min.css"/>
 			<script src="/fauxrpc/assets/highlight.min.js"></script>
 			<script src="/fauxrpc/assets/highlight-protobuf.min.js"></script>
-			<style>
-        		body { font-family: 'Inter', sans-serif; }
-    		</style>
+			<link rel="stylesheet" href="/fauxrpc/assets/tailwind.css"/>
+			<script>
+				window.currentLogStatusFilter = 'all';
+				window.currentInspectorTab = 'payloads';
+				window.selectedLogEntryId = null;
+				window.pendingChordKey = null;
+				window.pendingChordTimer = null;
+
+				function highlightWithin(root) {
+					if (typeof hljs === 'undefined' || !root) return;
+					root.querySelectorAll('pre code').forEach((el) => {
+						if (!el.dataset.highlighted) {
+							hljs.highlightElement(el);
+						}
+					});
+				}
+
+				function toggleStatusPopover(evt) {
+					if (evt) evt.stopPropagation();
+					closeMobileMenu();
+					closeShortcutsModal();
+					const popover = document.getElementById('status-popover');
+					const btn = document.getElementById('status-popover-btn');
+					if (!popover) return;
+					const isHidden = popover.classList.toggle('hidden');
+					if (btn) {
+						btn.setAttribute('aria-expanded', String(!isHidden));
+					}
+				}
+
+				function closeStatusPopover() {
+					const popover = document.getElementById('status-popover');
+					const btn = document.getElementById('status-popover-btn');
+					if (popover && !popover.classList.contains('hidden')) {
+						popover.classList.add('hidden');
+						if (btn) btn.setAttribute('aria-expanded', 'false');
+						return true;
+					}
+					return false;
+				}
+
+				function toggleMobileMenu(evt) {
+					if (evt) evt.stopPropagation();
+					closeStatusPopover();
+					closeShortcutsModal();
+					const menu = document.getElementById('mobile-nav-menu');
+					const btn = document.getElementById('mobile-menu-btn');
+					const openIcon = document.getElementById('mobile-menu-icon-open');
+					const closeIcon = document.getElementById('mobile-menu-icon-close');
+					if (!menu) return;
+					const isHidden = menu.classList.toggle('hidden');
+					if (btn) btn.setAttribute('aria-expanded', String(!isHidden));
+					if (openIcon && closeIcon) {
+						openIcon.classList.toggle('hidden', !isHidden);
+						closeIcon.classList.toggle('hidden', isHidden);
+					}
+				}
+
+				function closeMobileMenu() {
+					const menu = document.getElementById('mobile-nav-menu');
+					const btn = document.getElementById('mobile-menu-btn');
+					const openIcon = document.getElementById('mobile-menu-icon-open');
+					const closeIcon = document.getElementById('mobile-menu-icon-close');
+					if (menu && !menu.classList.contains('hidden')) {
+						menu.classList.add('hidden');
+						if (btn) btn.setAttribute('aria-expanded', 'false');
+						if (openIcon && closeIcon) {
+							openIcon.classList.remove('hidden');
+							closeIcon.classList.add('hidden');
+						}
+						return true;
+					}
+					return false;
+				}
+
+				function toggleShortcutsModal(evt) {
+					if (evt) evt.stopPropagation();
+					closeStatusPopover();
+					closeMobileMenu();
+					const modal = document.getElementById('shortcuts-modal');
+					if (!modal) return;
+					modal.classList.toggle('hidden');
+				}
+
+				function closeShortcutsModal() {
+					const modal = document.getElementById('shortcuts-modal');
+					if (modal && !modal.classList.contains('hidden')) {
+						modal.classList.add('hidden');
+						return true;
+					}
+					return false;
+				}
+
+				function setActiveNavTab(tabId, shouldCloseMenu = true) {
+					document.querySelectorAll('.nav-tab').forEach((el) => {
+						const matches = el.id === tabId || el.dataset.navKey === tabId;
+						el.classList.toggle('active', matches);
+					});
+					if (shouldCloseMenu) {
+						closeMobileMenu();
+					}
+				}
+
+				function syncNavWithLocation() {
+					const path = window.location.pathname;
+					if (path.startsWith('/fauxrpc/stubs')) {
+						setActiveNavTab('nav-stubs', false);
+					} else if (path.startsWith('/fauxrpc/browser')) {
+						setActiveNavTab('nav-schema', false);
+					} else if (path.startsWith('/fauxrpc/about')) {
+						setActiveNavTab('nav-about', false);
+					} else {
+						setActiveNavTab('nav-logs', false);
+					}
+				}
+
+				function selectLogEntry(rowOrId, maybeEntryId) {
+					let targetRow = null;
+					let entryId = maybeEntryId;
+
+					if (rowOrId && typeof rowOrId === 'object' && rowOrId.nodeType === 1) {
+						targetRow = rowOrId.closest('.log-entry-row') || rowOrId;
+						if (!entryId && targetRow.dataset) {
+							entryId = targetRow.dataset.entryId;
+						}
+					} else if (typeof rowOrId === 'string') {
+						entryId = rowOrId;
+						targetRow =
+							document.getElementById('log-row-' + entryId) ||
+							document.querySelector('#log-entries .log-entry-row[data-entry-id="' + entryId + '"]');
+					}
+
+					const tpl =
+						(targetRow && targetRow.querySelector('template.log-detail-tpl')) ||
+						(entryId && document.getElementById('log-detail-tpl-' + entryId));
+					const pane = document.getElementById('log-inspector-pane');
+					if (!tpl || !pane) return;
+
+					window.selectedLogEntryId = entryId;
+
+					document.querySelectorAll('.log-entry-row').forEach((row) => {
+						const isSelected = targetRow ? row === targetRow : row.dataset.entryId === entryId;
+						row.classList.toggle('selected-row', isSelected);
+					});
+
+					pane.innerHTML = '';
+					pane.appendChild(tpl.content.cloneNode(true));
+					if (window.htmx) {
+						window.htmx.process(pane);
+					}
+					highlightWithin(pane);
+
+					if (window.currentInspectorTab && window.currentInspectorTab !== 'payloads') {
+						switchInspectorTab(entryId, window.currentInspectorTab);
+					}
+				}
+
+				function ensureSelectedLogEntry() {
+					const pane = document.getElementById('log-inspector-pane');
+					if (!pane) return null;
+
+					const selectedRow = document.querySelector('#log-entries .log-entry-row.selected-row:not(.hidden)');
+					if (selectedRow && selectedRow.dataset.entryId && pane.querySelector('[data-insp-tab]')) {
+						window.selectedLogEntryId = selectedRow.dataset.entryId;
+						return selectedRow.dataset.entryId;
+					}
+
+					const firstRow = selectedRow || document.querySelector('#log-entries .log-entry-row:not(.hidden)');
+					if (firstRow && firstRow.dataset.entryId) {
+						selectLogEntry(firstRow, firstRow.dataset.entryId);
+						return firstRow.dataset.entryId;
+					}
+
+					return null;
+				}
+
+				function clearCurrentSelection() {
+					window.selectedLogEntryId = null;
+					document.querySelectorAll('.log-entry-row.selected-row, .stub-entry-row.selected-row, .schema-file-row.selected-row').forEach((row) => {
+						row.classList.remove('selected-row');
+					});
+					if (document.activeElement && document.activeElement !== document.body) {
+						document.activeElement.blur();
+					}
+					const pane = document.getElementById('log-inspector-pane');
+					const emptyTpl = document.getElementById('log-inspector-empty-tpl');
+					if (pane && emptyTpl) {
+						pane.innerHTML = '';
+						pane.appendChild(emptyTpl.content.cloneNode(true));
+					}
+				}
+
+				function navigateActiveList(delta) {
+					const stubEditPanel = document.getElementById('stub-edit-panel');
+					if (stubEditPanel && !stubEditPanel.classList.contains('hidden')) {
+						return;
+					}
+
+					// 1. Request Log list
+					const logTbody = document.getElementById('log-entries');
+					if (logTbody) {
+						const visibleRows = Array.from(logTbody.querySelectorAll('.log-entry-row:not(.hidden)'));
+						if (visibleRows.length === 0) return;
+
+						let curIdx = visibleRows.findIndex((r) => r.classList.contains('selected-row'));
+						if (curIdx === -1 && window.selectedLogEntryId) {
+							curIdx = visibleRows.findIndex((r) => r.dataset.entryId === window.selectedLogEntryId);
+						}
+						let nextIdx = 0;
+						if (curIdx === -1) {
+							nextIdx = delta > 0 ? 0 : visibleRows.length - 1;
+						} else {
+							nextIdx = Math.min(Math.max(curIdx + delta, 0), visibleRows.length - 1);
+						}
+						if (nextIdx === curIdx) return;
+						const targetRow = visibleRows[nextIdx];
+						if (targetRow) {
+							selectLogEntry(targetRow, targetRow.dataset.entryId);
+							if (document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('log-entry-row')) {
+								targetRow.focus({ preventScroll: true });
+							}
+							targetRow.scrollIntoView({ block: 'nearest' });
+						}
+						return;
+					}
+
+					// 2. Stubs list
+					const stubsTbody = document.getElementById('stubs-table-body');
+					if (stubsTbody) {
+						const visibleRows = Array.from(stubsTbody.querySelectorAll('.stub-entry-row:not(.hidden)'));
+						if (visibleRows.length === 0) return;
+
+						let curIdx = visibleRows.findIndex((r) => r.classList.contains('selected-row'));
+						let nextIdx = curIdx === -1 ? (delta > 0 ? 0 : visibleRows.length - 1) : Math.min(Math.max(curIdx + delta, 0), visibleRows.length - 1);
+						if (nextIdx === curIdx) return;
+						const targetRow = visibleRows[nextIdx];
+						if (targetRow) {
+							selectStubRow(targetRow);
+							if (document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('stub-entry-row')) {
+								targetRow.focus({ preventScroll: true });
+							}
+							targetRow.click();
+							targetRow.scrollIntoView({ block: 'nearest' });
+						}
+						return;
+					}
+
+					// 3. Schema tree
+					const schemaContainer = document.getElementById('schema-tree-container');
+					if (schemaContainer) {
+						const visibleRows = Array.from(schemaContainer.querySelectorAll('.schema-file-row:not(.hidden)'));
+						if (visibleRows.length === 0) return;
+
+						let curIdx = visibleRows.findIndex((r) => r.classList.contains('selected-row'));
+						let nextIdx = curIdx === -1 ? (delta > 0 ? 0 : visibleRows.length - 1) : Math.min(Math.max(curIdx + delta, 0), visibleRows.length - 1);
+						if (nextIdx === curIdx) return;
+						const targetRow = visibleRows[nextIdx];
+						if (targetRow) {
+							selectSchemaFileRow(targetRow);
+							if (document.activeElement && document.activeElement.classList && document.activeElement.classList.contains('schema-file-row')) {
+								targetRow.focus({ preventScroll: true });
+							}
+							targetRow.click();
+							targetRow.scrollIntoView({ block: 'nearest' });
+						}
+					}
+				}
+
+				function switchInspectorTab(entryIdOrTab, maybeTabName) {
+					const tabName = maybeTabName || entryIdOrTab;
+					const entryId = maybeTabName ? entryIdOrTab : window.selectedLogEntryId;
+					if (!tabName) return;
+
+					window.currentInspectorTab = tabName;
+					const pane = document.getElementById('log-inspector-pane');
+					if (!pane) return;
+
+					const tabs = ['payloads', 'headers', 'mocks', 'yaml'];
+					tabs.forEach((name) => {
+						const btn =
+							pane.querySelector('[data-insp-tab="' + name + '"]') ||
+							(entryId ? document.getElementById('insp-tab-' + name + '-' + entryId) : null);
+						const panel =
+							pane.querySelector('[data-insp-panel="' + name + '"]') ||
+							(entryId ? document.getElementById('insp-panel-' + name + '-' + entryId) : null);
+						if (!btn || !panel) return;
+
+						if (name === tabName) {
+							btn.classList.add('border-sky-400', 'text-sky-300');
+							btn.classList.remove('border-transparent', 'text-slate-400');
+							panel.classList.remove('hidden');
+							highlightWithin(panel);
+						} else {
+							btn.classList.remove('border-sky-400', 'text-sky-300');
+							btn.classList.add('border-transparent', 'text-slate-400');
+							panel.classList.add('hidden');
+						}
+					});
+				}
+
+				function setLogStatusFilter(status, btnEl) {
+					window.currentLogStatusFilter = status;
+					document.querySelectorAll('.log-status-filter-btn').forEach((btn) => {
+						if (btn === btnEl) {
+							btn.classList.add('bg-slate-800', 'text-slate-100');
+							btn.classList.remove('text-slate-400');
+						} else {
+							btn.classList.remove('bg-slate-800', 'text-slate-100');
+							btn.classList.add('text-slate-400');
+						}
+					});
+					applyLogFilters();
+				}
+
+				function applyLogFilters() {
+					const tbody = document.getElementById('log-entries');
+					if (!tbody) return;
+
+					const searchInput = document.getElementById('log-filter-input');
+					const protoSelect = document.getElementById('log-protocol-filter');
+					const query = searchInput ? searchInput.value.trim().toLowerCase() : '';
+					const protocol = protoSelect ? protoSelect.value : 'all';
+					const statusFilter = window.currentLogStatusFilter || 'all';
+
+					let visibleCount = 0;
+					const rows = tbody.querySelectorAll('.log-entry-row');
+					rows.forEach((row) => {
+						const rowSearch = row.dataset.search || '';
+						const rowProto = row.dataset.protocol || '';
+						const isError = row.dataset.isError === 'true';
+
+						let match = true;
+						if (query && !rowSearch.includes(query)) {
+							match = false;
+						}
+						if (protocol !== 'all' && rowProto !== protocol) {
+							match = false;
+						}
+						if (statusFilter === 'ok' && isError) {
+							match = false;
+						} else if (statusFilter === 'error' && !isError) {
+							match = false;
+						}
+
+						row.classList.toggle('hidden', !match);
+						if (match) visibleCount++;
+					});
+
+					const emptyState = document.getElementById('log-empty-state');
+					if (emptyState) {
+						emptyState.classList.toggle('hidden', rows.length > 0 && visibleCount > 0);
+					}
+				}
+
+				function clearRequestLog() {
+					fetch('/fauxrpc/logs/clear', { method: 'POST' }).catch(() => {});
+					const tbody = document.getElementById('log-entries');
+					if (tbody) {
+						tbody.innerHTML = '';
+					}
+					clearCurrentSelection();
+					const emptyState = document.getElementById('log-empty-state');
+					if (emptyState) {
+						emptyState.classList.remove('hidden');
+					}
+				}
+
+				function copyToClipboard(elementId, buttonElement) {
+					const targetElement = document.getElementById(elementId);
+					if (!targetElement) return;
+
+					const textToCopy = targetElement.innerText || targetElement.textContent || '';
+					navigator.clipboard.writeText(textToCopy).then(() => {
+						if (!buttonElement) return;
+						const originalHTML = buttonElement.innerHTML;
+						buttonElement.innerHTML = '<span>Copied!</span>';
+						buttonElement.disabled = true;
+						setTimeout(() => {
+							buttonElement.innerHTML = originalHTML;
+							buttonElement.disabled = false;
+						}, 1600);
+					});
+				}
+
+				function downloadStubYAML(elementId, filename, buttonElement) {
+					const targetElement = document.getElementById(elementId);
+					if (!targetElement) return;
+
+					const content = targetElement.innerText || targetElement.textContent || '';
+					const blob = new Blob([content], { type: 'text/yaml;charset=utf-8' });
+					const url = URL.createObjectURL(blob);
+					const a = document.createElement('a');
+					a.href = url;
+					a.download = filename || 'stub.yaml';
+					document.body.appendChild(a);
+					a.click();
+					document.body.removeChild(a);
+					URL.revokeObjectURL(url);
+
+					if (buttonElement) {
+						const originalHTML = buttonElement.innerHTML;
+						buttonElement.innerHTML = '<span>Downloaded!</span>';
+						buttonElement.disabled = true;
+						setTimeout(() => {
+							buttonElement.innerHTML = originalHTML;
+							buttonElement.disabled = false;
+						}, 1600);
+					}
+				}
+
+				function registerStubFromYAML(elementId, buttonElement) {
+					const targetElement = document.getElementById(elementId);
+					if (!targetElement) return;
+
+					const yamlContent = targetElement.innerText || targetElement.textContent || '';
+					const entryId = elementId.replace('yaml-stub-', '');
+					const feedbackEl = document.getElementById('yaml-stub-feedback-' + entryId);
+
+					const originalHTML = buttonElement ? buttonElement.innerHTML : '';
+					if (buttonElement) {
+						buttonElement.innerHTML = '<span>Registering...</span>';
+						buttonElement.disabled = true;
+					}
+
+					fetch('/fauxrpc/stubs/register', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/x-yaml' },
+						body: yamlContent
+					})
+						.then(async (res) => {
+							const msg = await res.text();
+							if (!res.ok) throw new Error(msg || 'Failed to register stub');
+							return msg;
+						})
+						.then((msg) => {
+							if (buttonElement) {
+								buttonElement.innerHTML = '<span>Registered!</span>';
+							}
+							if (feedbackEl) {
+								feedbackEl.className = 'px-3 py-2 text-xs border-b border-emerald-800/80 bg-emerald-950/60 text-emerald-300 flex items-center justify-between';
+								feedbackEl.innerHTML = '<span>Stub activated in server (' + msg + ').</span>';
+							}
+							document.querySelectorAll('.stubs-count-badge').forEach((countEl) => {
+								const cur = parseInt(countEl.textContent || '0', 10) || 0;
+								countEl.textContent = String(cur + 1);
+							});
+							if (buttonElement) {
+								setTimeout(() => {
+									buttonElement.innerHTML = originalHTML;
+									buttonElement.disabled = false;
+								}, 2000);
+							}
+						})
+						.catch((err) => {
+							if (buttonElement) {
+								buttonElement.innerHTML = originalHTML;
+								buttonElement.disabled = false;
+							}
+							if (feedbackEl) {
+								feedbackEl.className = 'px-3 py-2 text-xs border-b border-rose-800/80 bg-rose-950/60 text-rose-300';
+								feedbackEl.textContent = err.message;
+							}
+						});
+				}
+
+				function filterStubList() {
+					const input = document.getElementById('stub-filter-input');
+					const query = input ? input.value.trim().toLowerCase() : '';
+					document.querySelectorAll('.stub-entry-row').forEach((row) => {
+						const text = row.dataset.stubSearch || '';
+						row.classList.toggle('hidden', query !== '' && !text.includes(query));
+					});
+				}
+
+				function selectStubRow(rowEl) {
+					const targetRow = rowEl && typeof rowEl.closest === 'function' ? rowEl.closest('.stub-entry-row') || rowEl : rowEl;
+					document.querySelectorAll('.stub-entry-row').forEach((r) => {
+						r.classList.toggle('selected-row', r === targetRow);
+					});
+				}
+
+				function switchStubEditTab(tab) {
+					const editPanel = document.getElementById('stub-edit-panel');
+					const formPanel = document.getElementById('stub-edit-panel-form');
+					const yamlPanel = document.getElementById('stub-edit-panel-yaml');
+					const formBtn = document.getElementById('stub-edit-tab-form');
+					const yamlBtn = document.getElementById('stub-edit-tab-yaml');
+					if (!editPanel || !formPanel || !yamlPanel || !formBtn || !yamlBtn) return;
+
+					editPanel.dataset.activeEditTab = tab;
+					const isForm = tab === 'form';
+					formPanel.classList.toggle('hidden', !isForm);
+					yamlPanel.classList.toggle('hidden', isForm);
+
+					if (isForm) {
+						formBtn.classList.add('bg-slate-800', 'text-slate-100');
+						formBtn.classList.remove('text-slate-400');
+						yamlBtn.classList.remove('bg-slate-800', 'text-slate-100');
+						yamlBtn.classList.add('text-slate-400');
+					} else {
+						yamlBtn.classList.add('bg-slate-800', 'text-slate-100');
+						yamlBtn.classList.remove('text-slate-400');
+						formBtn.classList.remove('bg-slate-800', 'text-slate-100');
+						formBtn.classList.add('text-slate-400');
+					}
+				}
+
+				function openNewStubEditor(preferredTab) {
+					const tpl = document.getElementById('stub-new-editor-tpl');
+					const pane = document.getElementById('stub-inspector-pane');
+					if (!tpl || !pane) return false;
+
+					document.querySelectorAll('.stub-entry-row.selected-row').forEach((row) => {
+						row.classList.remove('selected-row');
+					});
+
+					pane.innerHTML = '';
+					pane.appendChild(tpl.content.cloneNode(true));
+					if (window.htmx) {
+						window.htmx.process(pane);
+					}
+					highlightWithin(pane);
+
+					const tab = preferredTab || 'form';
+					switchStubEditTab(tab);
+
+					if (tab === 'yaml') {
+						const yamlInput = document.getElementById('stub-edit-yaml');
+						if (yamlInput) yamlInput.focus();
+					} else {
+						const targetInput = document.getElementById('stub-edit-target');
+						if (targetInput) targetInput.focus();
+					}
+					return true;
+				}
+
+				function enterStubEditMode(preferredTab) {
+					const viewPanel = document.getElementById('stub-view-panel');
+					const editPanel = document.getElementById('stub-edit-panel');
+					const feedbackEl = document.getElementById('stub-edit-feedback');
+					const saveBanner = document.getElementById('stub-save-banner');
+					if (!viewPanel || !editPanel) return false;
+
+					if (feedbackEl) feedbackEl.classList.add('hidden');
+					if (saveBanner) saveBanner.classList.add('hidden');
+
+					viewPanel.classList.add('hidden');
+					editPanel.classList.remove('hidden');
+
+					const tab = preferredTab === 'yaml' ? 'yaml' : 'form';
+					switchStubEditTab(tab);
+
+					if (tab === 'yaml') {
+						const yamlInput = document.getElementById('stub-edit-yaml');
+						if (yamlInput) yamlInput.focus();
+					} else {
+						const jsonInput = document.getElementById('stub-edit-json');
+						if (jsonInput) jsonInput.focus();
+					}
+					return true;
+				}
+
+				function applyFieldValidationState(inputEl, statusEl, errorEl, hasValue, validLabel, invalidLabel, errorMessage) {
+					if (!inputEl) return;
+					inputEl.classList.remove('border-slate-800', 'border-rose-600', 'border-emerald-700/80');
+					if (errorMessage) {
+						inputEl.classList.add('border-rose-600');
+						if (statusEl) {
+							statusEl.textContent = invalidLabel;
+							statusEl.className = 'text-[10px] font-mono px-1.5 py-0.5 rounded bg-rose-950/80 text-rose-300 border border-rose-800/80';
+						}
+						if (errorEl) {
+							errorEl.textContent = errorMessage;
+							errorEl.classList.remove('hidden');
+						}
+					} else if (hasValue) {
+						inputEl.classList.add('border-emerald-700/80');
+						if (statusEl) {
+							statusEl.textContent = validLabel;
+							statusEl.className = 'text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800/80';
+						}
+						if (errorEl) {
+							errorEl.textContent = '';
+							errorEl.classList.add('hidden');
+						}
+					} else {
+						inputEl.classList.add('border-slate-800');
+						if (statusEl) {
+							statusEl.textContent = '';
+							statusEl.className = 'hidden text-[10px] font-mono px-1.5 py-0.5 rounded';
+						}
+						if (errorEl) {
+							errorEl.textContent = '';
+							errorEl.classList.add('hidden');
+						}
+					}
+				}
+
+				function runStubValidation() {
+					const editPanel = document.getElementById('stub-edit-panel');
+					if (!editPanel || editPanel.classList.contains('hidden')) return;
+
+					const activeTab = editPanel.dataset.activeEditTab || 'form';
+					const seq = (window.stubValidationSeq = (window.stubValidationSeq || 0) + 1);
+
+					if (activeTab === 'yaml') {
+						const yamlInput = document.getElementById('stub-edit-yaml');
+						const yamlStatus = document.getElementById('stub-yaml-status');
+						const yamlErr = document.getElementById('stub-yaml-validation');
+						const rawYaml = yamlInput ? yamlInput.value.trim() : '';
+
+						if (!rawYaml) {
+							applyFieldValidationState(yamlInput, yamlStatus, yamlErr, false, 'Valid YAML', 'Invalid YAML', '');
+							return;
+						}
+
+						fetch('/fauxrpc/stubs/validate', {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/x-yaml' },
+							body: rawYaml
+						})
+							.then((res) => res.json())
+							.then((data) => {
+								if (seq !== window.stubValidationSeq) return;
+								applyFieldValidationState(
+									yamlInput,
+									yamlStatus,
+									yamlErr,
+									true,
+									'Valid YAML & Schema',
+									'Invalid YAML',
+									data.yaml_error || ''
+								);
+							})
+							.catch(() => {});
+						return;
+					}
+
+					const targetEl = document.getElementById('stub-edit-target');
+					const activeIfEl = document.getElementById('stub-edit-active-if');
+					const jsonEl = document.getElementById('stub-edit-json');
+					const celEl = document.getElementById('stub-edit-cel');
+
+					const targetVal = targetEl ? targetEl.value.trim() : '';
+					const activeIfVal = activeIfEl ? activeIfEl.value.trim() : '';
+					const jsonVal = jsonEl ? jsonEl.value.trim() : '';
+					const celVal = celEl ? celEl.value.trim() : '';
+
+					// Immediate client-side JSON syntax check
+					if (jsonVal) {
+						try {
+							JSON.parse(jsonVal);
+						} catch (e) {
+							applyFieldValidationState(
+								jsonEl,
+								document.getElementById('stub-json-status'),
+								document.getElementById('stub-json-validation'),
+								true,
+								'Valid JSON',
+								'Invalid JSON',
+								'Invalid JSON syntax: ' + e.message
+							);
+						}
+					} else {
+						applyFieldValidationState(
+							jsonEl,
+							document.getElementById('stub-json-status'),
+							document.getElementById('stub-json-validation'),
+							false,
+							'Valid JSON',
+							'Invalid JSON',
+							''
+						);
+					}
+
+					fetch('/fauxrpc/stubs/validate', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							target: targetVal,
+							active_if: activeIfVal,
+							json_content: jsonVal,
+							cel_content: celVal
+						})
+					})
+						.then((res) => res.json())
+						.then((data) => {
+							if (seq !== window.stubValidationSeq) return;
+							applyFieldValidationState(
+								targetEl,
+								document.getElementById('stub-target-status'),
+								document.getElementById('stub-target-validation'),
+								targetVal !== '',
+								'Valid Target',
+								'Unknown Target',
+								data.target_error || ''
+							);
+							applyFieldValidationState(
+								activeIfEl,
+								document.getElementById('stub-active-if-status'),
+								document.getElementById('stub-active-if-validation'),
+								activeIfVal !== '',
+								'Valid CEL',
+								'Invalid CEL',
+								data.active_if_error || ''
+							);
+							applyFieldValidationState(
+								jsonEl,
+								document.getElementById('stub-json-status'),
+								document.getElementById('stub-json-validation'),
+								jsonVal !== '',
+								'Valid JSON',
+								'Invalid JSON',
+								data.json_error || ''
+							);
+							applyFieldValidationState(
+								celEl,
+								document.getElementById('stub-cel-status'),
+								document.getElementById('stub-cel-validation'),
+								celVal !== '',
+								'Valid CEL',
+								'Invalid CEL',
+								data.cel_error || ''
+							);
+						})
+						.catch(() => {});
+				}
+
+				function scheduleStubValidation() {
+					clearTimeout(window.stubValidationTimer);
+					window.stubValidationTimer = setTimeout(runStubValidation, 300);
+				}
+
+				function cancelStubEditMode() {
+					const viewPanel = document.getElementById('stub-view-panel');
+					const editPanel = document.getElementById('stub-edit-panel');
+					const feedbackEl = document.getElementById('stub-edit-feedback');
+					if (viewPanel && editPanel && !editPanel.classList.contains('hidden')) {
+						editPanel.classList.add('hidden');
+						viewPanel.classList.remove('hidden');
+						if (feedbackEl) feedbackEl.classList.add('hidden');
+						return true;
+					}
+					const newRoot = document.getElementById('stub-new-root');
+					if (newRoot) {
+						const firstStubRow = document.querySelector('#stubs-table-body .stub-entry-row:not(.hidden)');
+						if (firstStubRow) {
+							firstStubRow.click();
+							return true;
+						}
+						if (feedbackEl && !feedbackEl.classList.contains('hidden')) {
+							feedbackEl.classList.add('hidden');
+							return true;
+						}
+					}
+					return false;
+				}
+
+				function saveStubChanges(oldTarget, oldId, buttonElement) {
+					const editPanel = document.getElementById('stub-edit-panel');
+					const feedbackEl = document.getElementById('stub-edit-feedback');
+					if (!editPanel) return;
+
+					const isCreate = !oldTarget || !oldId;
+					const activeTab = editPanel.dataset.activeEditTab || 'form';
+					let contentType = 'application/json';
+					let body = '';
+
+					if (activeTab === 'yaml') {
+						const yamlInput = document.getElementById('stub-edit-yaml');
+						contentType = 'application/x-yaml';
+						body = yamlInput ? yamlInput.value : '';
+					} else {
+						const targetEl = document.getElementById('stub-edit-target');
+						const idEl = document.getElementById('stub-edit-id');
+						const priorityEl = document.getElementById('stub-edit-priority');
+						const activeIfEl = document.getElementById('stub-edit-active-if');
+						const jsonEl = document.getElementById('stub-edit-json');
+						const celEl = document.getElementById('stub-edit-cel');
+						const errCodeEl = document.getElementById('stub-edit-error-code');
+						const errMsgEl = document.getElementById('stub-edit-error-message');
+
+						body = JSON.stringify({
+							target: targetEl ? targetEl.value : oldTarget,
+							id: idEl ? idEl.value : oldId,
+							priority: priorityEl ? parseInt(priorityEl.value || '0', 10) || 0 : 0,
+							active_if: activeIfEl ? activeIfEl.value : '',
+							json_content: jsonEl ? jsonEl.value : '',
+							cel_content: celEl ? celEl.value : '',
+							error_code: errCodeEl ? parseInt(errCodeEl.value || '0', 10) || 0 : 0,
+							error_message: errMsgEl ? errMsgEl.value : ''
+						});
+					}
+
+					const originalHTML = buttonElement ? buttonElement.innerHTML : '';
+					if (buttonElement) {
+						buttonElement.innerHTML = isCreate ? '<span>Registering...</span>' : '<span>Saving...</span>';
+						buttonElement.disabled = true;
+					}
+					if (feedbackEl) {
+						feedbackEl.classList.add('hidden');
+					}
+
+					const endpoint = isCreate ? '/fauxrpc/stubs/' : '/fauxrpc/stubs/' + oldTarget + '/' + oldId;
+					const method = isCreate ? 'POST' : 'PUT';
+
+					fetch(endpoint, {
+						method: method,
+						headers: { 'Content-Type': contentType },
+						body: body
+					})
+						.then(async (res) => {
+							const text = await res.text();
+							if (!res.ok) {
+								throw new Error(text || 'Failed to save stub');
+							}
+							return text;
+						})
+						.then((html) => {
+							const mainContent = document.getElementById('main-content');
+							if (mainContent) {
+								mainContent.innerHTML = html;
+								if (window.htmx) {
+									window.htmx.process(mainContent);
+								}
+								highlightWithin(mainContent);
+							}
+							const totalRows = document.querySelectorAll('#stubs-table-body .stub-entry-row').length;
+							document.querySelectorAll('.stubs-count-badge').forEach((countEl) => {
+								countEl.textContent = String(totalRows);
+							});
+							const saveBanner = document.getElementById('stub-save-banner');
+							if (saveBanner) {
+								saveBanner.textContent = isCreate ? 'Stub registered in server.' : 'Stub updated in server.';
+								saveBanner.classList.remove('hidden');
+								setTimeout(() => {
+									saveBanner.classList.add('hidden');
+								}, 3000);
+							}
+						})
+						.catch((err) => {
+							if (buttonElement) {
+								buttonElement.innerHTML = originalHTML;
+								buttonElement.disabled = false;
+							}
+							if (feedbackEl) {
+								feedbackEl.textContent = err.message;
+								feedbackEl.classList.remove('hidden');
+							}
+						});
+				}
+
+				function filterSchemaTree() {
+					const input = document.getElementById('schema-filter-input');
+					const query = input ? input.value.trim().toLowerCase() : '';
+					document.querySelectorAll('.schema-package-group').forEach((group) => {
+						let visibleInGroup = 0;
+						group.querySelectorAll('.schema-file-row').forEach((row) => {
+							const text = row.dataset.schemaSearch || '';
+							const match = query === '' || text.includes(query);
+							row.classList.toggle('hidden', !match);
+							if (match) visibleInGroup++;
+						});
+						group.classList.toggle('hidden', visibleInGroup === 0);
+					});
+				}
+
+				function selectSchemaFileRow(rowEl) {
+					const targetRow = rowEl && typeof rowEl.closest === 'function' ? rowEl.closest('.schema-file-row') || rowEl : rowEl;
+					document.querySelectorAll('.schema-file-row').forEach((r) => {
+						r.classList.toggle('selected-row', r === targetRow);
+					});
+				}
+
+				function focusActiveSearchInput() {
+					const input =
+						document.getElementById('log-filter-input') ||
+						document.getElementById('stub-filter-input') ||
+						document.getElementById('schema-filter-input');
+					if (input) {
+						input.focus();
+						input.select();
+					}
+				}
+
+				function isEditableTarget(el) {
+					if (!el) return false;
+					const tag = (el.tagName || '').toLowerCase();
+					return tag === 'input' || tag === 'textarea' || tag === 'select' || el.isContentEditable;
+				}
+
+				document.addEventListener('DOMContentLoaded', () => {
+					syncNavWithLocation();
+					highlightWithin(document.body);
+					const firstRow = document.querySelector('#log-entries .log-entry-row');
+					if (firstRow && !window.selectedLogEntryId) {
+						selectLogEntry(firstRow, firstRow.dataset.entryId);
+					}
+				});
+
+				document.addEventListener('click', (evt) => {
+					const statusWrapper = document.getElementById('status-popover-wrapper');
+					if (statusWrapper && !statusWrapper.contains(evt.target)) {
+						closeStatusPopover();
+					}
+					const mobileMenu = document.getElementById('mobile-nav-menu');
+					const mobileBtn = document.getElementById('mobile-menu-btn');
+					if (mobileMenu && !mobileMenu.contains(evt.target) && (!mobileBtn || !mobileBtn.contains(evt.target))) {
+						closeMobileMenu();
+					}
+				});
+
+				document.addEventListener('keydown', (evt) => {
+					if (evt.metaKey || evt.ctrlKey || evt.altKey) return;
+
+					const editable = isEditableTarget(evt.target);
+
+					if (evt.key === 'Escape') {
+						if (closeShortcutsModal() || closeStatusPopover() || closeMobileMenu() || cancelStubEditMode()) {
+							evt.preventDefault();
+							return;
+						}
+						if (editable) {
+							evt.target.blur();
+							evt.preventDefault();
+							return;
+						}
+						clearCurrentSelection();
+						evt.preventDefault();
+						return;
+					}
+
+					// Allow ArrowDown / ArrowUp only from the search filter inputs to jump into list navigation
+					if (editable) {
+						const isSearchInput =
+							evt.target.id === 'log-filter-input' ||
+							evt.target.id === 'stub-filter-input' ||
+							evt.target.id === 'schema-filter-input';
+						if (isSearchInput && (evt.key === 'ArrowDown' || evt.key === 'ArrowUp')) {
+							evt.preventDefault();
+							evt.target.blur();
+							navigateActiveList(evt.key === 'ArrowDown' ? 1 : -1);
+						}
+						return;
+					}
+
+					// Handle 'g' chord navigation (g r = Requests, g s = Stubs, g c = Schema, g a = About)
+					if (window.pendingChordKey === 'g') {
+						clearTimeout(window.pendingChordTimer);
+						window.pendingChordKey = null;
+						const key = evt.key.toLowerCase();
+						const navMap = {
+							r: 'nav-logs',
+							s: 'nav-stubs',
+							c: 'nav-schema',
+							a: 'nav-about'
+						};
+						if (navMap[key]) {
+							const navEl = document.getElementById(navMap[key]);
+							if (navEl) {
+								evt.preventDefault();
+								navEl.click();
+							}
+							return;
+						}
+					}
+
+					if (evt.key === '?') {
+						evt.preventDefault();
+						toggleShortcutsModal();
+						return;
+					}
+
+					// If shortcuts modal is open, ignore other single-key shortcuts
+					const shortcutsModal = document.getElementById('shortcuts-modal');
+					if (shortcutsModal && !shortcutsModal.classList.contains('hidden')) {
+						return;
+					}
+
+					switch (evt.key) {
+						case 'j':
+						case 'ArrowDown':
+							evt.preventDefault();
+							navigateActiveList(1);
+							break;
+						case 'k':
+						case 'ArrowUp':
+							evt.preventDefault();
+							navigateActiveList(-1);
+							break;
+						case '/':
+							evt.preventDefault();
+							focusActiveSearchInput();
+							break;
+						case '1':
+						case '2':
+						case '3':
+						case '4': {
+							const inspectorTabMap = {
+								'1': 'payloads',
+								'2': 'headers',
+								'3': 'mocks',
+								'4': 'yaml'
+							};
+							const activeEntryId = ensureSelectedLogEntry();
+							const pane = document.getElementById('log-inspector-pane');
+							if (activeEntryId || (pane && pane.querySelector('[data-insp-tab]'))) {
+								evt.preventDefault();
+								switchInspectorTab(activeEntryId, inspectorTabMap[evt.key]);
+							} else {
+								const topNavMap = {
+									'1': 'nav-logs',
+									'2': 'nav-stubs',
+									'3': 'nav-schema',
+									'4': 'nav-about'
+								};
+								const navEl = document.getElementById(topNavMap[evt.key]);
+								if (navEl) {
+									evt.preventDefault();
+									navEl.click();
+								}
+							}
+							break;
+						}
+						case 'y': {
+							const activeEntryId = ensureSelectedLogEntry();
+							if (activeEntryId) {
+								evt.preventDefault();
+								switchInspectorTab(activeEntryId, 'yaml');
+								const btn = document.querySelector('#insp-panel-yaml-' + activeEntryId + ' button[title*="Copy"]');
+								copyToClipboard('yaml-stub-' + activeEntryId, btn);
+							}
+							break;
+						}
+						case 'd': {
+							const activeEntryId = ensureSelectedLogEntry();
+							if (activeEntryId) {
+								evt.preventDefault();
+								switchInspectorTab(activeEntryId, 'yaml');
+								const dlBtn = document.querySelector('#insp-panel-yaml-' + activeEntryId + ' button[title*="Download"]');
+								if (dlBtn) dlBtn.click();
+							}
+							break;
+						}
+						case 'r': {
+							const activeEntryId = ensureSelectedLogEntry();
+							if (activeEntryId) {
+								evt.preventDefault();
+								switchInspectorTab(activeEntryId, 'yaml');
+								const regBtn = document.querySelector('#insp-panel-yaml-' + activeEntryId + ' button[title*="Register"]');
+								if (regBtn) regBtn.click();
+							}
+							break;
+						}
+						case 'n':
+							if (document.getElementById('stub-new-editor-tpl')) {
+								evt.preventDefault();
+								openNewStubEditor('form');
+							}
+							break;
+						case 'e':
+							if (document.getElementById('stub-edit-panel')) {
+								evt.preventDefault();
+								enterStubEditMode();
+							}
+							break;
+						case 'x':
+							if (document.getElementById('log-entries')) {
+								evt.preventDefault();
+								clearRequestLog();
+							}
+							break;
+						case 's':
+							evt.preventDefault();
+							toggleStatusPopover();
+							break;
+						case 'g':
+							window.pendingChordKey = 'g';
+							clearTimeout(window.pendingChordTimer);
+							window.pendingChordTimer = setTimeout(() => {
+								window.pendingChordKey = null;
+							}, 1000);
+							break;
+					}
+				});
+
+				window.addEventListener('popstate', syncNavWithLocation);
+
+				function deduplicateLogEntries(tbody) {
+					if (!tbody) return;
+					const seenIds = new Set();
+					Array.from(tbody.querySelectorAll('.log-entry-row')).forEach((row) => {
+						const id = row.dataset.entryId || row.id;
+						if (!id) return;
+						if (seenIds.has(id)) {
+							row.remove();
+						} else {
+							seenIds.add(id);
+						}
+					});
+				}
+
+				function handleLogStreamUpdated() {
+					const tbody = document.getElementById('log-entries');
+					if (!tbody) return;
+					deduplicateLogEntries(tbody);
+					applyLogFilters();
+					const selectedRow = tbody.querySelector('.log-entry-row.selected-row:not(.hidden)');
+					if (selectedRow) return;
+					const firstRow = tbody.querySelector('.log-entry-row:not(.hidden)') || tbody.querySelector('.log-entry-row');
+					if (firstRow && (!window.selectedLogEntryId || !document.getElementById('log-row-' + window.selectedLogEntryId))) {
+						selectLogEntry(firstRow, firstRow.dataset.entryId);
+					}
+				}
+
+				document.addEventListener('htmx:sseBeforeMessage', (evt) => {
+					const target = (evt.detail && (evt.detail.elt || evt.detail.target)) || evt.target;
+					if (!target || typeof target.closest !== 'function') return;
+					const tbody = target.id === 'log-entries' ? target : target.closest('#log-entries');
+					if (!tbody) return;
+					const rawData = evt.detail && typeof evt.detail.data === 'string' ? evt.detail.data : '';
+					const match = rawData.match(/data-entry-id="([^"]+)"/);
+					if (match && match[1]) {
+						if (tbody.querySelector('.log-entry-row[data-entry-id="' + match[1] + '"]')) {
+							evt.preventDefault();
+						}
+					}
+				});
+
+				document.addEventListener('htmx:sseMessage', (evt) => {
+					const target = (evt.detail && (evt.detail.elt || evt.detail.target)) || evt.target;
+					if (!target || typeof target.closest !== 'function') return;
+					if (target.id === 'summary-stats' || target.getAttribute('sse-swap') === 'Summary' || target.closest('#status-popover')) {
+						return;
+					}
+					if (target.id === 'log-entries' || target.closest('#log-entries')) {
+						handleLogStreamUpdated();
+					}
+				});
+
+				document.addEventListener('htmx:afterSwap', (evt) => {
+					const target = (evt.detail && (evt.detail.target || evt.detail.elt)) || evt.target;
+					if (!target || typeof target.closest !== 'function') return;
+					if (target.id === 'summary-stats' || target.getAttribute('sse-swap') === 'Summary' || target.closest('#status-popover')) {
+						return;
+					}
+					if (target.id === 'main-content') {
+						syncNavWithLocation();
+						if (document.getElementById('stub-new-editor-tpl')) {
+							const totalRows = document.querySelectorAll('#stubs-table-body .stub-entry-row').length;
+							document.querySelectorAll('.stubs-count-badge').forEach((countEl) => {
+								countEl.textContent = String(totalRows);
+							});
+						}
+					}
+					highlightWithin(target);
+					if (target.id === 'log-entries' || target.closest('#log-entries') || target.id === 'main-content') {
+						handleLogStreamUpdated();
+					}
+				});
+			</script>
 		</head>
-		<body class="bg-gray-900 text-white h-screen font-sans flex flex-col md:flex-row">
-			<header class="bg-gray-900 border-b border-gray-800 p-6 flex items-center justify-between md:hidden">
-				<div class="flex items-center">
-					<div class="bg-blue-500 p-2 rounded-lg mr-3">
-						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 text-white"><rect width="20" height="8" x="2" y="2" rx="2" ry="2"></rect><rect width="20" height="8" x="2" y="14" rx="2" ry="2"></rect><line x1="6" x2="6.01" y1="6" y2="6"></line><line x1="6" x2="6.01" y1="18" y2="18"></line></svg>
-					</div>
-					<h2 class="text-2xl font-bold text-white">FauxRPC</h2>
+		<body class="bg-[#090d16] text-slate-200 font-sans min-h-screen flex flex-col">
+			<!-- Top Application Bar -->
+			<header class="h-[3.25rem] px-4 bg-slate-950 border-b border-slate-800 flex items-center justify-between gap-4 shrink-0 sticky top-0 z-30 relative">
+				<!-- Left: Brand + Desktop Primary Navigation Tabs -->
+				<div class="flex items-center gap-6 min-w-0">
+					<a
+						href="/fauxrpc/logs"
+						hx-get="/fauxrpc/logs"
+						hx-target="#main-content"
+						hx-push-url="true"
+						onclick="setActiveNavTab('nav-logs')"
+						aria-label="FauxRPC"
+						title="FauxRPC"
+						class="flex items-center shrink-0 group focus:outline-none"
+					>
+						<img
+							src="/fauxrpc/assets/icon.svg"
+							alt="FauxRPC"
+							width="28"
+							height="28"
+							class="w-7 h-7 rounded-md transition-transform group-hover:scale-105"
+						/>
+					</a>
+
+					<!-- Desktop Primary Nav (hidden on small screens) -->
+					<nav aria-label="Primary sections" class="hidden md:flex items-center gap-1">
+						<a
+							id="nav-logs"
+							data-nav-key="nav-logs"
+							href="/fauxrpc/logs"
+							hx-get="/fauxrpc/logs"
+							hx-target="#main-content"
+							hx-push-url="true"
+							onclick="setActiveNavTab('nav-logs')"
+							class="nav-tab active px-3 py-1.5 rounded border border-transparent text-xs font-medium text-slate-300 hover:text-slate-100 hover:bg-slate-900 transition-colors flex items-center gap-1.5 whitespace-nowrap"
+						>
+							<span>Requests</span>
+						</a>
+
+						<a
+							id="nav-stubs"
+							data-nav-key="nav-stubs"
+							href="/fauxrpc/stubs/"
+							hx-get="/fauxrpc/stubs/"
+							hx-target="#main-content"
+							hx-push-url="true"
+							onclick="setActiveNavTab('nav-stubs')"
+							class="nav-tab px-3 py-1.5 rounded border border-transparent text-xs font-medium text-slate-300 hover:text-slate-100 hover:bg-slate-900 transition-colors flex items-center gap-1.5 whitespace-nowrap"
+						>
+							<span>Stubs</span>
+							<span id="nav-stubs-count" class="stubs-count-badge px-1.5 py-0.2 rounded bg-slate-800 text-[10px] font-mono text-slate-300 tabular-nums">
+								{ fmt.Sprintf("%d", info.GetStubDB().NumStubs()) }
+							</span>
+						</a>
+
+						if info.HasProtobufServices() {
+							<a
+								id="nav-schema"
+								data-nav-key="nav-schema"
+								href="/fauxrpc/browser/"
+								hx-get="/fauxrpc/browser/"
+								hx-target="#main-content"
+								hx-push-url="true"
+								onclick="setActiveNavTab('nav-schema')"
+								class="nav-tab px-3 py-1.5 rounded border border-transparent text-xs font-medium text-slate-300 hover:text-slate-100 hover:bg-slate-900 transition-colors flex items-center gap-1.5 whitespace-nowrap"
+							>
+								<span>Schema</span>
+							</a>
+						}
+					</nav>
 				</div>
-				<button _="on click toggle .hidden on #mobile-menu" class="text-gray-300 hover:text-white focus:outline-none">
-					<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-					</svg>
-				</button>
+
+				<!-- Right: Desktop Secondary Links + Status Indicator + Shortcuts + Mobile Hamburger -->
+				<div class="flex items-center gap-2 shrink-0">
+					<div class="hidden md:flex items-center gap-1 text-xs">
+						if info.HasProtobufServices() {
+							<a
+								href="/fauxrpc/docs"
+								target="_blank"
+								rel="noopener noreferrer"
+								class="px-2.5 py-1.5 rounded text-slate-400 hover:text-slate-200 hover:bg-slate-900 transition-colors flex items-center gap-1"
+								title="Open generated Protobuf documentation in a new tab"
+							>
+								<span>Proto Docs</span>
+								<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" class="w-3 h-3">
+									<path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"></path>
+								</svg>
+							</a>
+						}
+
+						if info.HasOpenAPIRoutes() {
+							<a
+								href="/fauxrpc/openapi.html"
+								target="_blank"
+								rel="noopener noreferrer"
+								class="px-2.5 py-1.5 rounded text-slate-400 hover:text-slate-200 hover:bg-slate-900 transition-colors flex items-center gap-1"
+								title="Open OpenAPI documentation in a new tab"
+							>
+								<span>OpenAPI</span>
+								<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" class="w-3 h-3">
+									<path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"></path>
+								</svg>
+							</a>
+						}
+
+						<a
+							id="nav-about"
+							data-nav-key="nav-about"
+							href="/fauxrpc/about"
+							hx-get="/fauxrpc/about"
+							hx-target="#main-content"
+							hx-push-url="true"
+							onclick="setActiveNavTab('nav-about')"
+							class="nav-tab px-2.5 py-1.5 rounded border border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-900 transition-colors"
+						>
+							About
+						</a>
+					</div>
+
+					<!-- Server Status Indicator + Telemetry Popover -->
+					<div id="status-popover-wrapper" class="relative" hx-ext="sse" sse-connect="/fauxrpc/sse/summary">
+						<button
+							type="button"
+							id="status-popover-btn"
+							aria-expanded="false"
+							aria-controls="status-popover"
+							onclick="toggleStatusPopover(event)"
+							class="px-2.5 py-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs text-slate-300 transition-colors flex items-center gap-2"
+							title="View server status and telemetry (Shortcut: s)"
+						>
+							<span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+							<span class="font-mono text-[11px] text-slate-200">{ stats.HTTPHost }</span>
+							<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" class="w-3.5 h-3.5 text-slate-400">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5"></path>
+							</svg>
+						</button>
+
+						<div
+							id="status-popover"
+							class="hidden absolute right-0 mt-2 w-80 rounded-lg bg-slate-900 border border-slate-800 shadow-[0_16px_40px_rgba(0,0,0,0.65)] overflow-hidden z-50"
+						>
+							<div sse-swap="Summary">
+								@partials.Summary(stats)
+							</div>
+						</div>
+					</div>
+
+					<!-- Keyboard Shortcuts Help Button -->
+					<button
+						type="button"
+						onclick="toggleShortcutsModal(event)"
+						aria-label="Keyboard shortcuts"
+						title="Keyboard shortcuts (?)"
+						class="px-2 py-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-mono text-slate-400 hover:text-slate-100 transition-colors"
+					>
+						?
+					</button>
+
+					<!-- Mobile Hamburger Button (shown only on small screens) -->
+					<button
+						type="button"
+						id="mobile-menu-btn"
+						aria-label="Toggle navigation menu"
+						aria-expanded="false"
+						aria-controls="mobile-nav-menu"
+						onclick="toggleMobileMenu(event)"
+						class="md:hidden p-1.5 rounded bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-slate-100 transition-colors"
+					>
+						<svg id="mobile-menu-icon-open" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" class="w-4 h-4">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"></path>
+						</svg>
+						<svg id="mobile-menu-icon-close" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" class="hidden w-4 h-4">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+						</svg>
+					</button>
+				</div>
+
+				<!-- Mobile Collapsible Navigation Menu -->
+				<div
+					id="mobile-nav-menu"
+					class="hidden md:hidden absolute top-full left-0 right-0 bg-slate-950 border-b border-slate-800 shadow-[0_12px_32px_rgba(0,0,0,0.55)] p-3 space-y-1 z-40"
+				>
+					<nav aria-label="Mobile navigation" class="flex flex-col space-y-1">
+						<a
+							data-nav-key="nav-logs"
+							href="/fauxrpc/logs"
+							hx-get="/fauxrpc/logs"
+							hx-target="#main-content"
+							hx-push-url="true"
+							onclick="setActiveNavTab('nav-logs')"
+							class="nav-tab active px-3 py-2 rounded border border-transparent text-xs font-medium text-slate-200 hover:bg-slate-900 transition-colors flex items-center justify-between"
+						>
+							<span>Requests</span>
+						</a>
+
+						<a
+							data-nav-key="nav-stubs"
+							href="/fauxrpc/stubs/"
+							hx-get="/fauxrpc/stubs/"
+							hx-target="#main-content"
+							hx-push-url="true"
+							onclick="setActiveNavTab('nav-stubs')"
+							class="nav-tab px-3 py-2 rounded border border-transparent text-xs font-medium text-slate-200 hover:bg-slate-900 transition-colors flex items-center justify-between"
+						>
+							<span>Stubs</span>
+							<span class="stubs-count-badge px-1.5 py-0.5 rounded bg-slate-800 text-[10px] font-mono text-slate-300 tabular-nums">
+								{ fmt.Sprintf("%d", info.GetStubDB().NumStubs()) }
+							</span>
+						</a>
+
+						if info.HasProtobufServices() {
+							<a
+								data-nav-key="nav-schema"
+								href="/fauxrpc/browser/"
+								hx-get="/fauxrpc/browser/"
+								hx-target="#main-content"
+								hx-push-url="true"
+								onclick="setActiveNavTab('nav-schema')"
+								class="nav-tab px-3 py-2 rounded border border-transparent text-xs font-medium text-slate-200 hover:bg-slate-900 transition-colors flex items-center justify-between"
+							>
+								<span>Schema</span>
+							</a>
+						}
+
+						<div class="pt-1 mt-1 border-t border-slate-800/80 flex flex-col space-y-1">
+							if info.HasProtobufServices() {
+								<a
+									href="/fauxrpc/docs"
+									target="_blank"
+									rel="noopener noreferrer"
+									onclick="closeMobileMenu()"
+									class="px-3 py-2 rounded text-xs font-medium text-slate-400 hover:text-slate-100 hover:bg-slate-900 transition-colors flex items-center justify-between"
+								>
+									<span>Proto Docs</span>
+									<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" class="w-3.5 h-3.5">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"></path>
+									</svg>
+								</a>
+							}
+
+							if info.HasOpenAPIRoutes() {
+								<a
+									href="/fauxrpc/openapi.html"
+									target="_blank"
+									rel="noopener noreferrer"
+									onclick="closeMobileMenu()"
+									class="px-3 py-2 rounded text-xs font-medium text-slate-400 hover:text-slate-100 hover:bg-slate-900 transition-colors flex items-center justify-between"
+								>
+									<span>OpenAPI</span>
+									<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" class="w-3.5 h-3.5">
+										<path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"></path>
+									</svg>
+								</a>
+							}
+
+							<a
+								data-nav-key="nav-about"
+								href="/fauxrpc/about"
+								hx-get="/fauxrpc/about"
+								hx-target="#main-content"
+								hx-push-url="true"
+								onclick="setActiveNavTab('nav-about')"
+								class="nav-tab px-3 py-2 rounded border border-transparent text-xs font-medium text-slate-400 hover:text-slate-100 hover:bg-slate-900 transition-colors flex items-center justify-between"
+							>
+								<span>About</span>
+							</a>
+						</div>
+					</nav>
+				</div>
 			</header>
-			<aside id="mobile-menu" class="w-full md:w-64 bg-gray-900 md:border-r border-gray-800 p-6 flex-col flex-shrink-0 md:flex hidden md:!flex">
-				<div class="flex items-center mb-10 hidden md:flex">
-					<div class="bg-blue-500 p-2 rounded-lg mr-3">
-						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6 text-white"><rect width="20" height="8" x="2" y="2" rx="2" ry="2"></rect><rect width="20" height="8" x="2" y="14" rx="2" ry="2"></rect><line x1="6" x2="6.01" y1="6" y2="6"></line><line x1="6" x2="6.01" y1="18" y2="18"></line></svg>
+
+			<!-- Keyboard Shortcuts Modal -->
+			<div
+				id="shortcuts-modal"
+				role="dialog"
+				aria-modal="true"
+				aria-labelledby="shortcuts-modal-title"
+				onclick="if(event.target === this) closeShortcutsModal()"
+				class="hidden fixed inset-0 z-50 bg-slate-950/75 flex items-center justify-center p-4"
+			>
+				<div class="w-full max-w-lg rounded-lg bg-slate-900 border border-slate-800 shadow-[0_16px_48px_rgba(0,0,0,0.65)] overflow-hidden">
+					<div class="px-4 py-3 bg-slate-950 border-b border-slate-800 flex items-center justify-between">
+						<h2 id="shortcuts-modal-title" class="text-sm font-semibold text-slate-100">Keyboard Shortcuts</h2>
+						<button
+							type="button"
+							onclick="closeShortcutsModal()"
+							class="p-1 rounded text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+							aria-label="Close shortcuts menu"
+						>
+							<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" class="w-4 h-4">
+								<path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+							</svg>
+						</button>
 					</div>
-					<h2 class="text-2xl font-bold text-white">FauxRPC</h2>
+
+					<div class="p-4 space-y-5 text-xs max-h-[80vh] overflow-y-auto">
+						<!-- List Navigation -->
+						<div class="space-y-2">
+							<h3 class="font-semibold text-slate-300">List Navigation &amp; Focus</h3>
+							<div class="divide-y divide-slate-800/80 rounded border border-slate-800 bg-slate-950/60">
+								<div class="px-3 py-2 flex items-center justify-between">
+									<span class="text-slate-300">Select next item</span>
+									<div class="flex items-center gap-1 font-mono">
+										<kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200">j</kbd>
+										<span class="text-slate-400">or</span>
+										<kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200">↓</kbd>
+									</div>
+								</div>
+								<div class="px-3 py-2 flex items-center justify-between">
+									<span class="text-slate-300">Select previous item</span>
+									<div class="flex items-center gap-1 font-mono">
+										<kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200">k</kbd>
+										<span class="text-slate-400">or</span>
+										<kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200">↑</kbd>
+									</div>
+								</div>
+								<div class="px-3 py-2 flex items-center justify-between">
+									<span class="text-slate-300">Focus filter / search input</span>
+									<kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-slate-200">/</kbd>
+								</div>
+								<div class="px-3 py-2 flex items-center justify-between">
+									<span class="text-slate-300">Clear selection, blur input, or close menu</span>
+									<kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-slate-200">Esc</kbd>
+								</div>
+							</div>
+						</div>
+
+						<!-- Request Inspector -->
+						<div class="space-y-2">
+							<h3 class="font-semibold text-slate-300">Request Inspector</h3>
+							<div class="divide-y divide-slate-800/80 rounded border border-slate-800 bg-slate-950/60">
+								<div class="px-3 py-2 flex items-center justify-between">
+									<span class="text-slate-300">Switch inspector tabs (Payloads, Headers, Mocks, YAML)</span>
+									<div class="flex items-center gap-1 font-mono">
+										<kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200">1</kbd>
+										<kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200">2</kbd>
+										<kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200">3</kbd>
+										<kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200">4</kbd>
+									</div>
+								</div>
+								<div class="px-3 py-2 flex items-center justify-between">
+									<span class="text-slate-300">Copy generated YAML stub</span>
+									<kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-slate-200">y</kbd>
+								</div>
+								<div class="px-3 py-2 flex items-center justify-between">
+									<span class="text-slate-300">Download YAML stub file</span>
+									<kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-slate-200">d</kbd>
+								</div>
+								<div class="px-3 py-2 flex items-center justify-between">
+									<span class="text-slate-300">Register YAML stub in server</span>
+									<kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-slate-200">r</kbd>
+								</div>
+								<div class="px-3 py-2 flex items-center justify-between">
+									<span class="text-slate-300">Create new stub / Edit selected stub (Stubs view)</span>
+									<div class="flex items-center gap-1 font-mono">
+										<kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200">n</kbd>
+										<span class="text-slate-400">/</span>
+										<kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200">e</kbd>
+									</div>
+								</div>
+								<div class="px-3 py-2 flex items-center justify-between">
+									<span class="text-slate-300">Clear request log</span>
+									<kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-slate-200">x</kbd>
+								</div>
+							</div>
+						</div>
+
+						<!-- Global Views -->
+						<div class="space-y-2">
+							<h3 class="font-semibold text-slate-300">Views &amp; Server</h3>
+							<div class="divide-y divide-slate-800/80 rounded border border-slate-800 bg-slate-950/60">
+								<div class="px-3 py-2 flex items-center justify-between">
+									<span class="text-slate-300">Go to Requests / Stubs / Schema / About</span>
+									<div class="flex items-center gap-1.5 font-mono">
+										<span><kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200">g</kbd> <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200">r</kbd></span>
+										<span class="text-slate-500">·</span>
+										<span><kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200">g</kbd> <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200">s</kbd></span>
+										<span class="text-slate-500">·</span>
+										<span><kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200">g</kbd> <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200">c</kbd></span>
+										<span class="text-slate-500">·</span>
+										<span><kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200">g</kbd> <kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-slate-200">a</kbd></span>
+									</div>
+								</div>
+								<div class="px-3 py-2 flex items-center justify-between">
+									<span class="text-slate-300">Toggle server status &amp; telemetry</span>
+									<kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-slate-200">s</kbd>
+								</div>
+								<div class="px-3 py-2 flex items-center justify-between">
+									<span class="text-slate-300">Toggle this shortcuts menu</span>
+									<kbd class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-slate-200">?</kbd>
+								</div>
+							</div>
+						</div>
+					</div>
 				</div>
-				<nav class="flex flex-col space-y-3">
-					<button hx-get="/fauxrpc/summary" hx-target="#main-content" hx-push-url="/fauxrpc/summary" class="flex items-center w-full px-4 py-3 rounded-lg transition-colors duration-200 text-gray-300 hover:bg-gray-700">
-						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6"><path d="M3 3v18h18"></path><path d="M9 17V9"></path><path d="M15 17V5"></path><path d="M12 17V13"></path></svg>
-						<span class="ml-4">Summary</span>
-					</button>
-					<button hx-get="/fauxrpc/logs" hx-target="#main-content" hx-push-url="/fauxrpc/logs" class="flex items-center w-full px-4 py-3 rounded-lg transition-colors duration-200 text-gray-300 hover:bg-gray-700">
-						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6"><line x1="8" x2="21" y1="6" y2="6"></line><line x1="8" x2="21" y1="12" y2="12"></line><line x1="8" x2="21" y1="18" y2="18"></line><line x1="3" x2="3.01" y1="6" y2="6"></line><line x1="3" x2="3.01" y1="12" y2="12"></line><line x1="3" x2="3.01" y1="18" y2="18"></line></svg>
-						<span class="ml-4">Request Log</span>
-					</button>
-					<button hx-get="/fauxrpc/browser" hx-target="#main-content" hx-push-url="/fauxrpc/browser" class="flex items-center w-full px-4 py-3 rounded-lg transition-colors duration-200 text-gray-300 hover:bg-gray-700">
-						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6"><path d="M5 3v18h14V3H5zm2 2h10v14H7V5z"/></svg>
-						<span class="ml-4">Schema</span>
-					</button>
-					<button hx-get="/fauxrpc/stubs" hx-target="#main-content" hx-push-url="/fauxrpc/stubs" class="flex items-center w-full px-4 py-3 rounded-lg transition-colors duration-200 text-gray-300 hover:bg-gray-700">
-						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
-						<span class="ml-4">Stubs</span>
-					</button>
-					if p != nil && p.HasProtobufServices() {
-						<a href="/fauxrpc/docs/" target="_blank" rel="noopener noreferrer" class="flex items-center w-full px-4 py-3 rounded-lg transition-colors duration-200 text-gray-300 hover:bg-gray-700">
-							<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><line x1="10" y1="9" x2="10" y2="9"></line></svg>
-							<span class="ml-4 flex-grow">Protobuf Docs</span>
-							<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 text-gray-400"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-						</a>
-					}
-					if p != nil && p.HasOpenAPIRoutes() {
-						<a href="/fauxrpc/openapi-docs/" target="_blank" rel="noopener noreferrer" class="flex items-center w-full px-4 py-3 rounded-lg transition-colors duration-200 text-gray-300 hover:bg-gray-700">
-							<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><line x1="10" y1="9" x2="10" y2="9"></line></svg>
-							<span class="ml-4 flex-grow">OpenAPI Docs</span>
-							<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-4 w-4 text-gray-400"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-						</a>
-					}
-					<button hx-get="/fauxrpc/about" hx-target="#main-content" hx-push-url="/fauxrpc/about" class="flex items-center w-full px-4 py-3 rounded-lg transition-colors duration-200 text-gray-300 hover:bg-gray-700">
-						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="h-6 w-6"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-						<span class="ml-4">About</span>
-					</button>
-				</nav>
-			</aside>
-			<main class="flex-1 p-8 overflow-auto">
-				<div id="main-content">
-					@content
-				</div>
+			</div>
+
+			<!-- Main Workspace -->
+			<main id="main-content" class="flex-1 overflow-hidden">
+				@content
 			</main>
-			@CopyScript()
 		</body>
 	</html>
-}
-
-// CopyScript contains the JavaScript function for the copy-to-clipboard functionality.
-// This component should be rendered once in your main layout, ideally before the closing </body> tag.
-templ CopyScript() {
-	<script>
-        function copyToClipboard(elementId, button) {
-            const element = document.getElementById(elementId);
-            if (!element) return;
-
-            const textToCopy = element.querySelector('code').innerText;
-            navigator.clipboard.writeText(textToCopy).then(() => {
-                const originalContent = button.innerHTML;
-                const originalClasses = button.className;
-
-                // Set success state
-                button.disabled = true;
-                button.className = originalClasses.replace('text-gray-400', 'text-green-500').replace('hover:text-gray-200', '');
-                button.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-                    </svg>
-                    <span>Copied!</span>
-                `;
-
-                // Revert to original state after 2 seconds
-                setTimeout(() => {
-                    button.disabled = false;
-                    button.className = originalClasses;
-                    button.innerHTML = originalContent;
-                }, 2000);
-            }).catch(err => {
-                console.error('Failed to copy text: ', err);
-            });
-        }
-
-        function switchTab(entryId, tabName) {
-            const reqRespTab = document.getElementById(`tab-reqresp-${entryId}`);
-            const stubTab = document.getElementById(`tab-stub-${entryId}`);
-            const reqRespContent = document.getElementById(`content-reqresp-${entryId}`);
-            const stubContent = document.getElementById(`content-stub-${entryId}`);
-            
-            if (tabName === 'reqresp') {
-                reqRespTab.classList.add('border-blue-500', 'text-blue-500');
-                reqRespTab.classList.remove('border-transparent', 'text-gray-400');
-                stubTab.classList.remove('border-blue-500', 'text-blue-500');
-                stubTab.classList.add('border-transparent', 'text-gray-400');
-                
-                reqRespContent.classList.remove('hidden');
-                stubContent.classList.add('hidden');
-            } else {
-                stubTab.classList.add('border-blue-500', 'text-blue-500');
-                stubTab.classList.remove('border-transparent', 'text-gray-400');
-                reqRespTab.classList.remove('border-blue-500', 'text-blue-500');
-                reqRespTab.classList.add('border-transparent', 'text-gray-400');
-                
-                stubContent.classList.remove('hidden');
-                reqRespContent.classList.add('hidden');
-            }
-        }
-
-        document.addEventListener('htmx:load', function(evt) {
-            if (typeof hljs !== 'undefined') {
-                evt.detail.elt.querySelectorAll('pre code').forEach((el) => {
-                    hljs.highlightElement(el);
-                });
-            }
-        });
-	</script>
 }

@@ -20,7 +20,7 @@ type ActiveIf struct {
 }
 
 func NewActiveIf(md protoreflect.MethodDescriptor, expr string) (*ActiveIf, error) {
-	reqMsg := registry.NewMessage(md.Input()).New()
+	reqMsg := registry.NewMessage(md.Input()).Interface()
 	env, err := cel.NewEnv(
 		celfakeit.Configure(),
 		ext.Encoders(),

@@ -1,265 +1,148 @@
 package partials
 
 import (
-    "github.com/sudorandom/fauxrpc/private/log"
-    "github.com/sudorandom/fauxrpc/private/registry"
+	"github.com/sudorandom/fauxrpc/private/log"
+	"github.com/sudorandom/fauxrpc/private/registry"
 )
 
-// in partials/requestlog.templ
-templ RequestLog(history []*log.LogEntry, reg registry.ServiceRegistry) {
-    <div id="sse-controller" hx-ext="sse">
-        @requestLog(history, reg)
-    </div>
+templ RequestLogInspectorEmpty() {
+	<div class="flex-1 flex flex-col items-center justify-center p-8 text-center">
+		<div class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-slate-900 border border-slate-800 text-slate-400 mb-3">
+			<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" class="w-5 h-5">
+				<path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m5.231 13.481L15 17.25m-4.5-15H5.625c-.621 0-1.125.504-1.125 1.125v16.5c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9zm3.75 11.625a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"></path>
+			</svg>
+		</div>
+		<h2 class="text-sm font-semibold text-slate-200">Request Inspector</h2>
+		<p class="text-xs text-slate-400 max-w-xs mt-1 leading-relaxed">
+			Select any request row from the stream (or press <kbd class="px-1.5 py-0.5 text-[11px] font-mono bg-slate-900 border border-slate-700 rounded text-slate-300">j</kbd> / <kbd class="px-1.5 py-0.5 text-[11px] font-mono bg-slate-900 border border-slate-700 rounded text-slate-300">k</kbd>) to inspect payloads, headers, matched stubs, or export a YAML stub.
+		</p>
+	</div>
 }
 
-templ requestLog(history []*log.LogEntry, reg registry.ServiceRegistry) {
-    <div>
-        <div class="flex justify-between items-center flex-shrink-0">
-            <h1 class="text-3xl font-bold text-white">Request Log</h1>
-            <div class="flex items-center space-x-2 ml-auto"> <!-- Status indicators wrapper -->
-                <div id="sse-status-connected" class="px-3 py-1 rounded-full text-sm font-semibold bg-green-500 text-green-100 hidden">Connected</div>
-                <div id="sse-status-waiting" class="px-3 py-1 rounded-full text-sm font-semibold bg-gray-500 text-gray-100 animate-pulse hidden">Waiting...</div>
-                <div id="sse-status-disconnected" class="px-3 py-1 rounded-full text-sm font-semibold bg-red-500 text-red-100 hidden">Disconnected</div>
-            </div>
-        </div>
-        <p class="text-gray-400 mb-6">This section displays a real-time stream of incoming requests to FauxRPC. New requests will appear here as they happen.</p>
+templ RequestLog(entries []*log.LogEntry, reg registry.ServiceRegistry) {
+	<div class="grid grid-cols-1 lg:grid-cols-12 lg:h-[calc(100vh-3.25rem)] overflow-hidden bg-[#090d16]">
+		<template id="log-inspector-empty-tpl">
+			@RequestLogInspectorEmpty()
+		</template>
 
-        <div class="flex items-center space-x-4 mb-4">
-            <input type="text" id="log-filter-input" placeholder="Filter logs..." class="w-full p-2 bg-gray-700 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 flex-grow">
-            <div class="flex items-center space-x-4 flex-shrink-0">
-                <div class="relative w-32 h-10"> <!-- Set a fixed height (h-10) to match the clear button's py-2 padding -->
-                    <button
-                        id="pause-btn"
-                        class="w-full h-full bg-blue-600 hover:bg-blue-500 text-white font-semibold transition-colors flex items-center justify-center whitespace-nowrap absolute inset-0 rounded-lg"
-                        onclick="toggleSseStream(this)"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="h-5 w-5 inline-block mr-2">
-                            <path d="M5.75 3a.75.75 0 0 0-.75.75v12.5c0 .414.336.75.75.75h1.5a.75.75 0 0 0 .75-.75V3.75A.75.75 0 0 0 7.25 3h-1.5ZM12.75 3a.75.75 0 0 0-.75.75v12.5c0 .414.336.75.75.75h1.5a.75.75 0 0 0 .75-.75V3.75a.75.75 0 0 0-.75-.75h-1.5Z" />
-                        </svg>
-                        Pause
-                    </button>
-                    <button
-                        id="resume-btn"
-                        class="w-full h-full bg-blue-600 hover:bg-blue-500 text-white font-semibold transition-colors flex items-center justify-center whitespace-nowrap absolute inset-0 hidden rounded-lg"
-                        onclick="toggleSseStream(this)"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" class="h-5 w-5 inline-block mr-2">
-                            <path d="M5.25 5.653c0-1.085 1.172-1.786 2.15-1.142l8.25 4.75a1.125 1.125 0 0 1 0 1.984l-8.25 4.75a1.125 1.125 0 0 1-2.15-1.142V5.653Z" />
-                        </svg>
-                        Resume
-                    </button>
-                </div>
-                <button id="clear-btn" class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white font-semibold rounded-lg transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true" class="h-5 w-5 inline-block mr-2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                    Clear
-                </button>
-            </div>
-        </div>
+		<!-- Left Pane: Live Request Stream Table -->
+		<div class="lg:col-span-7 flex flex-col border-b lg:border-b-0 lg:border-r border-slate-800 h-full overflow-hidden">
+			<!-- Filter & Stream Toolbar -->
+			<div class="p-3 bg-slate-900/70 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
+				<div class="relative flex-1 min-w-[200px]">
+					<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"></path>
+					</svg>
+					<input
+						type="search"
+						id="log-filter-input"
+						aria-label="Filter requests by service, method, payload, or status"
+						placeholder="Filter by service, method, payload, status... (Press /)"
+						oninput="applyLogFilters()"
+						class="w-full pl-8 pr-3 py-1.5 bg-slate-950/90 border border-slate-800 rounded text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-sky-500 transition-colors"
+					/>
+				</div>
 
-        <div
-            id="log-container"
-            class="overflow-y-auto pr-2 flex-grow"
-            sse-swap="Request"
-            hx-swap="afterbegin"
-        >
-            if len(history) == 0 {
-                <div id="no-entries-placeholder" class="text-gray-400 text-center py-8">
-                    New requests will appear here...
-                </div>
-            }
-            for _, entry := range history {
-                @LogEntry(entry, reg)
-            }
-        </div>
+				<div class="flex items-center gap-1.5 flex-wrap">
+					<!-- Status Filter Segmented Control -->
+					<div class="inline-flex rounded bg-slate-950 p-0.5 border border-slate-800 text-xs" role="group" aria-label="Filter by status">
+						<button
+							type="button"
+							data-status-filter="all"
+							onclick="setLogStatusFilter('all', this)"
+							class="log-status-filter-btn px-2 py-1 rounded text-[11px] font-medium bg-slate-800 text-slate-100 transition-colors"
+						>
+							All
+						</button>
+						<button
+							type="button"
+							data-status-filter="ok"
+							onclick="setLogStatusFilter('ok', this)"
+							class="log-status-filter-btn px-2 py-1 rounded text-[11px] font-medium text-slate-400 hover:text-slate-200 transition-colors"
+						>
+							OK
+						</button>
+						<button
+							type="button"
+							data-status-filter="error"
+							onclick="setLogStatusFilter('error', this)"
+							class="log-status-filter-btn px-2 py-1 rounded text-[11px] font-medium text-slate-400 hover:text-slate-200 transition-colors"
+						>
+							Errors
+						</button>
+					</div>
 
-        <script>
-            var eventSource = null; // Global variable to hold the EventSource
-            var debounceTimeout = null;
+					<!-- Protocol Filter -->
+					<select
+						id="log-protocol-filter"
+						aria-label="Filter by client protocol"
+						onchange="applyLogFilters()"
+						class="px-2 py-1.5 bg-slate-950 border border-slate-800 rounded text-xs text-slate-200 focus:outline-none focus:border-sky-500"
+					>
+						<option value="all">All Protocols</option>
+						<option value="gRPC">gRPC</option>
+						<option value="gRPC-Web">gRPC-Web</option>
+						<option value="ConnectRPC">Connect</option>
+						<option value="HTTP">HTTP</option>
+					</select>
 
-            function connectSseStream(filterText = '') {
-                const sseController = document.getElementById('sse-controller');
-                const statusConnected = document.getElementById('sse-status-connected');
-                const statusWaiting = document.getElementById('sse-status-waiting');
-                const statusDisconnected = document.getElementById('sse-status-disconnected');
-                const logContainer = document.getElementById('log-container');
-                const filterInput = document.getElementById('log-filter-input');
+					<!-- Clear Log Button -->
+					<button
+						type="button"
+						onclick="clearRequestLog()"
+						class="px-2.5 py-1.5 rounded bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-slate-100 text-xs font-medium transition-colors flex items-center gap-1"
+						title="Clear request log history (Shortcut: x)"
+					>
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" class="w-3.5 h-3.5">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"></path>
+						</svg>
+						<span>Clear</span>
+					</button>
+				</div>
+			</div>
 
-                // Close existing connection if any
-                if (eventSource) {
-                    eventSource.close();
-                    eventSource = null;
-                }
+			<!-- Request Stream Table -->
+			<div class="flex-1 overflow-y-auto relative" hx-ext="sse" sse-connect="/fauxrpc/sse/logs">
+				<table class="w-full text-left border-collapse">
+					<thead class="sticky top-0 z-10 bg-slate-900/95 border-b border-slate-800 text-[11px] font-medium text-slate-400 select-none">
+						<tr>
+							<th scope="col" class="py-2 pl-3 pr-2 w-24">Status</th>
+							<th scope="col" class="py-2 px-2 w-24">Protocol</th>
+							<th scope="col" class="py-2 px-2">Service / Method</th>
+							<th scope="col" class="py-2 px-2 w-20">Source</th>
+							<th scope="col" class="py-2 px-2 w-20 text-right">Latency</th>
+							<th scope="col" class="py-2 pl-2 pr-3 w-28 text-right">Time</th>
+						</tr>
+					</thead>
+					<tbody id="log-entries" sse-swap="Request" hx-swap="afterbegin">
+						for _, entry := range entries {
+							@LogEntry(entry, reg)
+						}
+					</tbody>
+				</table>
 
-                // Clear logs when connecting with a new filter
-                if (logContainer) {
-                    logContainer.innerHTML = '';
-                }
+				<!-- Empty State -->
+				<div id="log-empty-state" class={ "p-12 text-center", templ.KV("hidden", len(entries) > 0) }>
+					<div class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-slate-900 border border-slate-800 text-sky-400 mb-3">
+						<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" class="w-5 h-5">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M1.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12.53 18.22l-.53.53-.53-.53a.75.75 0 011.06 0z"></path>
+						</svg>
+					</div>
+					<h2 class="text-sm font-semibold text-slate-200">Listening for Live RPC &amp; HTTP Traffic</h2>
+					<p class="text-xs text-slate-400 max-w-md mx-auto mt-1.5 leading-relaxed">
+						Incoming gRPC, gRPC-Web, Connect, and transcoded HTTP requests will stream here automatically in real time.
+					</p>
+					<div class="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded bg-slate-900 border border-slate-800 font-mono text-xs text-slate-300">
+						<span class="text-slate-400">$</span>
+						<span>fauxrpc curl http://127.0.0.1:6660</span>
+					</div>
+				</div>
+			</div>
+		</div>
 
-                const url = `/fauxrpc/sse/logs?filter=${encodeURIComponent(filterText)}`;
-
-                // Show connecting indicator
-                if (statusConnected && statusWaiting && statusDisconnected) {
-                    statusConnected.classList.add('hidden');
-                    statusDisconnected.classList.add('hidden');
-                    statusWaiting.classList.remove('hidden');
-                }
-                eventSource = new EventSource(url);
-
-                eventSource.onopen = function() {
-                    console.log('EventSource opened');
-                    if (statusConnected && statusWaiting && statusDisconnected) {
-                        statusWaiting.classList.add('hidden');
-                        statusDisconnected.classList.add('hidden');
-                        statusConnected.classList.remove('hidden');
-                    }
-                };
-
-                eventSource.addEventListener('Request', function(event) {
-                    const tempDiv = document.createElement('div');
-                    tempDiv.innerHTML = event.data;
-                    const newElt = tempDiv.firstChild;
-                    logContainer.insertAdjacentElement('afterbegin', newElt);
-
-                    if (typeof hljs !== 'undefined') {
-                        newElt.querySelectorAll('pre code').forEach((el) => {
-                            hljs.highlightElement(el);
-                        });
-                    }
-
-                    // Hide placeholder
-                    const placeholder = document.getElementById('no-entries-placeholder');
-                    if (placeholder) {
-                        placeholder.classList.add('hidden');
-                    }
-
-                    // Trim logs
-                    const maxItems = 200;
-                    while (logContainer.childElementCount > maxItems) {
-                        logContainer.lastElementChild.remove();
-                    }
-                });
-
-                eventSource.onmessage = function(event) {
-                    // This will catch any 'message' events (i.e., events without an 'event:' field)
-                    // For now, we're not expecting any, but it's good to have.
-                    console.log('Received generic message event:', event);
-                };
-
-                eventSource.onerror = function(error) {
-                    console.error('EventSource error:', error);
-                    if (statusConnected && statusWaiting && statusDisconnected) {
-                        statusWaiting.classList.add('hidden');
-                        statusConnected.classList.add('hidden');
-                        statusDisconnected.classList.remove('hidden');
-                    }
-                    eventSource.close(); // Close on error to prevent continuous errors
-                };
-            }
-
-            // --- Global function for the 'Pause'/'Resume' button ---
-            function toggleSseStream(button) {
-                const filterInput = document.getElementById('log-filter-input');
-                const pauseBtn = document.getElementById('pause-btn');
-                const resumeBtn = document.getElementById('resume-btn');
-                const statusConnected = document.getElementById('sse-status-connected');
-                const statusWaiting = document.getElementById('sse-status-waiting');
-                const statusDisconnected = document.getElementById('sse-status-disconnected');
-
-                if (button.id === 'pause-btn') { // Check button ID instead of textContent
-                    pauseBtn.classList.add('hidden');
-                    resumeBtn.classList.remove('hidden');
-                    if (eventSource) {
-                        eventSource.close();
-                        eventSource = null;
-                    }
-                    // Set status to disconnected
-                    if (statusConnected && statusWaiting && statusDisconnected) {
-                        statusConnected.classList.add('hidden');
-                        statusWaiting.classList.add('hidden');
-                        statusDisconnected.classList.remove('hidden');
-                    }
-                } else { // This is the 'Resume' part (button.id === 'resume-btn')
-                    resumeBtn.classList.add('hidden');
-                    pauseBtn.classList.remove('hidden');
-                    if (statusConnected && statusWaiting && statusDisconnected) {
-                        statusConnected.classList.add('hidden');
-                        statusWaiting.classList.add('hidden');
-                        statusDisconnected.classList.add('hidden');
-                    }
-                    connectSseStream(filterInput.value); // Reconnect with current filter
-                }
-            }
-
-            // --- Component-specific logic, runs immediately on load/swap ---
-            (function() {
-                const sseController = document.getElementById('sse-controller');
-                const logContainer = document.getElementById('log-container');
-                const filterInput = document.getElementById('log-filter-input');
-                const pauseBtn = document.getElementById('pause-btn');
-                const resumeBtn = document.getElementById('resume-btn');
-                const clearBtn = document.getElementById('clear-btn'); // New reference
-                const statusConnected = document.getElementById('sse-status-connected');
-                const statusWaiting = document.getElementById('sse-status-waiting');
-                const statusDisconnected = document.getElementById('sse-status-disconnected');
-
-
-                if (!sseController || !logContainer || !filterInput || !pauseBtn || !resumeBtn || !clearBtn || !statusConnected || !statusWaiting || !statusDisconnected) {
-                    console.error("Missing required elements for SSE control.");
-                    return;
-                }
-
-                // Initial button state
-                pauseBtn.classList.remove('hidden');
-                resumeBtn.classList.add('hidden');
-
-                // Initial connection on page load
-                connectSseStream(filterInput.value);
-
-                // Debounce for filter input
-                filterInput.addEventListener('input', function() {
-                    clearTimeout(debounceTimeout);
-                    debounceTimeout = setTimeout(() => {
-                        // Check if currently paused before reconnecting on filter change
-                        if (pauseBtn.classList.contains('hidden')) { // If pauseBtn is hidden, it means resumeBtn is visible, so it's paused
-                            // Do nothing, stream is paused
-                        } else {
-                            connectSseStream(filterInput.value);
-                        }
-                    }, 300); // 300ms debounce
-                });
-
-                // Clear button logic
-                if (clearBtn) {
-                    clearBtn.addEventListener('click', function() {
-                        logContainer.innerHTML = `
-                            <div id="no-entries-placeholder" class="text-gray-400 text-center py-8">
-                                New requests will appear here...
-                            </div>
-                        `;
-                    });
-                }
-
-                // Log Container Management (trimming)
-                htmx.on(logContainer, 'htmx:afterSwap', function() {
-                    // This listener is still useful if htmx swaps content for other reasons
-                    // or if we decide to re-introduce htmx-driven swaps for SSE messages.
-                    // For now, the onmessage handler directly inserts.
-                    const maxItems = 20;
-                    while (logContainer.childElementCount > maxItems) {
-                        logContainer.lastElementChild.remove();
-                    }
-                });
-
-                // Placeholder management on htmx:sseMessage (now handled in onmessage directly)
-                // htmx.on(controller, 'htmx:sseMessage', function() {
-                //     const placeholder = document.getElementById('no-entries-placeholder');
-                //     if (placeholder) {
-                //         placeholder.classList.add('hidden');
-                //     }
-                // });
-            })();
-        </script>
-    </div>
+		<!-- Right Pane: Sticky Request Inspector -->
+		<div id="log-inspector-pane" class="lg:col-span-5 flex flex-col h-full overflow-hidden bg-slate-900/20">
+			@RequestLogInspectorEmpty()
+		</div>
+	</div>
 }

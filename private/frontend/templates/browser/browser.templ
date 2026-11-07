@@ -1,50 +1,114 @@
 package browser
 
 import (
-    "fmt"
-    "strings"
-
-    "github.com/sudorandom/fauxrpc/private/frontend/templates/browser/partials"
+	"fmt"
+	"strings"
 )
 
-templ Browser(path string, files []string) {
-    <div>
-        <h1 class="text-3xl font-bold text-white">Schema</h1>
-        <p class="text-gray-400 mb-6">This section displays the Protobuf (Protocol Buffers) schemas registered with FauxRPC. Protobufs define the structure for data, allowing for efficient and language-agnostic communication.</p>
-
-        <div id="browser-content" class="bg-gray-900 rounded-lg shadow-lg">
-            @breadcrumbs(path, "")
-            <ul class="list-none">
-                for _, file := range files {
-                    if path == "" {
-                        // We are listing packages
-                        @partials.Dir(file, fmt.Sprintf("/fauxrpc/browser/%s", file))
-                    } else {
-						// We are listing files in a package
-						if strings.HasSuffix(file, "/") {
-							@partials.Dir(path+file, fmt.Sprintf("/fauxrpc/browser/%s", path+file))
-						} else {
-							@partials.File(strings.Split(file, "/")[len(strings.Split(file, "/"))-1], fmt.Sprintf("/fauxrpc/browser/%s", file))
-						}
-                    }
-                }
-            </ul>
-        </div>
-    </div>
+func countSchemaFiles(groups []SchemaPackageGroup) int {
+	total := 0
+	for _, g := range groups {
+		total += len(g.Files)
+	}
+	return total
 }
 
-templ breadcrumbs(path string, currentFileName string) {
-    <div class="text-sm breadcrumbs p-2 bg-gray-800 rounded-lg shadow-md mb-6">
-        <ul class="flex items-center">
-            <li><b class="mr-3">Path:</b> <a hx-get={ templ.URL(fmt.Sprintf("/fauxrpc/browser/")) } hx-target="#main-content" hx-push-url="true" class="text-blue-400 hover:text-blue-200 transition-colors duration-200 cursor-pointer">(root)</a></li>
-            for i, part := range strings.Split(path, "/") {
-                if part != "" {
-                    <li class="flex items-center before:content-['/'] before:px-2 before:text-gray-500"><a hx-get={ templ.URL(fmt.Sprintf("/fauxrpc/browser/%s/", strings.Join(strings.Split(path, "/")[:i+1], "/"))) } hx-target="#main-content" hx-push-url="true" class="text-blue-400 hover:text-blue-200 transition-colors duration-200 cursor-pointer">{ part }</a></li>
-                }
-            }
-            if currentFileName != "" {
-                <li class="flex items-center before:content-['/'] before:px-2 before:text-gray-500"><span>{ currentFileName }</span></li>
-            }
-        </ul>
-    </div>
+func isSelectedSchemaFile(file SchemaFileEntry, selected *SchemaFileEntry) bool {
+	if selected == nil {
+		return false
+	}
+	return file.Path == selected.Path
+}
+
+templ Browser(groups []SchemaPackageGroup, selectedFile *SchemaFileEntry, selectedContent string) {
+	{{ totalFiles := countSchemaFiles(groups) }}
+	<div class="grid grid-cols-1 lg:grid-cols-12 lg:h-[calc(100vh-3.25rem)] overflow-hidden bg-[#090d16]">
+		<!-- Left Pane: Package & Protobuf File Tree -->
+		<div class="lg:col-span-5 flex flex-col border-b lg:border-b-0 lg:border-r border-slate-800 h-full overflow-hidden">
+			<!-- Toolbar -->
+			<div class="p-3 bg-slate-900/70 border-b border-slate-800 flex items-center justify-between gap-2">
+				<div class="relative flex-1">
+					<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.75" stroke="currentColor" class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z"></path>
+					</svg>
+					<input
+						type="search"
+						id="schema-filter-input"
+						aria-label="Filter Protobuf packages and files"
+						placeholder="Filter packages or .proto files..."
+						oninput="filterSchemaTree()"
+						class="w-full pl-8 pr-3 py-1.5 bg-slate-950/90 border border-slate-800 rounded text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-sky-500 transition-colors"
+					/>
+				</div>
+				<span class="text-xs font-mono tabular-nums text-slate-400 px-2 py-1 rounded bg-slate-950 border border-slate-800 shrink-0">
+					{ fmt.Sprintf("%d files", totalFiles) }
+				</span>
+			</div>
+
+			<!-- Package / File List -->
+			<div class="flex-1 overflow-y-auto divide-y divide-slate-800/70" id="schema-tree-container">
+				if totalFiles > 0 {
+					for _, group := range groups {
+						<div class="schema-package-group" data-package={ strings.ToLower(group.Package) }>
+							<div class="px-3 py-1.5 bg-slate-900/90 text-[11px] font-mono font-semibold text-slate-300 flex items-center justify-between sticky top-0 z-10 border-b border-slate-800/60">
+								<span class="truncate">{ group.Package }</span>
+								<span class="text-slate-400 font-normal tabular-nums">{ fmt.Sprintf("%d", len(group.Files)) }</span>
+							</div>
+							<div class="divide-y divide-slate-800/40">
+								for _, file := range group.Files {
+									<button
+										type="button"
+										data-schema-search={ strings.ToLower(file.Package + " " + file.Path + " " + file.FileName) }
+										hx-get={ fmt.Sprintf("/fauxrpc/browser/%s", file.Path) }
+										hx-target="#schema-viewer-pane"
+										hx-push-url="true"
+										onclick="selectSchemaFileRow(this)"
+										class={ "schema-file-row w-full text-left px-3 py-2.5 hover:bg-slate-800/50 transition-colors flex items-center justify-between gap-2 text-xs focus:outline-none", templ.KV("selected-row", isSelectedSchemaFile(file, selectedFile)) }
+									>
+										<div class="min-w-0">
+											<div class="font-mono font-medium text-slate-100 truncate">{ file.FileName }</div>
+											<div class="font-mono text-[11px] text-slate-400 truncate mt-0.5">{ file.Path }</div>
+										</div>
+										<div class="flex items-center gap-1 shrink-0 font-mono text-[10px] tabular-nums">
+											if file.ServiceCount > 0 {
+												<span class="px-1.5 py-0.5 rounded bg-sky-950/80 text-sky-300 border border-sky-800/70">
+													{ fmt.Sprintf("%d svc", file.ServiceCount) }
+												</span>
+											}
+											if file.MessageCount > 0 {
+												<span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+													{ fmt.Sprintf("%d msg", file.MessageCount) }
+												</span>
+											}
+										</div>
+									</button>
+								}
+							</div>
+						</div>
+					}
+				} else {
+					<div class="p-12 text-center">
+						<h2 class="text-sm font-semibold text-slate-200">No Protobuf Descriptors Registered</h2>
+						<p class="text-xs text-slate-400 max-w-xs mx-auto mt-1 leading-relaxed">
+							Start FauxRPC with <code class="font-mono text-slate-300">--schema</code> to load <code class="font-mono text-slate-300">.proto</code> files, descriptors, Buf modules, or reflection targets.
+						</p>
+					</div>
+				}
+			</div>
+		</div>
+
+		<!-- Right Pane: Protobuf Source Viewer -->
+		<div id="schema-viewer-pane" class="lg:col-span-7 flex flex-col h-full overflow-hidden bg-slate-900/20">
+			if selectedFile != nil {
+				@FileContent(selectedFile.Package, selectedFile.Path, selectedFile.FileName, selectedContent)
+			} else {
+				<div class="flex-1 flex flex-col items-center justify-center p-8 text-center">
+					<h2 class="text-sm font-semibold text-slate-200">Schema Descriptor Viewer</h2>
+					<p class="text-xs text-slate-400 max-w-xs mt-1 leading-relaxed">
+						Select a Protobuf file from the package tree on the left to inspect its reconstructed <code class="font-mono text-slate-300">.proto</code> source.
+					</p>
+				</div>
+			}
+		</div>
+	</div>
 }

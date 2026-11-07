@@ -97,3 +97,10 @@ func (l *Logger) SubscribeWithHistory() ([]*LogEntry, chan *LogEntry, func()) {
 	}
 	return historyCopy, ch, unsubscribe
 }
+
+// Clear removes all buffered log entries from the history.
+func (l *Logger) Clear() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.history = []*LogEntry{}
+}

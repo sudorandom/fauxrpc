@@ -133,6 +133,8 @@ func (db *stubDatabase) AddStub(entry StubEntry) {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
+	db.removeStubLocked(entry.Key)
+
 	// Create a copy on the heap
 	newEntry := entry
 	db.stubsByKey[entry.Key] = &newEntry
@@ -162,6 +164,10 @@ func (db *stubDatabase) RemoveStub(key StubKey) {
 	db.mutex.Lock()
 	defer db.mutex.Unlock()
 
+	db.removeStubLocked(key)
+}
+
+func (db *stubDatabase) removeStubLocked(key StubKey) {
 	// Check if the stub exists
 	entry, exists := db.stubsByKey[key]
 	if !exists {

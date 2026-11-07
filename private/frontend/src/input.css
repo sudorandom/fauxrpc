@@ -1,3 +1,92 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body {
+    background-color: #090d16;
+    color: #e2e8f0;
+    caret-color: #38bdf8;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::selection {
+    background-color: rgba(56, 189, 248, 0.25);
+    color: #f8fafc;
+  }
+
+  :focus-visible {
+    outline: 2px solid #38bdf8;
+    outline-offset: 2px;
+  }
+
+  a {
+    text-underline-offset: 3px;
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Custom subtle dark scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #1e293b #090d16;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #090d16;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: #1e293b;
+  border-radius: 3px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #334155;
+}
+
+/* Active navigation & selection states */
+.nav-tab.active {
+  background-color: #1e293b;
+  color: #f8fafc;
+  border-color: #334155;
+}
+
+.log-entry-row.selected-row,
+.log-entry-row.selected-row:hover,
+.stub-entry-row.selected-row,
+.stub-entry-row.selected-row:hover,
+.schema-file-row.selected-row,
+.schema-file-row.selected-row:hover {
+  background-color: rgba(14, 165, 233, 0.16) !important;
+}
+
+.log-entry-row.selected-row > td,
+.stub-entry-row.selected-row > td {
+  background-color: rgba(14, 165, 233, 0.16);
+}
+
+.log-entry-row.selected-row > td:first-child,
+.stub-entry-row.selected-row > td:first-child,
+.schema-file-row.selected-row {
+  box-shadow: inset 3px 0 0 #38bdf8;
+}
+
+.hljs {
+  background: transparent !important;
+  padding: 0 !important;
+}
